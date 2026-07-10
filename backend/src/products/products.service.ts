@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { MovementType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -36,23 +37,52 @@ export class ProductsService {
       slug = `${slug}-${Date.now()}`;
     }
 
-    return this.prisma.product.create({
-      data: {
-        name: dto.name,
-        slug,
-        description: dto.description,
-        price: dto.price,
-        compareAtPrice: dto.compareAtPrice,
-        stockQuantity: dto.stockQuantity,
-        sku: dto.sku,
-        images: dto.images || [],
-        attributes: dto.attributes || {},
-        categoryId: dto.categoryId,
-        isActive: dto.isActive ?? true,
-      },
-      include: {
-        category: true,
-      },
+    // A product without an inventory row can never be ordered: reserve() issues
+    // `UPDATE inventory WHERE product_id = …`, which would match nothing and fail
+    // every checkout with "Insufficient stock". The row and its opening INITIAL
+    // movement are therefore created in the SAME transaction as the product, so
+    // the ledger balances from the first instant (plan Session 2.1).
+    return this.prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          name: dto.name,
+          slug,
+          description: dto.description,
+          price: dto.price,
+          compareAtPrice: dto.compareAtPrice,
+          stockQuantity: dto.stockQuantity,
+          sku: dto.sku,
+          images: dto.images || [],
+          attributes: dto.attributes || {},
+          categoryId: dto.categoryId,
+          isActive: dto.isActive ?? true,
+        },
+        include: {
+          category: true,
+        },
+      });
+
+      const inventory = await tx.inventory.create({
+        data: {
+          productId: product.id,
+          // Nothing is reserved yet, so the sellable cache
+          // (products.stock_quantity) equals quantity_available here.
+          quantityAvailable: dto.stockQuantity,
+          quantityReserved: 0,
+          minimumStockLevel: 0,
+        },
+      });
+
+      await tx.inventoryMovement.create({
+        data: {
+          inventoryId: inventory.id,
+          type: MovementType.INITIAL,
+          quantityChange: dto.stockQuantity,
+          note: 'Opening balance (product created)',
+        },
+      });
+
+      return product;
     });
   }
 
