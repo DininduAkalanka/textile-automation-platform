@@ -58,6 +58,35 @@ enum MovementType {
   DAMAGE // admin write-off:            available -= qty
 }
 
+/// Drives decision D8: an order item enters production when its product is
+/// UNIFORM or CUSTOM, or when requires_measurement is true. READY_MADE is the
+/// default precisely because it is inert — a mislabelled product will never
+/// silently spawn a production task.
+enum ProductType {
+  FABRIC
+  READY_MADE
+  UNIFORM
+  CUSTOM
+  ACCESSORY
+}
+
+/// Production pipeline stages (plan §4.3). A task advances CUTTING → STITCHING
+/// → FINISHING → QUALITY_CHECK, resetting status to PENDING on each advance.
+enum ProductionStage {
+  CUTTING
+  STITCHING
+  FINISHING
+  QUALITY_CHECK
+}
+
+/// Status within a single stage. A QC failure returns the task to stage
+/// FINISHING with status PENDING and a mandatory note.
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -74,6 +103,10 @@ model User {
 
   orders        Order[]
   refreshTokens RefreshToken[]
+  worker        Worker?
+  measurements  CustomerMeasurement[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
 
   @@index([email])
   @@index([role])
@@ -101,9 +134,18 @@ model Category {
   slug        String  @unique
   description String?
   imageUrl    String? @map("image_url")
+  parentId    String? @map("parent_category_id") @db.Uuid
+
+  // Self-referencing tree (doc 06 §5.2). Depth is capped at 2 in the service
+  // layer; Postgres cannot express that constraint. onDelete: Restrict makes a
+  // category with children undeletable at the DB level, matching the 409 the
+  // API returns.
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
 
   products Product[]
 
+  @@index([parentId])
   @@map("categories")
 }
 
@@ -124,6 +166,18 @@ model Product {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  // ─── Catalog attributes (doc 06 §5.2) ───────────────────
+  productType         ProductType @default(READY_MADE) @map("product_type")
+  requiresMeasurement Boolean     @default(false) @map("requires_measurement")
+  fabricType          String?     @map("fabric_type")
+  color               String?
+  unit                String?
+
+  /// Deliberately nullable, never 0: a missing cost is unknown margin, and a 0
+  /// default would silently report 100% profit in the Phase G/H analytics.
+  /// Profit tools must exclude products where this is null.
+  costPrice Decimal? @map("cost_price") @db.Decimal(10, 2)
+
   category   Category?   @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
   inventory  Inventory?
@@ -133,6 +187,7 @@ model Product {
   @@index([subCategory])
   @@index([isActive])
   @@index([price])
+  @@index([productType])
   @@map("products")
 }
 
@@ -156,6 +211,7 @@ model Order {
   payment            Payment?
   statusHistory      OrderStatusHistory[]
   inventoryMovements InventoryMovement[]
+  productionTasks    ProductionTask[]
 
   @@index([userId])
   @@index([status])
@@ -173,8 +229,14 @@ model OrderItem {
   totalPrice         Decimal @map("total_price") @db.Decimal(10, 2)
   selectedAttributes Json?   @map("selected_attributes")
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  /// BR3: garment measurements captured at checkout, snapshotted here so a
+  /// later edit to the customer's saved measurements never rewrites history.
+  /// Shape varies by product type, hence JSONB (doc 06 §9).
+  measurements Json? @db.JsonB
+
+  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product          @relation(fields: [productId], references: [id])
+  productionTasks ProductionTask[]
 
   @@index([orderId])
   @@index([productId])
@@ -289,4 +351,113 @@ model PaymentWebhookEvent {
 
   @@unique([gateway, transactionId, eventStatus]) // D5: idempotent — replays no-op
   @@map("payment_webhook_events")
+}
+
+// ─── Measurements (BR3) ──────────────────────────────────
+// Doc 06 §5.3 hangs this off a `customers` table. This project keeps the
+// user↔order relation direct (V2 DR-7), so measurements hang off `users`.
+// Adding `customers` later is a 1:1 backfill, not a remodel.
+
+model CustomerMeasurement {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  label        String? // "Nimal — school shirt"
+  personName   String?      @map("person_name")
+  productType  ProductType? @map("product_type")
+  measurements Json         @db.JsonB
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("customer_measurements")
+}
+
+// ─── Production (FR-P1..P5, BR5, decision D8) ────────────
+
+model Worker {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Workers authenticate as users with role=WORKER, so name/phone/email are
+  /// never duplicated here (doc 06 §3: "avoid redundant data duplication").
+  userId String @unique @map("user_id") @db.Uuid
+
+  specialization ProductionStage?
+  skillLevel     Int?             @map("skill_level")
+  hourlyRate     Decimal?         @map("hourly_rate") @db.Decimal(10, 2)
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks ProductionTask[]
+
+  @@index([isActive])
+  @@map("workers")
+}
+
+model ProductionTask {
+  id          String @id @default(uuid()) @db.Uuid
+  orderId     String @map("order_id") @db.Uuid
+  orderItemId String @map("order_item_id") @db.Uuid
+
+  stage  ProductionStage @default(CUTTING)
+  status TaskStatus      @default(PENDING)
+
+  /// BR5: a task cannot be STARTED without an assignee. Nullable because a task
+  /// is created (unassigned) the moment an order is confirmed; the guard lives
+  /// in the service layer, since Postgres cannot express "null only while PENDING".
+  assignedWorkerId String? @map("assigned_worker_id") @db.Uuid
+
+  note      String?   @db.Text // required by the service on a QC failure
+  startTime DateTime? @map("start_time")
+  endTime   DateTime? @map("end_time")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  worker    Worker?   @relation(fields: [assignedWorkerId], references: [id])
+
+  @@index([assignedWorkerId, status]) // worker portal: "my open tasks"
+  @@index([orderId])
+  @@index([stage, status]) // admin pipeline board, grouped by column
+  @@map("production_tasks")
+}
+
+// ─── Cross-cutting (doc 09 §11.2 audit; in-app notifications) ──
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid // null for system actions
+  action     String // "payment.verify", "inventory.adjust", …
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  before     Json?    @db.JsonB
+  after      Json?    @db.JsonB
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  /// SetNull, not Cascade: deleting a user must never erase the audit trail.
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String // "order.confirmed", "inventory.low_stock", …
+  title     String
+  body      String?   @db.Text
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt]) // unread badge count
+  @@map("notifications")
 }
