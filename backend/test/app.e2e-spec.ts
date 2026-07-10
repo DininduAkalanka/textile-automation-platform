@@ -7,7 +7,7 @@ import { AppModule } from './../src/app.module';
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -16,14 +16,20 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  afterAll(async () => {
+    await app.close();
+  });
+
+  // The Nest scaffold shipped an assertion for 'Hello World!', which this
+  // controller has never returned. It went unnoticed because `test:e2e` was
+  // never wired into CI.
+  it('GET / returns the service banner', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
-  });
-
-  afterEach(async () => {
-    await app.close();
+      .expect(({ body }) => {
+        expect(body.status).toBe('online');
+        expect(typeof body.version).toBe('string');
+      });
   });
 });
