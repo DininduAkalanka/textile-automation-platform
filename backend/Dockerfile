@@ -25,5 +25,8 @@ RUN npm run build
 
 EXPOSE 3001
 
-# Run database migrations/seed, then start the server
-CMD npx prisma db push --accept-data-loss && npm run db:seed && npm run start:prod
+# Apply migration history, seed, then start the server.
+# `migrate deploy` never drops data and never prompts, so it is the only safe
+# form for an unattended container start. The seed step is idempotent but is a
+# development convenience: a production image must not run it.
+CMD npx prisma migrate deploy && npm run db:seed && npm run start:prod

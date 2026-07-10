@@ -1,3 +1,14 @@
+-- ⚠ SUPERSEDED — DO NOT RUN. Retained as a historical record only.
+--
+-- This was a one-time remap for databases created before the OrderStatus
+-- realign. It is now baked into prisma/migrations/0_init, which creates the
+-- enum already in canonical form.
+--
+-- Re-running it against a current database is DESTRUCTIVE: it renames the live
+-- "OrderStatus" type and then drops "OrderStatus_old". The "non-destructive"
+-- claim below held only for the pre-realign schema it was written against.
+--
+-- ── Original note ──────────────────────────────────────────────────────────
 -- Migration 002 — realign OrderStatus to the doc-canonical machine + add WORKER role.
 -- (IMPLEMENTATION_PLAN_V2 DR-2 / DR-5.)
 --
