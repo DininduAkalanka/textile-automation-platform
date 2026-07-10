@@ -164,6 +164,41 @@ export interface AdminPaymentsResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+/**
+ * GET /admin/dashboard. Money arrives as a decimal string, never a number:
+ * parsing it into a JS float is exactly the bug this endpoint replaced. Pass it
+ * straight to formatLKR.
+ */
+export interface DashboardResponse {
+  range: { from: string; to: string };
+  totals: {
+    /** Decimal string. COMPLETED payments only, aggregated in SQL. */
+    revenue: string;
+    ordersToday: number;
+    pendingOrders: number;
+    lowStockCount: number;
+    totalOrders: number;
+    totalProducts: number;
+  };
+  salesByDay: Array<{ date: string; revenue: string; orders: number }>;
+  topProducts: Array<{
+    productId: string;
+    name: string;
+    quantity: number;
+    revenue: string;
+  }>;
+  ordersByStatus: Array<{ status: string; count: number }>;
+  recentOrders: Array<{
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    total: string;
+    status: string;
+    paymentStatus: string | null;
+    createdAt: string;
+  }>;
+}
+
 export interface Address {
   fullName: string;
   addressLine1: string;

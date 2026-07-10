@@ -7,28 +7,36 @@ import { Order, Product } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatLKR } from '@/lib/format';
 
+/** Server-computed. Revenue is a decimal string and is never parsed to a float here. */
+const EMPTY_TOTALS = {
+  revenue: '0.00',
+  ordersToday: 0,
+  pendingOrders: 0,
+  lowStockCount: 0,
+  totalOrders: 0,
+  totalProducts: 0,
+};
+
 export default function AdminDashboard() {
   const { user, isAuthenticated } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ totalOrders: 0, totalRevenue: 0, totalProducts: 0 });
+  const [totals, setTotals] = useState(EMPTY_TOTALS);
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'ADMIN') {
+      // Metrics come from GET /admin/dashboard, which aggregates in SQL over
+      // COMPLETED payments. Summing order totals client-side (as this page used
+      // to) counted cancelled and unpaid orders, and only ever saw page one.
       Promise.all([
+        api.getAdminDashboard(),
         api.getAllOrders(1, 10),
         api.getProducts({ limit: 100 }),
-      ]).then(([ordersRes, productsRes]) => {
-        const allOrders = ordersRes.orders || [];
-        const allProducts = productsRes.products || [];
-        setOrders(allOrders);
-        setProducts(allProducts);
-        setStats({
-          totalOrders: ordersRes.pagination?.total || 0,
-          totalRevenue: allOrders.reduce((sum: number, o: Order) => sum + Number(o.total), 0),
-          totalProducts: productsRes.pagination?.total || 0,
-        });
+      ]).then(([dashboard, ordersRes, productsRes]) => {
+        setTotals(dashboard.totals);
+        setOrders(ordersRes.orders || []);
+        setProducts(productsRes.products || []);
       }).catch(console.error).finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -82,10 +90,10 @@ export default function AdminDashboard() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
         {[
-          { label: 'Total Orders', value: stats.totalOrders, icon: '📦', color: '#eff6ff' },
-          { label: 'Revenue', value: formatLKR(stats.totalRevenue), icon: '💰', color: '#ecfdf5' },
-          { label: 'Products', value: stats.totalProducts, icon: '🧵', color: '#fef3cd' },
-          { label: 'Customers', value: '—', icon: '👥', color: '#fce7f3' },
+          { label: 'Total Orders', value: totals.totalOrders, icon: '📦', color: '#eff6ff' },
+          { label: 'Revenue (paid)', value: formatLKR(totals.revenue), icon: '💰', color: '#ecfdf5' },
+          { label: 'Products', value: totals.totalProducts, icon: '🧵', color: '#fef3cd' },
+          { label: 'Low Stock', value: totals.lowStockCount, icon: '⚠️', color: '#fce7f3' },
         ].map((stat) => (
           <div
             key={stat.label}

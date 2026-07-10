@@ -1,4 +1,4 @@
-import { ApiResponse, AuthResponse, ProductsResponse, Product, OrdersResponse, Order, Category, PaymentIntentResponse, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse } from '@/types';
+import { ApiResponse, AuthResponse, ProductsResponse, Product, OrdersResponse, Order, Category, PaymentIntentResponse, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -213,6 +213,18 @@ class ApiClient {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status) params.set('status', status);
     return this.request<OrdersResponse>(`/orders/admin/all?${params}`);
+  }
+
+  /**
+   * Server-aggregated dashboard metrics. Revenue counts COMPLETED payments only
+   * and is computed in SQL — never summed client-side over a page of orders.
+   */
+  async getAdminDashboard(from?: string, to?: string): Promise<DashboardResponse> {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    return this.request<DashboardResponse>(`/admin/dashboard${query ? `?${query}` : ''}`);
   }
 
   async updateOrderStatus(id: string, status: string): Promise<Order> {
