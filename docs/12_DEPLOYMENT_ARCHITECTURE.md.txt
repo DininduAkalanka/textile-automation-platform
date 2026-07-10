@@ -1,0 +1,380 @@
+# 14_DEPLOYMENT_ARCHITECTURE.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Deployment Architecture Specification
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **deployment strategy and infrastructure architecture** for the full system including:
+
+* Frontend (Next.js)
+* Backend (NestJS)
+* AI Service (FastAPI RAG system)
+* Database (PostgreSQL)
+* Cache (Redis)
+* File Storage (S3 / Cloudinary)
+* Payment Gateway integrations
+
+---
+
+# 2. High-Level Deployment Architecture
+
+```text
+                USERS
+                  ↓
+          ┌──────────────┐
+          │   FRONTEND   │
+          │   Next.js    │
+          │   (Vercel)   │
+          └──────┬───────┘
+                 │ API Calls
+                 ↓
+        ┌──────────────────┐
+        │   BACKEND API    │
+        │   NestJS Server  │
+        │ (AWS / Railway)  │
+        └──────┬───────────┘
+               │
+   ┌───────────┼──────────────┐
+   ↓           ↓              ↓
+DATABASE     REDIS        AI SERVICE
+PostgreSQL   Cache       FastAPI RAG
+(Cloud DB)   (Upstash)    (Python)
+```
+
+---
+
+# 3. Frontend Deployment
+
+## 3.1 Platform: Vercel (Recommended)
+
+### Why Vercel:
+
+* Zero-config deployment
+* Automatic CI/CD
+* Global CDN
+* Built-in Next.js optimization
+
+---
+
+## 3.2 Deployment Flow
+
+```text
+GitHub Push → Vercel Build → CDN Deployment → Live Site
+```
+
+---
+
+## 3.3 Environment Variables
+
+```env
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_PAYMENT_GATEWAY_KEY=xxxx
+```
+
+---
+
+# 4. Backend Deployment
+
+## 4.1 Recommended Options
+
+### Option A (Recommended for Student Project)
+
+* Railway
+* Render
+
+### Option B (Production Scale)
+
+* AWS EC2
+* AWS ECS (Docker)
+
+---
+
+## 4.2 Backend Deployment Flow
+
+```text
+GitHub → CI/CD Pipeline → Docker Build → Server Deploy → API Live
+```
+
+---
+
+## 4.3 Backend Environment Variables
+
+```env
+DATABASE_URL=postgresql://...
+JWT_SECRET=super_secret_key
+REDIS_URL=redis://...
+PAYHERE_MERCHANT_ID=xxxx
+AI_SERVICE_URL=http://ai-service:8000
+```
+
+---
+
+# 5. AI Service Deployment (RAG System)
+
+## 5.1 Platform Options
+
+* AWS EC2 (recommended)
+* Render (simple deployment)
+* Docker container service
+
+---
+
+## 5.2 AI Service Architecture
+
+```text
+NestJS Backend → FastAPI AI Service → ML Models → Response
+```
+
+---
+
+## 5.3 AI Deployment Setup
+
+* Python FastAPI server
+* Uvicorn as ASGI server
+* Docker container recommended
+
+---
+
+## 5.4 AI Environment Variables
+
+```env
+OPENAI_API_KEY=xxxx
+DATABASE_URL=xxxx
+MODEL_PATH=/models/
+```
+
+---
+
+# 6. Database Deployment
+
+## 6.1 Recommended: PostgreSQL Cloud
+
+### Options:
+
+* Supabase (BEST for students)
+* AWS RDS (production)
+* Neon.tech (serverless DB)
+
+---
+
+## 6.2 Database Features:
+
+* Auto backups
+* Scaling support
+* SSL encryption
+* Connection pooling
+
+---
+
+# 7. Redis Deployment (Caching Layer)
+
+## Purpose:
+
+* Session storage
+* API caching
+* AI query optimization
+
+---
+
+## Options:
+
+* Upstash Redis (recommended)
+* AWS ElastiCache
+
+---
+
+# 8. File Storage System
+
+## 8.1 Options:
+
+* AWS S3 (production)
+* Cloudinary (images only, easier)
+
+---
+
+## 8.2 Use Cases:
+
+* Product images
+* Invoice PDFs
+* User uploads
+
+---
+
+# 9. CI/CD Pipeline
+
+## 9.1 Workflow
+
+```text
+Developer Push → GitHub
+      ↓
+GitHub Actions Trigger
+      ↓
+Run Tests
+      ↓
+Build Project
+      ↓
+Deploy to Server
+```
+
+---
+
+## 9.2 CI/CD Tools
+
+* GitHub Actions (recommended)
+* Docker pipelines
+* Vercel auto deploy
+
+---
+
+# 10. Dockerization Strategy
+
+## 10.1 Why Docker?
+
+* Consistent environments
+* Easy deployment
+* Scalable architecture
+
+---
+
+## 10.2 Containers:
+
+* frontend container (optional)
+* backend container
+* AI service container
+* database container (dev only)
+
+---
+
+# 11. Domain & SSL Setup
+
+## 11.1 Domain Structure
+
+```text
+https://yourstore.com        → Frontend
+https://api.yourstore.com    → Backend
+https://ai.yourstore.com     → AI Service
+```
+
+---
+
+## 11.2 SSL Security
+
+* HTTPS enforced everywhere
+* Auto SSL via Vercel / Cloudflare
+
+---
+
+# 12. Load Balancing (Future Upgrade)
+
+## Options:
+
+* Nginx reverse proxy
+* AWS Load Balancer
+
+---
+
+## Purpose:
+
+* Handle high traffic
+* Distribute requests
+* Improve reliability
+
+---
+
+# 13. Monitoring & Logging
+
+## Tools:
+
+* Winston (backend logs)
+* Sentry (error tracking)
+* Google Analytics (frontend)
+* Prometheus (future scaling)
+
+---
+
+# 14. Backup Strategy
+
+## Database Backups:
+
+* Daily automatic backups
+* Weekly full snapshot
+* Point-in-time recovery
+
+---
+
+## File Backups:
+
+* S3 versioning enabled
+* Redundant storage regions
+
+---
+
+# 15. Security in Deployment
+
+* Environment variables secured
+* No secrets in GitHub
+* IP restricted database access
+* API rate limiting enabled
+
+---
+
+# 16. Scalability Strategy
+
+## Phase 1 (University Project):
+
+* Monolithic backend
+* Single AI service
+* Cloud database
+
+---
+
+## Phase 2 (Growth):
+
+* Microservices split
+* Separate AI scaling
+* Multi-region deployment
+
+---
+
+# 17. Cost Optimization
+
+* Use free tiers initially:
+
+  * Vercel Free
+  * Supabase Free
+  * Render Free
+  * Upstash Free Redis
+
+---
+
+# 18. Deployment Checklist
+
+Before production:
+
+* [ ] Environment variables configured
+* [ ] Database migrated
+* [ ] Payment gateway tested
+* [ ] AI service connected
+* [ ] HTTPS enabled
+* [ ] Error logging active
+
+---
+
+# 19. Conclusion
+
+This deployment architecture ensures:
+
+* Real-world production readiness
+* Scalable cloud infrastructure
+* Separation of services (frontend, backend, AI)
+* Low-cost startup deployment
+* Smooth upgrade path to enterprise system
+
+> This system is designed to be deployable like a real SaaS product, not just a university project

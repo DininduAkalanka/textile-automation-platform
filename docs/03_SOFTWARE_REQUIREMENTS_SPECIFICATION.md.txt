@@ -1,0 +1,410 @@
+# 03_SOFTWARE_REQUIREMENTS_SPECIFICATION.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Software Requirements Specification (SRS)
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Introduction
+
+## 1.1 Purpose
+
+This Software Requirements Specification (SRS) defines all functional and non-functional requirements for the Smart Textile Business Management System.
+
+It serves as the **official technical contract** between:
+
+* Business requirements
+* System design
+* Developers (human or AI)
+* University evaluation panel
+
+---
+
+## 1.2 Scope
+
+The system is a full-stack web application that enables:
+
+* Online textile product sales
+* Custom uniform ordering
+* Inventory management
+* Production workflow tracking
+* Payment processing
+* Admin and customer management
+
+---
+
+## 1.3 Definitions
+
+* **Customer**: End user purchasing products
+* **Admin**: System manager controlling operations
+* **Worker**: Production staff handling manufacturing tasks
+* **Order**: Purchase transaction
+* **Inventory**: Stock of products/materials
+* **Production Task**: Work assigned in manufacturing process
+
+---
+
+# 2. Overall System Description
+
+## 2.1 System Perspective
+
+The system is a **client-server web application** consisting of:
+
+* Frontend: Next.js (Customer + Admin UI)
+* Backend: NestJS API Server
+* Database: PostgreSQL
+* Payment Gateway: PayHere / Stripe
+* Optional AI service: Analytics engine (future extension)
+
+---
+
+## 2.2 System Users
+
+| User Type | Description               |
+| --------- | ------------------------- |
+| Customer  | Buys products online      |
+| Admin     | Manages system operations |
+| Worker    | Handles production tasks  |
+
+---
+
+## 2.3 Operating Environment
+
+* Modern web browsers (Chrome, Firefox, Edge)
+* Mobile responsive support
+* Cloud-hosted backend (AWS / VPS)
+* PostgreSQL database server
+
+---
+
+# 3. Functional Requirements
+
+---
+
+# 3.1 Authentication System
+
+## FR-001: User Registration
+
+* Users shall be able to register using email and password
+* System shall validate email uniqueness
+* Passwords must be encrypted using bcrypt
+
+---
+
+## FR-002: User Login
+
+* Users shall log in using email and password
+* System shall generate JWT token upon successful login
+* Invalid login attempts must be rejected
+
+---
+
+## FR-003: Role-Based Access Control
+
+System shall support three roles:
+
+* Customer
+* Admin
+* Worker
+
+Access to APIs and UI must be restricted based on role.
+
+---
+
+# 3.2 Product Management
+
+## FR-004: Product Listing
+
+* System shall display all active products
+* Products shall include image, price, and description
+
+---
+
+## FR-005: Product Search
+
+* Users shall search products by name, category, or type
+* System shall return filtered results
+
+---
+
+## FR-006: Product Details
+
+* System shall display full product information
+* Includes stock availability and pricing
+
+---
+
+# 3.3 Shopping Cart System
+
+## FR-007: Add to Cart
+
+* Users shall add products to cart
+* Cart shall store product ID, quantity, and price
+
+---
+
+## FR-008: Update Cart
+
+* Users shall update quantity or remove items
+
+---
+
+## FR-009: Persistent Cart (Optional MVP enhancement)
+
+* Cart may be stored in local storage or database
+
+---
+
+# 3.4 Order Management
+
+## FR-010: Create Order
+
+* System shall create order from cart items
+* System shall calculate subtotal, tax, and total
+
+---
+
+## FR-011: Order Status Tracking
+
+Order shall follow this lifecycle:
+
+* Pending
+* Confirmed
+* In Production
+* Quality Check
+* Completed
+* Delivered
+
+---
+
+## FR-012: Order History
+
+* Customers shall view past orders
+
+---
+
+# 3.5 Payment System
+
+## FR-013: Payment Processing
+
+* System shall support online payment gateway integration
+* Payments shall be linked to orders
+
+---
+
+## FR-014: Payment Verification
+
+* System shall verify payment via gateway callback
+* Order status shall update automatically
+
+---
+
+## FR-015: Payment Status Tracking
+
+Statuses:
+
+* Pending
+* Completed
+* Failed
+* Refunded
+
+---
+
+# 3.6 Inventory Management
+
+## FR-016: Stock Tracking
+
+* System shall track product stock in real time
+
+---
+
+## FR-017: Stock Deduction
+
+* Stock shall decrease automatically after order confirmation
+
+---
+
+## FR-018: Low Stock Alert
+
+* System shall notify admin when stock is below threshold
+
+---
+
+# 3.7 Production Management
+
+## FR-019: Production Task Creation
+
+* System shall create tasks from confirmed orders
+
+---
+
+## FR-020: Worker Assignment
+
+* Admin shall assign tasks to workers
+
+---
+
+## FR-021: Production Tracking
+
+Stages:
+
+* Cutting
+* Stitching
+* Finishing
+* Quality Check
+
+---
+
+# 3.8 Admin Dashboard
+
+## FR-022: Dashboard Overview
+
+* Display sales metrics
+* Display inventory status
+* Display order status
+
+---
+
+## FR-023: Management Functions
+
+Admin shall manage:
+
+* Products
+* Orders
+* Inventory
+* Workers
+* Customers
+
+---
+
+# 4. Non-Functional Requirements
+
+---
+
+## NFR-001: Performance
+
+* Page load time < 3 seconds
+* API response time < 2 seconds
+* Support at least 100 concurrent users
+
+---
+
+## NFR-002: Security
+
+* JWT-based authentication
+* Password hashing using bcrypt
+* HTTPS communication
+* Input validation and sanitization
+* Role-based access control
+
+---
+
+## NFR-003: Scalability
+
+* Modular backend architecture
+* Stateless API design
+* Cloud deployment ready
+
+---
+
+## NFR-004: Reliability
+
+* 99% system uptime target
+* Daily database backups
+* Error logging system
+
+---
+
+## NFR-005: Usability
+
+* Mobile responsive UI
+* Simple navigation
+* Multi-language support ready (future)
+
+---
+
+## NFR-006: Maintainability
+
+* Modular code structure
+* Clean architecture principles
+* Type-safe development (TypeScript)
+
+---
+
+# 5. System Constraints
+
+* Must be completed within academic timeline
+* Limited initial budget (free-tier infrastructure)
+* Small development team (3–4 members)
+* Must use open-source technologies
+
+---
+
+# 6. External Interfaces
+
+## 6.1 User Interface
+
+* Web-based frontend (Next.js)
+* Admin dashboard UI
+* Mobile responsive design
+
+---
+
+## 6.2 API Interfaces
+
+* RESTful API (NestJS)
+* JSON-based communication
+
+---
+
+## 6.3 Payment Gateway
+
+* PayHere / Stripe integration
+* Webhook-based payment verification
+
+---
+
+# 7. Data Requirements
+
+System shall store:
+
+* Users
+* Products
+* Orders
+* Order Items
+* Payments
+* Inventory Records
+* Production Tasks
+* Workers
+
+---
+
+# 8. Assumptions
+
+* Users have internet access
+* Business data is available for migration
+* Payment gateway is functional in region
+* Staff will use system properly after training
+
+---
+
+# 9. Acceptance Criteria
+
+System is considered successful if:
+
+* Users can complete full purchase flow
+* Orders are tracked correctly
+* Payments are verified automatically
+* Inventory updates correctly
+* Production tasks are traceable
+* Admin can manage operations without manual records
+
+---
+
+# 10. Conclusion
+
+This SRS document defines the complete functional and technical behavior of the Smart Textile Business Management System. It acts as the foundation for system architecture, database design, API development, and implementation planning.

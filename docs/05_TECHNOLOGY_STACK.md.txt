@@ -1,0 +1,387 @@
+# 05_TECHNOLOGY_STACK.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Technology Stack Specification
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the complete **technology stack** used to build the Smart Textile Business Management System.
+
+It explains:
+
+* What technologies are used
+* Why they are selected
+* How they fit into the system architecture
+
+---
+
+# 2. Technology Selection Principles
+
+All technologies are selected based on:
+
+* Scalability
+* Industry adoption
+* Performance
+* Developer productivity
+* Open-source availability
+* Long-term maintainability
+* Academic suitability
+
+---
+
+# 3. Frontend Technology Stack
+
+## 3.1 Core Framework
+
+### Next.js 14+ (App Router)
+
+**Why Next.js:**
+
+* Server-side rendering (SEO-friendly)
+* Fast performance
+* File-based routing
+* Built-in API support (optional)
+* Production-ready by default
+* Excellent React ecosystem support
+
+---
+
+## 3.2 UI Framework
+
+### Tailwind CSS
+
+**Why Tailwind:**
+
+* Rapid UI development
+* Utility-first styling
+* Easy responsive design
+* Reduces CSS complexity
+* Widely used in modern production apps
+
+---
+
+### shadcn/ui
+
+**Why shadcn/ui:**
+
+* Pre-built accessible components
+* Fully customizable
+* Based on Radix UI
+* No heavy dependency overhead
+* Modern UI design system
+
+---
+
+## 3.3 State Management
+
+### Zustand
+
+**Why Zustand:**
+
+* Lightweight compared to Redux
+* Simple API
+* Works well with Next.js
+* No boilerplate
+* Ideal for cart and UI state
+
+---
+
+## 3.4 Data Fetching
+
+### React Query (TanStack Query)
+
+**Why React Query:**
+
+* API caching
+* Automatic refetching
+* Loading/error states handling
+* Reduces manual state management
+
+---
+
+## 3.5 HTTP Client
+
+### Axios
+
+* Clean API calls
+* Interceptors for auth tokens
+* Better error handling
+
+---
+
+# 4. Backend Technology Stack
+
+## 4.1 Framework
+
+### NestJS (Node.js + TypeScript)
+
+**Why NestJS:**
+
+* Enterprise-grade architecture
+* Modular structure
+* Built-in dependency injection
+* TypeScript-first development
+* Scalable backend design
+* Used in real production systems
+
+---
+
+## 4.2 Runtime
+
+### Node.js (LTS Version)
+
+* High performance
+* Non-blocking I/O
+* Large ecosystem
+
+---
+
+## 4.3 API Style
+
+### REST API
+
+* Simple and widely supported
+* Easy integration with frontend
+* Suitable for MVP phase
+
+---
+
+## 4.4 Authentication
+
+### JWT (JSON Web Tokens)
+
+* Stateless authentication
+* Scalable
+* Secure with expiration handling
+
+---
+
+### bcrypt
+
+* Secure password hashing
+* Industry standard
+
+---
+
+## 4.5 Validation
+
+### class-validator + class-transformer
+
+* DTO validation
+* Clean request validation
+* Reduces runtime errors
+
+---
+
+# 5. Database Technology Stack
+
+## 5.1 Database
+
+### PostgreSQL
+
+**Why PostgreSQL:**
+
+* Highly reliable relational database
+* ACID compliance
+* Supports complex queries
+* JSONB support for flexible data
+* Industry standard for production systems
+
+---
+
+## 5.2 ORM
+
+### Prisma ORM
+
+**Why Prisma:**
+
+* Type-safe database queries
+* Auto-generated client
+* Easy migrations
+* Excellent developer experience
+* Strong TypeScript support
+
+---
+
+## 5.3 Caching (Optional but recommended)
+
+### Redis
+
+* Session caching
+* Performance optimization
+* Reduce database load
+
+---
+
+# 6. Payment Integration
+
+## 6.1 Primary Gateway
+
+### PayHere (Sri Lanka)
+
+**Why PayHere:**
+
+* Local payment support
+* Supports cards, bank transfers
+* Easy integration
+* Trusted in Sri Lanka
+
+---
+
+## 6.2 Alternative Gateway
+
+### Stripe
+
+* Global payments
+* Developer-friendly API
+* Strong documentation
+
+---
+
+# 7. AI / Data Intelligence Stack (Future Module)
+
+## 7.1 Framework
+
+### Python FastAPI
+
+* Lightweight API framework
+* High performance
+* Easy integration with ML models
+
+---
+
+## 7.2 Machine Learning Libraries
+
+* Scikit-learn (prediction models)
+* Pandas (data processing)
+* NumPy (numerical computation)
+* Statsmodels (time-series forecasting)
+
+---
+
+## 7.3 AI Use Cases
+
+* Demand forecasting
+* Inventory prediction
+* Sales analytics
+* Product recommendations
+
+---
+
+# 8. DevOps & Deployment Stack
+
+## 8.1 Containerization
+
+### Docker
+
+* Consistent environment
+* Easy deployment
+* Microservice readiness
+
+---
+
+## 8.2 CI/CD
+
+### GitHub Actions
+
+* Automated testing
+* Automated deployment
+* Continuous integration
+
+---
+
+## 8.3 Hosting
+
+### Frontend
+
+* Vercel (recommended)
+
+  * Fast deployment
+  * Next.js optimized
+
+---
+
+### Backend
+
+* AWS / Render / DigitalOcean
+
+  * Scalable servers
+  * Production-ready hosting
+
+---
+
+### Database
+
+* Supabase / AWS RDS / Neon
+
+  * Managed PostgreSQL
+  * Backup support
+
+---
+
+# 9. Development Tools
+
+## 9.1 Version Control
+
+* Git
+* GitHub
+
+---
+
+## 9.2 Code Quality
+
+* ESLint
+* Prettier
+* TypeScript strict mode
+
+---
+
+## 9.3 API Testing
+
+* Postman
+* Swagger (NestJS auto-generated docs)
+
+---
+
+# 10. Security Stack
+
+* HTTPS (SSL/TLS)
+* JWT authentication
+* bcrypt password hashing
+* Input validation (DTOs)
+* SQL injection prevention (Prisma ORM)
+* CORS configuration
+
+---
+
+# 11. System Compatibility
+
+## Supported Environments
+
+* Chrome (latest)
+* Firefox
+* Edge
+* Mobile browsers (Android/iOS)
+
+---
+
+# 12. Summary
+
+This technology stack ensures that the Smart Textile Business Management System is:
+
+* Modern
+* Scalable
+* Secure
+* Industry-aligned
+* Suitable for real-world deployment
+* Strong enough for academic evaluation
+
+The stack is intentionally chosen to balance:
+
+> 🚀 Rapid development + Production readiness + Long-term scalability

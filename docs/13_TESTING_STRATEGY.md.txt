@@ -1,0 +1,424 @@
+# 15_TESTING_STRATEGY.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Software Testing Strategy
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **testing strategy and quality assurance approach** for the entire system including:
+
+* Frontend (Next.js)
+* Backend (NestJS)
+* AI RAG System
+* Payment Integration
+* Database Layer
+
+The goal is to ensure:
+
+* High reliability
+* Bug-free production release
+* Secure transactions
+* Stable AI responses
+* Smooth user experience
+
+---
+
+# 2. Testing Levels
+
+The system follows a **4-layer testing strategy**:
+
+---
+
+## 2.1 Unit Testing
+
+### Scope:
+
+* Individual functions
+* Services (NestJS)
+* Utility functions
+* AI response handlers
+
+### Tools:
+
+* Jest (Backend + Frontend)
+* PyTest (AI Service)
+
+### Example:
+
+* Price calculation function
+* Order status update logic
+* Inventory deduction logic
+
+---
+
+## 2.2 Integration Testing
+
+### Scope:
+
+* API endpoints
+* Database interactions
+* Payment gateway integration
+* AI service communication
+
+### Example:
+
+* Create order → store in DB → return response
+* Payment success → update order → reduce inventory
+
+---
+
+## 2.3 System Testing (End-to-End)
+
+### Scope:
+
+Full user flows:
+
+* Customer buying flow
+* Admin order management flow
+* AI chat interaction flow
+
+### Example:
+
+```text
+Home → Product → Cart → Checkout → Payment → Order Confirmation
+```
+
+---
+
+## 2.4 User Acceptance Testing (UAT)
+
+### Scope:
+
+* Real users (client/business owner)
+* Final validation before deployment
+
+### Focus:
+
+* Usability
+* Business logic correctness
+* UI clarity
+
+---
+
+# 3. Frontend Testing Strategy
+
+---
+
+## 3.1 Component Testing
+
+* Product card rendering
+* Cart updates
+* Form validation
+
+---
+
+## 3.2 UI Testing
+
+* Responsive layout
+* Mobile compatibility
+* Navigation correctness
+
+---
+
+## 3.3 Tools:
+
+* Jest
+* React Testing Library
+* Cypress (E2E testing)
+
+---
+
+# 4. Backend Testing Strategy (NestJS)
+
+---
+
+## 4.1 API Testing
+
+Test all endpoints:
+
+* Authentication APIs
+* Product APIs
+* Order APIs
+* Inventory APIs
+
+---
+
+## 4.2 Service Testing
+
+* Business logic validation
+* Order calculation
+* Inventory updates
+* Payment verification
+
+---
+
+## 4.3 Tools:
+
+* Jest
+* Supertest (API testing)
+
+---
+
+# 5. Database Testing Strategy
+
+---
+
+## 5.1 Schema Testing
+
+* Table creation validation
+* Foreign key integrity
+* Constraint validation
+
+---
+
+## 5.2 Data Integrity Testing
+
+* Order consistency
+* Inventory accuracy
+* Payment transaction linking
+
+---
+
+## 5.3 Performance Testing
+
+* Query optimization
+* Index usage
+* Large dataset handling
+
+---
+
+# 6. Payment System Testing
+
+---
+
+## 6.1 Critical Test Cases
+
+* Successful payment flow
+* Failed payment handling
+* Duplicate payment prevention
+* Callback verification failure handling
+
+---
+
+## 6.2 Security Testing
+
+* Payment signature validation
+* Fraud simulation tests
+* Unauthorized payment attempts
+
+---
+
+## 6.3 Test Flow
+
+```text
+Create Order → Initiate Payment → Simulate Gateway Response → Verify Order Update
+```
+
+---
+
+# 7. AI System Testing (RAG Chatbot)
+
+---
+
+## 7.1 Customer AI Chat Testing
+
+### Test Cases:
+
+* Product search queries
+* Natural language requests
+* Ambiguous queries handling
+
+---
+
+## 7.2 Admin AI Chat Testing
+
+### Test Cases:
+
+* Sales analysis queries
+* Trend prediction questions
+* Revenue insights accuracy
+
+---
+
+## 7.3 AI Quality Checks:
+
+* Response relevance
+* Response accuracy
+* Hallucination detection
+* Latency under 3 seconds
+
+---
+
+# 8. Security Testing
+
+---
+
+## 8.1 Authentication Testing
+
+* Login validation
+* Token expiration
+* Unauthorized access attempts
+
+---
+
+## 8.2 API Security Testing
+
+* SQL injection attempts
+* XSS attack prevention
+* Rate limiting validation
+
+---
+
+## 8.3 Payment Security Testing
+
+* Fake webhook calls
+* Tampered payment data
+* Replay attack prevention
+
+---
+
+# 9. Performance Testing
+
+---
+
+## 9.1 Load Testing
+
+Simulate:
+
+* 100+ concurrent users
+* Multiple checkout requests
+* AI chat requests simultaneously
+
+---
+
+## 9.2 Stress Testing
+
+* System behavior under overload
+* API timeout handling
+* Database saturation testing
+
+---
+
+## 9.3 Tools:
+
+* JMeter
+* k6 (recommended modern tool)
+
+---
+
+# 10. AI Performance Testing
+
+---
+
+## Metrics:
+
+* Response time (< 3s)
+* Accuracy score
+* Retrieval relevance (RAG quality)
+
+---
+
+## Test Cases:
+
+* "What are best selling products?"
+* "What should I restock?"
+* "Predict next month sales"
+
+---
+
+# 11. Test Automation Strategy
+
+---
+
+## CI/CD Testing Flow:
+
+```text
+GitHub Push
+   ↓
+Run Unit Tests
+   ↓
+Run Integration Tests
+   ↓
+Run Lint Checks
+   ↓
+Deploy if Passed
+```
+
+---
+
+## Tools:
+
+* GitHub Actions
+* Jest
+* Cypress
+* PyTest
+
+---
+
+# 12. Bug Tracking System
+
+---
+
+## Tools:
+
+* GitHub Issues
+* Jira (optional)
+
+---
+
+## Severity Levels:
+
+* Critical → System crash / payment failure
+* High → Core feature broken
+* Medium → UI/UX issue
+* Low → Minor bug
+
+---
+
+# 13. Test Data Strategy
+
+---
+
+## Types:
+
+* Fake customer accounts
+* Sample products (fabric, uniforms)
+* Dummy orders
+* Mock payments
+
+---
+
+## Purpose:
+
+* Avoid real data corruption
+* Safe testing environment
+
+---
+
+# 14. Regression Testing
+
+Every update must ensure:
+
+* Old features still work
+* Payment system unaffected
+* AI responses stable
+* UI consistency maintained
+
+---
+
+# 15. Conclusion
+
+This testing strategy ensures:
+
+* Stable production release
+* Secure payment system
+* Reliable AI performance
+* High-quality user experience
+
+> Testing is not optional — it is the foundation of production-grade systems

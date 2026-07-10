@@ -1,0 +1,290 @@
+# 02_SYSTEM_SCOPE.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** System Scope Definition
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose of This Document
+
+This document defines the **boundaries of the system**, clearly separating:
+
+* What is included in the project (In Scope)
+* What is excluded from the project (Out of Scope)
+
+This ensures that the development effort remains **focused, achievable, and aligned with university timeline constraints**.
+
+---
+
+# 2. Project Scope Overview
+
+The Smart Textile Business Management System is a **web-based full-stack application** designed to digitalize textile retail, uniform manufacturing, and inventory operations.
+
+The system focuses on:
+
+* E-commerce functionality
+* Business process automation
+* Production tracking
+* Inventory management
+* Payment processing
+* Basic analytics and reporting
+
+---
+
+# 3. IN-SCOPE FEATURES
+
+## 3.1 Customer-Facing System (Frontend)
+
+The following features are included in the system:
+
+* Product browsing (catalog view)
+* Product search and filtering
+* Product detail pages
+* Shopping cart functionality
+* User registration and login
+* Checkout system
+* Online payment integration
+* Order tracking system
+* Order history view
+* Responsive UI (mobile + desktop)
+
+---
+
+## 3.2 Admin Dashboard
+
+The admin panel includes:
+
+* Product management (CRUD)
+* Category management
+* Inventory management
+* Order management
+* Customer management
+* Worker management
+* Production tracking overview
+* Dashboard analytics (basic)
+* Sales overview reports
+
+---
+
+## 3.3 Order Management System
+
+* Order creation from frontend
+* Order status lifecycle tracking:
+
+  * Pending
+  * Confirmed
+  * In Production
+  * Quality Check
+  * Completed
+  * Delivered
+* Order cancellation handling
+* Order history tracking
+
+---
+
+## 3.4 Inventory Management System
+
+* Real-time stock tracking
+* Stock increase/decrease on orders
+* Low stock alerts
+* Inventory movement logs
+* Product stock updates
+
+---
+
+## 3.5 Production Management System
+
+* Production task creation from orders
+* Worker assignment
+* Production stage tracking:
+
+  * Cutting
+  * Stitching
+  * Finishing
+  * Quality Check
+* Task completion tracking
+
+---
+
+## 3.6 Payment Integration
+
+* Online payment gateway integration (PayHere / Stripe)
+* Payment verification system
+* Payment status tracking:
+
+  * Pending
+  * Completed
+  * Failed
+  * Refunded
+* Payment history records
+
+---
+
+## 3.7 Authentication & Authorization
+
+* User registration and login
+* JWT-based authentication
+* Role-based access control (RBAC):
+
+  * Customer
+  * Admin
+  * Worker
+* Secure password storage (bcrypt)
+
+---
+
+## 3.8 Basic Reporting
+
+* Sales summary reports
+* Inventory status reports
+* Order statistics
+* Basic dashboard metrics
+
+---
+
+# 4. OUT-OF-SCOPE FEATURES
+
+The following features are **NOT included in the current version** of the system:
+
+---
+
+## 4.1 Advanced ERP Features (Excluded)
+
+* Full accounting system
+* Payroll system
+* HR management system
+* Tax automation
+* Financial auditing tools
+
+---
+
+## 4.2 Mobile Applications
+
+* Native Android application
+* Native iOS application
+
+(Only responsive web application is included)
+
+---
+
+## 4.3 Multi-Branch Support
+
+* Multi-store / multi-branch management
+* Franchise-level reporting
+* Branch-level inventory synchronization
+
+---
+
+## 4.4 Supplier Portal
+
+* Supplier self-service dashboard
+* Supplier bidding system
+* Supplier marketplace
+
+---
+
+## 4.5 Advanced AI Features (Postponed)
+
+* Advanced demand forecasting engine
+* Dynamic pricing optimization AI
+* Full recommendation engine (collaborative filtering)
+* Computer vision for fabric detection
+
+(Only basic analytics may be included in MVP phase)
+
+---
+
+## 4.6 Logistics & Delivery System
+
+* Courier integration (real-time tracking)
+* GPS tracking of deliveries
+* Delivery route optimization
+* Fleet management system
+
+---
+
+## 4.7 WhatsApp / External Automation
+
+* WhatsApp chatbot integration
+* SMS automation system
+* Email marketing automation
+
+---
+
+# 5. SYSTEM BOUNDARY DEFINITION
+
+The system boundary is defined as follows:
+
+## Inside System
+
+* Web application (Frontend + Backend)
+* Database system (PostgreSQL)
+* Payment gateway integration
+* Internal AI analytics service (basic level)
+
+## Outside System
+
+* Courier companies (external APIs not implemented)
+* Banks (only payment gateway interface used)
+* Supplier systems
+* Government systems
+* External ERP systems
+
+---
+
+# 6. MINIMUM VIABLE PRODUCT (MVP) SCOPE
+
+The initial release (for demonstration and evaluation) will include:
+
+### Core MVP Modules:
+
+* User Authentication
+* Product Catalog
+* Shopping Cart
+* Order Management
+* Payment Integration
+* Inventory Updates
+* Admin Dashboard
+* Basic Production Tracking
+
+---
+
+# 7. DESIGN PRINCIPLE FOR SCOPE CONTROL
+
+To ensure project success, the following principle must be followed:
+
+> "If a feature does not directly support order-to-delivery workflow, it is not part of MVP."
+
+This ensures:
+
+* Faster development
+* Lower complexity
+* Easier debugging
+* Stronger university evaluation outcome
+
+---
+
+# 8. SCOPE ASSUMPTIONS
+
+* Users have internet access
+* Business operates from a single location initially
+* Payment gateway is available and functional
+* Product data is provided by client
+* Staff are trained to use digital system
+
+---
+
+# 9. CONCLUSION
+
+This scope definition ensures that the Smart Textile Business Management System remains:
+
+* Realistic
+* Achievable within academic timeline
+* Focused on core business value
+* Technically implementable by the development team
+
+By strictly following this scope, the project avoids unnecessary complexity and ensures a successful delivery of a production-quality system.

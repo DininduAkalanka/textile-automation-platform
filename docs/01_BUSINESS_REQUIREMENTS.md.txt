@@ -1,0 +1,299 @@
+# 01_BUSINESS_REQUIREMENTS.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Business Requirements Specification (BRS)
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose of This Document
+
+This document defines the **real-world business requirements** of the Smart Textile Business Management System. It describes how the textile business operates today and how the proposed system will improve and automate those operations.
+
+This document is the **foundation for system design, database modeling, API development, and frontend architecture**.
+
+---
+
+# 2. Business Overview
+
+The client operates a textile business that includes:
+
+* Fabric retail sales
+* Ready-made garment sales
+* Custom uniform manufacturing
+* Bulk institutional orders (schools, companies, hospitals)
+* In-house production workflow
+
+The business currently operates using manual tools such as:
+
+* Paper-based order books
+* Excel sheets for inventory
+* WhatsApp for customer communication
+* Manual billing and tracking
+
+---
+
+# 3. Current Business Workflow (As-Is System)
+
+## 3.1 Customer Order Flow (Manual)
+
+1. Customer visits store or contacts via WhatsApp
+2. Staff manually records order
+3. Product availability is checked manually
+4. Price is calculated manually
+5. Order is written in register
+6. Customer is notified manually
+7. No real-time tracking exists
+
+---
+
+## 3.2 Inventory Management (Manual Excel System)
+
+* Stock is updated manually in Excel
+* No real-time synchronization
+* No automatic alerts for low stock
+* Errors occur due to manual updates
+* Stock reconciliation is done weekly or monthly
+
+---
+
+## 3.3 Production Workflow
+
+* Orders are handed to tailors verbally or on paper
+* No digital tracking of production stages
+* No visibility for managers
+* Delays are identified only after customer complaints
+
+---
+
+## 3.4 Payment Handling
+
+* Cash payments recorded manually
+* Bank transfers verified manually
+* No integration with payment gateways
+* No automatic reconciliation
+
+---
+
+## 3.5 Customer Management
+
+* Customer details stored in notebooks or WhatsApp chats
+* No centralized customer database
+* No purchase history tracking
+* No customer segmentation
+
+---
+
+# 4. Problems Identified
+
+## 4.1 Operational Problems
+
+* High dependency on manual work
+* Human errors in order entry
+* Delayed order processing
+* Lack of real-time visibility
+* Inefficient communication
+
+---
+
+## 4.2 Inventory Problems
+
+* Frequent stock mismatches
+* Overstocking of slow-moving items
+* Stockouts of high-demand products
+* No predictive ordering
+
+---
+
+## 4.3 Production Problems
+
+* No tracking of production stages
+* No accountability per worker
+* No delivery estimation accuracy
+* Bottlenecks not visible
+
+---
+
+## 4.4 Customer Experience Problems
+
+* No online ordering system
+* Slow response time
+* No order tracking
+* No personalization
+
+---
+
+## 4.5 Management Problems
+
+* No analytics or reporting
+* No forecasting
+* Decisions based on intuition
+* No performance metrics
+
+---
+
+# 5. To-Be System (Proposed Digital Workflow)
+
+## 5.1 Customer Order Flow (Digital)
+
+1. Customer browses products online
+2. Adds products to cart
+3. Places order via website
+4. System validates stock
+5. Order is created automatically
+6. Payment is processed online
+7. Order is sent to production (if custom)
+8. Customer receives real-time updates
+
+---
+
+## 5.2 Inventory Flow
+
+* Stock is updated automatically on every order
+* Low stock alerts are generated
+* Inventory is synchronized in real-time
+* Purchase orders can be generated automatically
+
+---
+
+## 5.3 Production Flow
+
+1. Order enters production queue
+2. Tasks are created for workers
+3. Each stage is tracked:
+
+   * Cutting
+   * Stitching
+   * Finishing
+   * Quality Check
+4. Progress is updated in system
+5. Delivery is marked when completed
+
+---
+
+## 5.4 Payment Flow
+
+* Customers pay via online gateway (PayHere/Stripe)
+* System verifies payment automatically
+* Order status updates instantly
+* Payment records stored securely
+
+---
+
+## 5.5 Customer Management Flow
+
+* Customer accounts created automatically
+* Order history stored permanently
+* Measurement data stored for repeat orders
+* Customer segmentation enabled (VIP, Regular, New)
+
+---
+
+# 6. Functional Requirements
+
+## 6.1 Customer Features
+
+* FR-C1: View product catalog
+* FR-C2: Search and filter products
+* FR-C3: View product details
+* FR-C4: Add products to cart
+* FR-C5: Place orders
+* FR-C6: Make online payments
+* FR-C7: Track order status
+* FR-C8: View order history
+
+---
+
+## 6.2 Admin Features
+
+* FR-A1: Manage products
+* FR-A2: Manage categories
+* FR-A3: Manage inventory
+* FR-A4: Manage orders
+* FR-A5: Update order status
+* FR-A6: Manage customers
+* FR-A7: View analytics dashboard
+* FR-A8: Generate reports
+
+---
+
+## 6.3 Production Features
+
+* FR-P1: Create production tasks
+* FR-P2: Assign tasks to workers
+* FR-P3: Track production stages
+* FR-P4: Mark task completion
+* FR-P5: Record quality checks
+
+---
+
+## 6.4 Payment Features
+
+* FR-PAY1: Process online payments
+* FR-PAY2: Verify transactions
+* FR-PAY3: Handle payment failures
+* FR-PAY4: Store payment history
+
+---
+
+# 7. Business Rules
+
+* BR1: Orders cannot be confirmed without stock validation
+* BR2: Payments must be verified before marking order as paid
+* BR3: Custom orders require measurement data
+* BR4: Inventory cannot go below zero
+* BR5: Each production task must be assigned to a worker
+* BR6: Order status must follow defined workflow sequence
+
+---
+
+# 8. Key Business Entities
+
+* Users (Customers, Admins, Workers)
+* Products (Fabric, Uniforms, Accessories)
+* Orders
+* Order Items
+* Inventory
+* Production Tasks
+* Workers
+* Payments
+* Suppliers (future scope)
+
+---
+
+# 9. Business Workflow Summary
+
+The system transforms the business into a fully digital workflow:
+
+**Customer → Product → Cart → Order → Payment → Production → Delivery**
+
+All steps are tracked in real-time and stored in a centralized system.
+
+---
+
+# 10. Success Criteria
+
+The system will be considered successful if:
+
+* Orders are processed without manual registers
+* Inventory is updated automatically
+* Production stages are trackable
+* Payments are automated and verified
+* Customers can order online
+* Management can see real-time analytics
+* Human errors are significantly reduced
+
+---
+
+# 11. Future Enhancements
+
+* WhatsApp AI order automation
+* AI demand forecasting
+* Supplier portal
+* Mobile application
+* Barcode inventory tracking
+* Advanced analytics dashboard
+* Multi-branch expansion

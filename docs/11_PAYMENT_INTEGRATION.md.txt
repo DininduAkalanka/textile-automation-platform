@@ -1,0 +1,331 @@
+# 13_PAYMENT_INTEGRATION.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Payment Integration Architecture
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **payment system architecture** for handling:
+
+* Customer payments (e-commerce orders)
+* Bulk/B2B payments
+* Cash on Delivery (COD)
+* Bank transfers
+* Payment gateway integration
+
+---
+
+# 2. Supported Payment Methods
+
+## 2.1 Online Payments
+
+* PayHere (Primary for Sri Lanka 🇱🇰)
+* Stripe (International fallback)
+
+---
+
+## 2.2 Offline Payments
+
+* Cash on Delivery (COD)
+* Bank Transfer
+* Manual admin verification
+
+---
+
+# 3. Payment System Architecture
+
+```text id="pay001"
+Frontend (Checkout)
+      ↓
+Backend API (NestJS)
+      ↓
+Payment Module
+      ↓
+Payment Gateway (PayHere / Stripe)
+      ↓
+Callback Verification
+      ↓
+Order Status Update
+      ↓
+Inventory Deduction + Production Trigger
+```
+
+---
+
+# 4. Payment Flow Design
+
+---
+
+## 4.1 Online Payment Flow
+
+```text id="pay002"
+1. Customer places order
+2. System creates "PENDING PAYMENT" order
+3. Backend sends payment request to gateway
+4. User redirected to PayHere/Stripe
+5. Payment completed
+6. Gateway sends callback to backend
+7. Backend verifies signature
+8. Order marked as PAID
+9. Production process starts
+```
+
+---
+
+## 4.2 Cash on Delivery (COD) Flow
+
+```text id="pay003"
+1. Customer selects COD
+2. Order created instantly
+3. Order marked as "CONFIRMED (COD)"
+4. Payment collected on delivery
+5. Admin marks payment as completed
+```
+
+---
+
+## 4.3 Bank Transfer Flow
+
+```text id="pay004"
+1. Customer places order
+2. Bank details displayed
+3. Customer uploads payment slip
+4. Admin verifies payment manually
+5. Order marked as PAID
+```
+
+---
+
+# 5. Payment Module Backend Design
+
+## 5.1 Payment Controller Responsibilities
+
+* Create payment session
+* Handle gateway callbacks
+* Verify transactions
+* Update order status
+
+---
+
+## 5.2 Payment Service Responsibilities
+
+* Generate payment request payload
+* Validate payment responses
+* Store transaction records
+* Handle failures and retries
+
+---
+
+## 5.3 Payment Entity Structure
+
+```sql id="pay005"
+CREATE TABLE payments (
+    payment_id      UUID PRIMARY KEY,
+    order_id        UUID NOT NULL,
+    amount          DECIMAL(12,2) NOT NULL,
+    payment_method  VARCHAR(20),
+    gateway         VARCHAR(50),
+    transaction_id  VARCHAR(255),
+    status          VARCHAR(20), -- pending, completed, failed, refunded
+    created_at      TIMESTAMP,
+    updated_at      TIMESTAMP
+);
+```
+
+---
+
+# 6. PayHere Integration (Sri Lanka)
+
+## 6.1 Why PayHere?
+
+* Widely used in Sri Lanka
+* Supports LKR currency
+* Simple integration
+* Trusted by local businesses
+
+---
+
+## 6.2 PayHere Flow
+
+```text id="pay006"
+Backend generates hash → Redirect user → PayHere checkout
+→ Payment processed → Callback to backend → Verify hash → Confirm payment
+```
+
+---
+
+## 6.3 Security Requirement
+
+* Hash verification is mandatory
+* Never trust frontend payment success
+* Always verify with backend signature check
+
+---
+
+# 7. Stripe Integration (Optional International)
+
+## Features:
+
+* Multi-currency support
+* Card payments
+* Apple Pay / Google Pay support
+
+---
+
+# 8. Order Payment State Machine
+
+```text id="pay007"
+PENDING_PAYMENT
+      ↓
+PAYMENT_PROCESSING
+      ↓
+PAID
+      ↓
+FAILED / CANCELLED
+      ↓
+REFUNDED
+```
+
+---
+
+# 9. Refund System Design
+
+## 9.1 Refund Conditions:
+
+* Order cancellation before production
+* Payment failure
+* Customer request approval (admin only)
+
+---
+
+## 9.2 Refund Flow:
+
+```text id="pay008"
+Admin initiates refund → Gateway refund API → Transaction reversal → Update order status
+```
+
+---
+
+# 10. Security Design (Critical)
+
+---
+
+## 10.1 Payment Security Rules
+
+* Never trust frontend payment status
+* Always verify gateway callback signature
+* Store all transaction logs
+* Use HTTPS only
+
+---
+
+## 10.2 Fraud Prevention
+
+* Detect duplicate transactions
+* Validate order amount consistency
+* Block suspicious repeated payments
+
+---
+
+# 11. Backend API Endpoints
+
+---
+
+## Customer APIs
+
+```text id="pay009"
+POST   /api/payments/create
+POST   /api/payments/verify
+GET    /api/payments/status/:orderId
+```
+
+---
+
+## Admin APIs
+
+```text id="pay010"
+GET    /api/admin/payments
+POST   /api/admin/payments/refund
+GET    /api/admin/payment-report
+```
+
+---
+
+# 12. Payment + Order Integration
+
+## Critical Rule:
+
+> Payment success automatically triggers order lifecycle
+
+---
+
+## Flow:
+
+```text id="pay011"
+Payment SUCCESS
+      ↓
+Update Order → PAID
+      ↓
+Reduce Inventory Stock
+      ↓
+Create Production Tasks
+      ↓
+Notify Customer
+```
+
+---
+
+# 13. Error Handling Strategy
+
+* Payment failed → retry option
+* Gateway timeout → pending state
+* Callback failure → retry webhook processing
+* Logging all errors in DB
+
+---
+
+# 14. Logging & Audit System
+
+Every payment must store:
+
+* Transaction ID
+* Gateway response
+* Timestamp
+* User ID
+* IP address
+
+---
+
+# 15. Performance Optimization
+
+* Async payment processing
+* Webhook queue system (future upgrade)
+* Redis caching for payment sessions
+
+---
+
+# 16. Future Enhancements
+
+* Subscription payments (for B2B clients)
+* Installment payment system
+* Loyalty points integration with payments
+* AI-based fraud detection system
+
+---
+
+# 17. Conclusion
+
+This payment system design ensures:
+
+* Secure transactions
+* Reliable order processing
+* Real-world payment gateway integration
+* Scalable architecture for future growth
+
+> This system is designed to match real production e-commerce platforms like Shopify-level payment flow reliability

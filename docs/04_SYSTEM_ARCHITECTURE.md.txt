@@ -1,0 +1,361 @@
+# 04_SYSTEM_ARCHITECTURE.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** System Architecture Design
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **high-level and low-level architecture** of the Smart Textile Business Management System.
+
+It explains how all system components interact, including:
+
+* Frontend application
+* Backend services
+* Database layer
+* Payment gateway
+* Optional AI services
+
+---
+
+# 2. Architectural Style
+
+The system follows a:
+
+> **Modular Monolithic Architecture (MVP Phase) → Microservice-Ready Design (Future Phase)**
+
+This approach ensures:
+
+* Fast development for university timeline
+* Easy deployment
+* Clean modular separation
+* Future scalability into microservices
+
+---
+
+# 3. High-Level Architecture
+
+```text id="sys001"
+            ┌──────────────────────────────┐
+            │        FRONTEND              │
+            │   Next.js (React App)       │
+            │  - Customer UI              │
+            │  - Admin Dashboard          │
+            └─────────────┬────────────────┘
+                          │ REST API (HTTPS)
+                          ▼
+            ┌──────────────────────────────┐
+            │        BACKEND              │
+            │     NestJS API Server       │
+            │  - Auth Module             │
+            │  - Product Module          │
+            │  - Order Module            │
+            │  - Inventory Module        │
+            │  - Production Module       │
+            │  - Payment Module          │
+            └─────────────┬────────────────┘
+                          │ Prisma ORM
+                          ▼
+            ┌──────────────────────────────┐
+            │       DATABASE              │
+            │     PostgreSQL             │
+            │  - Users                  │
+            │  - Products              │
+            │  - Orders                │
+            │  - Inventory             │
+            │  - Payments              │
+            │  - Production Tasks      │
+            └─────────────┬────────────────┘
+                          │
+        ┌─────────────────┴─────────────────┐
+        ▼                                   ▼
+┌──────────────────┐             ┌──────────────────┐
+│ PAYMENT GATEWAY  │             │ OPTIONAL AI      │
+│ PayHere / Stripe │             │ FastAPI Service  │
+│ External System   │             │ Forecasting      │
+└──────────────────┘             └──────────────────┘
+```
+
+---
+
+# 4. System Components
+
+---
+
+# 4.1 Frontend Layer (Next.js)
+
+## Responsibilities:
+
+* Render UI for customers and admin
+* Handle routing and navigation
+* Manage UI state
+* Communicate with backend APIs
+
+## Modules:
+
+* Product Catalog UI
+* Cart System
+* Checkout Flow
+* Authentication UI
+* Admin Dashboard
+* Order Tracking UI
+
+---
+
+## Frontend Architecture Pattern:
+
+* Component-Based Architecture
+* App Router (Next.js 14+)
+* Server + Client Components
+* Zustand (state management)
+
+---
+
+# 4.2 Backend Layer (NestJS)
+
+## Responsibilities:
+
+* Business logic execution
+* API handling
+* Authentication & authorization
+* Payment processing logic
+* Inventory updates
+* Production workflow management
+
+---
+
+## Backend Architecture Pattern:
+
+> Modular Monolith Architecture
+
+Each feature is a module:
+
+* AuthModule
+* ProductModule
+* OrderModule
+* InventoryModule
+* PaymentModule
+* ProductionModule
+
+---
+
+## Internal Flow Example:
+
+```text id="flow001"
+Frontend Request
+     ↓
+Controller (NestJS)
+     ↓
+Service Layer (Business Logic)
+     ↓
+Repository Layer (Prisma ORM)
+     ↓
+PostgreSQL Database
+```
+
+---
+
+# 4.3 Database Layer (PostgreSQL)
+
+## Responsibilities:
+
+* Persistent data storage
+* Transaction management
+* Data integrity enforcement
+
+## Key Features:
+
+* Relational schema design
+* Foreign key constraints
+* Indexing for performance
+* JSONB for flexible measurement data
+
+---
+
+# 4.4 Payment Gateway Layer
+
+## External System:
+
+* PayHere (primary for Sri Lanka)
+* Stripe (fallback/global support)
+
+## Flow:
+
+```text id="payflow"
+Order Created
+     ↓
+Payment Request Sent
+     ↓
+Redirect to Gateway
+     ↓
+User Completes Payment
+     ↓
+Gateway Sends Webhook
+     ↓
+Backend Verifies Payment
+     ↓
+Order Status Updated
+```
+
+---
+
+# 4.5 Optional AI Layer (Future Extension)
+
+## Responsibilities:
+
+* Demand forecasting
+* Inventory prediction
+* Sales analytics
+* Product recommendations
+
+## Technology:
+
+* Python FastAPI
+* Scikit-learn / Statsmodels
+* REST API integration
+
+---
+
+# 5. Data Flow Architecture
+
+## Example: Order Placement Flow
+
+```text id="dataflow001"
+Customer UI
+     ↓
+Add to Cart
+     ↓
+Checkout Request
+     ↓
+Backend Order API
+     ↓
+Database Order Creation
+     ↓
+Payment Gateway Redirect
+     ↓
+Payment Confirmation
+     ↓
+Inventory Update
+     ↓
+Production Task Creation
+     ↓
+Order Status Updated
+```
+
+---
+
+# 6. Security Architecture
+
+## Authentication:
+
+* JWT-based authentication
+* Token expiration handling
+* Refresh token mechanism
+
+## Authorization:
+
+* Role-Based Access Control (RBAC)
+
+  * Customer
+  * Admin
+  * Worker
+
+## Security Measures:
+
+* Password hashing (bcrypt)
+* Input validation
+* SQL injection protection (Prisma ORM)
+* HTTPS enforcement
+
+---
+
+# 7. Scalability Design
+
+## Current (MVP):
+
+* Single backend server
+* Single database instance
+
+## Future Scaling:
+
+* Horizontal scaling (multiple NestJS instances)
+* Redis caching layer
+* Microservices split:
+
+  * Order Service
+  * Payment Service
+  * Inventory Service
+  * AI Service
+
+---
+
+# 8. Deployment Architecture
+
+## Environment Setup:
+
+* Frontend → Vercel / Netlify
+* Backend → AWS / Render / VPS
+* Database → Supabase / AWS RDS
+* AI Service → Separate Python server
+
+## CI/CD Pipeline:
+
+```text id="cicd001"
+GitHub Push
+     ↓
+GitHub Actions
+     ↓
+Run Tests
+     ↓
+Build Project
+     ↓
+Deploy to Cloud
+```
+
+---
+
+# 9. Communication Between Services
+
+| Component                 | Protocol         |
+| ------------------------- | ---------------- |
+| Frontend → Backend        | REST API (HTTPS) |
+| Backend → Database        | Prisma ORM       |
+| Backend → Payment Gateway | HTTPS API        |
+| Backend → AI Service      | REST API         |
+
+---
+
+# 10. Performance Considerations
+
+* API response time < 2 seconds
+* Database indexing for products/orders
+* Pagination for product listing
+* Image optimization via CDN
+
+---
+
+# 11. Key Architectural Principles
+
+* Separation of Concerns
+* Modular Design
+* Stateless Backend APIs
+* Scalability by Design
+* Security First Approach
+* AI-ready Integration Layer
+
+---
+
+# 12. Conclusion
+
+This architecture ensures the Smart Textile Business Management System is:
+
+* Production-ready
+* Scalable for future expansion
+* Modular for team development
+* Secure and maintainable
+* Suitable for university evaluation and real-world deployment

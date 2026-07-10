@@ -1,0 +1,387 @@
+# 06_DATABASE_DESIGN.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Database Design Specification
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **complete database structure** for the Smart Textile Business Management System.
+
+It includes:
+
+* Entity relationships
+* Table structures
+* Constraints
+* Indexing strategy
+* Prisma ORM mapping approach
+
+---
+
+# 2. Database Technology
+
+* Database: PostgreSQL
+* ORM: Prisma
+* Data format support: SQL + JSONB
+* Architecture: Relational with flexible JSON fields
+
+---
+
+# 3. Database Design Principles
+
+* Normalize core business data (users, orders, products)
+* Use JSONB only for flexible attributes (measurements)
+* Maintain referential integrity using foreign keys
+* Optimize for read-heavy e-commerce operations
+* Avoid redundant data duplication
+
+---
+
+# 4. Entity Relationship Overview
+
+## Core Flow
+
+```text id="er001"
+User → Customer → Order → Order Items → Payment
+                      ↓
+                Inventory Update
+                      ↓
+             Production Tasks
+```
+
+---
+
+# 5. Database Tables
+
+---
+
+# 5.1 User Management
+
+## Table: users
+
+Primary authentication table for all system users.
+
+```sql id="t001"
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    user_type VARCHAR(20) NOT NULL CHECK (
+        user_type IN ('customer','admin','worker')
+    ),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## Table: customers
+
+```sql id="t002"
+CREATE TABLE customers (
+    customer_id UUID PRIMARY KEY,
+    user_id UUID UNIQUE REFERENCES users(user_id),
+    loyalty_points INT DEFAULT 0,
+    customer_segment VARCHAR(20) DEFAULT 'regular',
+    preferred_language VARCHAR(5) DEFAULT 'en',
+    notes TEXT
+);
+```
+
+---
+
+## Table: addresses
+
+```sql id="t003"
+CREATE TABLE addresses (
+    address_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(user_id),
+    address_line1 TEXT,
+    city TEXT,
+    province TEXT,
+    postal_code TEXT,
+    is_default BOOLEAN DEFAULT false
+);
+```
+
+---
+
+# 5.2 Product System
+
+## Table: product_categories
+
+```sql id="t004"
+CREATE TABLE product_categories (
+    category_id UUID PRIMARY KEY,
+    category_name VARCHAR(150),
+    parent_category_id UUID REFERENCES product_categories(category_id)
+);
+```
+
+---
+
+## Table: products
+
+```sql id="t005"
+CREATE TABLE products (
+    product_id UUID PRIMARY KEY,
+    product_name VARCHAR(255),
+    product_type VARCHAR(30),
+    category_id UUID REFERENCES product_categories(category_id),
+    fabric_type VARCHAR(100),
+    color VARCHAR(50),
+    price DECIMAL(10,2),
+    cost_price DECIMAL(10,2),
+    unit VARCHAR(20),
+    requires_measurement BOOLEAN DEFAULT false,
+    current_stock DECIMAL(10,2) DEFAULT 0,
+    minimum_stock_level DECIMAL(10,2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'active'
+);
+```
+
+---
+
+## Table: product_images
+
+```sql id="t006"
+CREATE TABLE product_images (
+    image_id UUID PRIMARY KEY,
+    product_id UUID REFERENCES products(product_id),
+    image_url TEXT,
+    is_primary BOOLEAN DEFAULT false
+);
+```
+
+---
+
+# 5.3 Measurement System
+
+## Table: customer_measurements
+
+```sql id="t007"
+CREATE TABLE customer_measurements (
+    measurement_id UUID PRIMARY KEY,
+    customer_id UUID REFERENCES customers(customer_id),
+    label VARCHAR(150),
+    person_name VARCHAR(150),
+    product_type VARCHAR(50),
+    measurements JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+# 5.4 Order System
+
+## Table: orders
+
+```sql id="t008"
+CREATE TABLE orders (
+    order_id UUID PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE,
+    customer_id UUID REFERENCES customers(customer_id),
+    order_status VARCHAR(30) DEFAULT 'pending',
+    subtotal DECIMAL(12,2),
+    discount DECIMAL(12,2),
+    total DECIMAL(12,2),
+    payment_status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## Table: order_items
+
+```sql id="t009"
+CREATE TABLE order_items (
+    item_id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders(order_id),
+    product_id UUID REFERENCES products(product_id),
+    quantity DECIMAL(10,2),
+    unit_price DECIMAL(10,2),
+    measurements JSONB,
+    subtotal DECIMAL(10,2)
+);
+```
+
+---
+
+## Table: payments
+
+```sql id="t010"
+CREATE TABLE payments (
+    payment_id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders(order_id),
+    payment_method VARCHAR(30),
+    transaction_id VARCHAR(255),
+    amount DECIMAL(12,2),
+    status VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+# 5.5 Inventory System
+
+## Table: inventory
+
+```sql id="t011"
+CREATE TABLE inventory (
+    inventory_id UUID PRIMARY KEY,
+    product_id UUID UNIQUE REFERENCES products(product_id),
+    quantity_available DECIMAL(10,2),
+    quantity_reserved DECIMAL(10,2),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## Table: inventory_movements
+
+```sql id="t012"
+CREATE TABLE inventory_movements (
+    movement_id UUID PRIMARY KEY,
+    product_id UUID REFERENCES products(product_id),
+    movement_type VARCHAR(20),
+    quantity_change DECIMAL(10,2),
+    reference_id UUID,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+# 5.6 Production System
+
+## Table: workers
+
+```sql id="t013"
+CREATE TABLE workers (
+    worker_id UUID PRIMARY KEY,
+    worker_name VARCHAR(150),
+    specialization VARCHAR(30),
+    skill_level INT,
+    hourly_rate DECIMAL(10,2)
+);
+```
+
+---
+
+## Table: production_tasks
+
+```sql id="t014"
+CREATE TABLE production_tasks (
+    task_id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders(order_id),
+    order_item_id UUID REFERENCES order_items(item_id),
+    stage VARCHAR(30),
+    status VARCHAR(30),
+    assigned_worker_id UUID REFERENCES workers(worker_id),
+    start_time TIMESTAMP,
+    end_time TIMESTAMP
+);
+```
+
+---
+
+# 6. Relationships Summary
+
+## Key Relationships
+
+* users → customers (1:1)
+* customers → orders (1:M)
+* orders → order_items (1:M)
+* products → order_items (1:M)
+* products → inventory (1:1)
+* orders → payments (1:M)
+* orders → production_tasks (1:M)
+* workers → production_tasks (1:M)
+
+---
+
+# 7. Indexing Strategy
+
+## Recommended Indexes
+
+* users.email (unique index)
+* orders.customer_id
+* orders.order_status
+* products.category_id
+* inventory.product_id
+* payments.order_id
+
+---
+
+# 8. Performance Optimization
+
+* Use pagination for product listing
+* Index frequently queried columns
+* Use caching for product catalog (future Redis)
+* Avoid deep joins in frontend queries
+
+---
+
+# 9. JSONB Usage Strategy
+
+Used only for flexible fields:
+
+* customer_measurements.measurements
+* order_items.measurements
+
+Reason:
+
+* Measurement structures differ per product type
+* Avoid schema explosion
+* Allows flexible garment types
+
+---
+
+# 10. Data Integrity Rules
+
+* Orders cannot exist without valid customer
+* Order items must belong to valid order
+* Payments must reference valid order
+* Inventory must always match product
+
+---
+
+# 11. Prisma Mapping Strategy
+
+Each table maps directly to Prisma models:
+
+* users → User model
+* orders → Order model
+* products → Product model
+* etc.
+
+Prisma ensures:
+
+* type safety
+* migration control
+* schema consistency
+
+---
+
+# 12. Conclusion
+
+This database design ensures:
+
+* Strong relational integrity
+* High scalability
+* Clean modular structure
+* Support for real-world textile business operations
+* Easy integration with backend services

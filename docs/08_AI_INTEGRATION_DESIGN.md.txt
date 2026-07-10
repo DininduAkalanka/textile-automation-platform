@@ -1,0 +1,391 @@
+# 10_AI_INTEGRATION_DESIGN.md
+
+# Smart Textile Business Management System
+
+**Version:** 2.0.0
+**Document Type:** AI + RAG System Design Specification
+**Status:** Enhanced Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines an advanced **dual-layer AI system with RAG (Retrieval-Augmented Generation)** to support:
+
+### 1. Customer Intelligence Chat System
+
+* Product search via natural language
+* Smart recommendations
+* Direct product linking
+
+### 2. Business Intelligence Chat System
+
+* AI-powered analytics for owner
+* Sales interpretation
+* Demand forecasting insights
+* Profitability analysis
+
+---
+
+# 2. Core Innovation: Dual RAG Architecture
+
+This system introduces **two separate AI assistants**:
+
+---
+
+## 2.1 Customer AI Assistant (Shopping Intelligence)
+
+### Purpose:
+
+Help customers find products faster without manual browsing.
+
+---
+
+### Example User Queries:
+
+* “I need school uniform fabric for kids”
+* “Show me cheap cotton shirts”
+* “What is best fabric for hot weather?”
+
+---
+
+### AI Behavior:
+
+The system:
+
+1. Understands intent (NLP)
+2. Searches product database (RAG retrieval)
+3. Matches relevant products
+4. Returns:
+
+   * Product list
+   * Direct product links
+   * Price + stock info
+
+---
+
+### Response Format:
+
+```json id="rag001"
+{
+  "query": "cotton shirt",
+  "results": [
+    {
+      "productId": "uuid",
+      "name": "Premium Cotton Shirt",
+      "price": 2500,
+      "stock": 20,
+      "link": "/products/uuid"
+    }
+  ],
+  "message": "These are the best matches for cotton shirts"
+}
+```
+
+---
+
+### Business Value:
+
+* Faster product discovery
+* Higher conversion rate
+* Reduced user friction
+* Increased sales
+
+---
+
+# 2.2 Owner AI Assistant (Business Intelligence RAG)
+
+### Purpose:
+
+Help business owner understand complex data using natural language.
+
+---
+
+### Example Queries:
+
+* “What was the best-selling product last month?”
+* “Which products are most profitable?”
+* “What should I restock this week?”
+* “Why did sales drop in June?”
+
+---
+
+### AI Behavior:
+
+The system:
+
+1. Retrieves structured business data
+2. Combines with analytics engine
+3. Applies RAG + LLM reasoning
+4. Generates human-readable insights
+
+---
+
+### Response Example:
+
+```json id="rag002"
+{
+  "query": "best selling last month",
+  "insight": "Cotton School Uniforms were the top-selling product category last month with 32% of total sales.",
+  "data": {
+    "topProduct": "Cotton School Uniform",
+    "revenue": 450000,
+    "growth": "+18%"
+  },
+  "recommendation": "Increase stock by 25% for next month due to high demand trend."
+}
+```
+
+---
+
+### Business Value:
+
+* Data-driven decision making
+* Reduces dependency on manual reports
+* Predictive business planning
+* Improves profit margins
+
+---
+
+# 3. RAG System Architecture
+
+## 3.1 High-Level Flow
+
+```text id="ragflow001"
+User Query
+     ↓
+Intent Detection Layer
+     ↓
+Route Decision:
+   ├── Customer RAG
+   └── Business RAG
+     ↓
+Retrieval Layer (Database / Vector Search)
+     ↓
+Context Enrichment
+     ↓
+LLM (GPT / OpenAI / Local Model)
+     ↓
+Final Response
+```
+
+---
+
+# 3.2 RAG Components
+
+## 1. Retriever Layer
+
+Sources:
+
+* PostgreSQL (Products, Orders)
+* Sales Data
+* Inventory Data
+* Embedding Vector DB (future upgrade)
+
+---
+
+## 2. Embedding Layer (Future Upgrade)
+
+* Convert product descriptions into vectors
+* Enable semantic search
+* Improve recommendation accuracy
+
+Tools:
+
+* OpenAI Embeddings OR
+* Sentence Transformers
+
+---
+
+## 3. Generator Layer
+
+* Large Language Model (LLM)
+* Converts retrieved data into natural language
+
+---
+
+# 4. Customer RAG System Design
+
+## 4.1 Workflow
+
+```text id="ragcust001"
+Customer Query
+     ↓
+Intent Classification (Shopping Intent)
+     ↓
+Product Search Engine (SQL + Semantic Search)
+     ↓
+Top Product Selection
+     ↓
+LLM Response Formatting
+     ↓
+UI Display with Product Cards
+```
+
+---
+
+## 4.2 Key Feature
+
+### Smart Product Linking
+
+Every AI response includes:
+
+* Product Name
+* Price
+* Stock
+* Direct clickable link
+
+---
+
+# 5. Business RAG System Design
+
+## 5.1 Workflow
+
+```text id="ragbiz001"
+Owner Question
+     ↓
+Query Understanding (Analytics Intent)
+     ↓
+Data Retrieval (SQL Aggregation)
+     ↓
+Analytics Engine (Python)
+     ↓
+LLM Explanation Layer
+     ↓
+Insight Response
+```
+
+---
+
+## 5.2 Data Sources
+
+* orders table
+* order_items table
+* inventory table
+* payments table
+
+---
+
+## 5.3 Analytical Capabilities
+
+* Revenue trends
+* Product performance
+* Seasonal demand
+* Profit margin analysis
+* Inventory efficiency
+
+---
+
+# 6. AI Service Architecture Update
+
+```text id="ragarch001"
+Frontend (Chat UI)
+      ↓
+Backend API (NestJS)
+      ↓
+AI Gateway Module
+      ↓
+RAG Engine (FastAPI)
+      ├── Customer RAG Service
+      ├── Business RAG Service
+      ├── Retrieval Layer
+      └── LLM Interface
+```
+
+---
+
+# 7. Chat System Design
+
+## 7.1 Customer Chat UI
+
+* Floating chat widget
+* Product-aware responses
+* Inline product cards
+* “Add to cart” directly from chat
+
+---
+
+## 7.2 Admin Chat UI
+
+* Dashboard-integrated AI panel
+* Natural language analytics
+* Exportable insights
+* Chart generation support
+
+---
+
+# 8. Example Use Cases
+
+---
+
+## 8.1 Customer Example
+
+**User:**
+
+> “I want cheap fabric for school uniforms”
+
+**AI Response:**
+
+* Cotton fabric suggestions
+* Price comparison
+* Direct product links
+* Stock availability
+
+---
+
+## 8.2 Business Owner Example
+
+**User:**
+
+> “What should I order next month?”
+
+**AI Response:**
+
+* Predicted demand list
+* High-profit products
+* Recommended purchase quantity
+
+---
+
+# 9. Security Design
+
+* Admin AI restricted via role-based access
+* Customer AI cannot access financial data
+* API authentication required
+* Query sanitization to prevent injection attacks
+
+---
+
+# 10. Performance Optimization
+
+* Cache frequent queries
+* Precompute analytics daily
+* Limit LLM calls with smart routing
+* Use batching for reports
+
+---
+
+# 11. Future Enhancements
+
+* Vector database (Pinecone / Weaviate)
+* Voice-based AI assistant
+* WhatsApp chatbot integration
+* Real-time inventory AI alerts
+* Autonomous pricing engine
+
+---
+
+# 12. Conclusion
+
+This dual RAG system transforms the platform into:
+
+> 🧠 An intelligent commerce + business decision system
+
+It adds:
+
+* Smart customer shopping assistant
+* AI business analyst for owner
+* Natural language data interaction layer
+
+This is a **high-impact AI feature suitable for top-level academic grading and real-world deployment.**

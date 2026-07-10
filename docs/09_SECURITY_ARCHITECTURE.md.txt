@@ -1,0 +1,360 @@
+# 11_SECURITY_ARCHITECTURE.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** Security Architecture Specification
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **security architecture** of the system to ensure:
+
+* Data protection
+* Secure authentication
+* Role-based access control
+* Payment security
+* AI system safety
+* System integrity
+
+---
+
+# 2. Security Principles
+
+The system follows these core principles:
+
+* **Zero Trust Model** (verify every request)
+* **Least Privilege Access**
+* **Defense in Depth**
+* **Secure by Design**
+* **Fail Securely (not silently)**
+
+---
+
+# 3. Authentication Security
+
+## 3.1 Authentication Method
+
+* JWT (JSON Web Tokens)
+* Secure HTTP-only cookies (recommended)
+* Refresh token mechanism
+
+---
+
+## 3.2 Password Security
+
+* Hashing algorithm: **bcrypt**
+* Salt rounds: 10–12
+* No plain text password storage
+
+---
+
+## 3.3 Login Protection
+
+* Rate limiting (brute force protection)
+* Account lock after multiple failed attempts
+* CAPTCHA (optional enhancement)
+
+---
+
+## 3.4 Token Security Flow
+
+```text id="sec001"
+Login → Validate Credentials → Generate JWT + Refresh Token
+     ↓
+Store Refresh Token (DB)
+     ↓
+Access Token used for API calls
+     ↓
+Refresh Token renews Access Token
+```
+
+---
+
+# 4. Authorization (Role-Based Access Control - RBAC)
+
+## 4.1 User Roles
+
+* Customer
+* Admin
+* Worker
+
+---
+
+## 4.2 Permission Matrix
+
+| Feature           | Customer | Worker | Admin |
+| ----------------- | -------- | ------ | ----- |
+| View Products     | ✔        | ✔      | ✔     |
+| Place Orders      | ✔        | ✖      | ✔     |
+| Manage Inventory  | ✖        | ✖      | ✔     |
+| Manage Production | ✖        | ✔      | ✔     |
+| View AI Reports   | ✖        | ✖      | ✔     |
+| Manage Users      | ✖        | ✖      | ✔     |
+
+---
+
+## 4.3 Guard System (NestJS)
+
+* JWT Guard
+* Role Guard
+* Permission Middleware
+
+---
+
+# 5. API Security
+
+## 5.1 Rate Limiting
+
+* Prevent API abuse
+* Limit requests per user/IP
+
+Example:
+
+* 100 requests/minute (general users)
+* 20 requests/minute (auth endpoints)
+
+---
+
+## 5.2 Input Validation
+
+* DTO validation (class-validator)
+* Schema validation for all requests
+* Reject malformed payloads
+
+---
+
+## 5.3 SQL Injection Protection
+
+* Prisma ORM prevents raw SQL injection
+* No direct query concatenation allowed
+
+---
+
+## 5.4 XSS Protection
+
+* Escape user inputs
+* Sanitize HTML content
+* Use secure frontend rendering
+
+---
+
+# 6. Data Security
+
+## 6.1 Encryption
+
+* HTTPS (TLS 1.2+ required)
+* Sensitive data encrypted at rest (optional upgrade)
+
+---
+
+## 6.2 Sensitive Data Protection
+
+Protected data:
+
+* Passwords
+* Payment transactions
+* User personal information
+* Business financial data
+
+---
+
+## 6.3 Database Security
+
+* Role-based DB access
+* No public DB exposure
+* Strong DB credentials
+* Restricted IP access
+
+---
+
+# 7. Payment Security
+
+## 7.1 Payment Flow Security
+
+```text id="sec002"
+Frontend → Backend → Payment Gateway (PayHere/Stripe)
+                    ↓
+            Secure Callback Verification
+                    ↓
+            Backend validates transaction
+                    ↓
+            Update order status
+```
+
+---
+
+## 7.2 Security Rules
+
+* Never trust frontend payment status
+* Always verify with payment gateway
+* Store transaction logs
+* Use signed callbacks
+
+---
+
+# 8. AI System Security
+
+## 8.1 AI Access Control
+
+* Customer AI → Product database only
+* Admin AI → Full business data access
+
+---
+
+## 8.2 Data Protection in AI
+
+* Remove sensitive fields before sending to LLM
+* No raw financial secrets exposed to model
+* Controlled query context injection
+
+---
+
+## 8.3 Prompt Injection Protection
+
+* Sanitize user prompts
+* Block malicious instructions like:
+
+  * “ignore system rules”
+  * “reveal database”
+* Strict system prompt enforcement
+
+---
+
+# 9. Session & Token Security
+
+## 9.1 Session Handling
+
+* Stateless JWT authentication
+* Refresh token stored securely
+* Token expiration enforcement
+
+---
+
+## 9.2 Token Rules
+
+* Access token: short-lived (15–30 min)
+* Refresh token: long-lived (7–30 days)
+* Token rotation enabled
+
+---
+
+# 10. File Upload Security
+
+## 10.1 Allowed File Types
+
+* Images: JPG, PNG, WEBP
+* Documents: PDF (for invoices)
+
+---
+
+## 10.2 Protection Mechanisms
+
+* File type validation
+* File size limits
+* Virus scan (future upgrade)
+* Secure storage (AWS S3)
+
+---
+
+# 11. Logging & Monitoring
+
+## 11.1 System Logs
+
+* Login attempts
+* Payment transactions
+* Order updates
+* API errors
+
+---
+
+## 11.2 Audit Logs (Admin Only)
+
+* Who changed inventory
+* Who updated orders
+* Who accessed reports
+
+---
+
+## 11.3 Monitoring Tools (Future)
+
+* Winston logger (Node.js)
+* Sentry (error tracking)
+* CloudWatch (AWS)
+
+---
+
+# 12. Security Threat Model
+
+## Potential Threats:
+
+* SQL Injection (mitigated via Prisma)
+* XSS attacks
+* Unauthorized admin access
+* Payment fraud
+* API abuse
+* Data leakage via AI prompts
+
+---
+
+## Mitigation Strategy:
+
+* Input validation everywhere
+* Strict RBAC
+* Secure API gateway
+* AI prompt filtering
+* Encrypted communication
+
+---
+
+# 13. Network Security
+
+* HTTPS enforced everywhere
+* No HTTP endpoints in production
+* CORS policy configured
+* API access restricted by domain
+
+---
+
+# 14. Secure Deployment Practices
+
+* Environment variables stored securely
+* No secrets in codebase
+* Separate dev/staging/production environments
+* Regular dependency updates
+
+---
+
+# 15. Backup & Recovery Security
+
+* Daily automated database backups
+* Encrypted backup storage
+* Disaster recovery plan
+
+---
+
+# 16. Security Testing Strategy
+
+* Penetration testing (manual)
+* API vulnerability testing
+* Authentication flow testing
+* AI prompt injection testing
+
+---
+
+# 17. Conclusion
+
+This security architecture ensures:
+
+* Safe e-commerce transactions
+* Protected user data
+* Secure AI system integration
+* Controlled admin access
+* Production-grade reliability
+
+It makes the system suitable for:
+
+> 🏢 Real-world deployment + academic excellence level security design

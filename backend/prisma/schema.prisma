@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CUSTOMER
+  WORKER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  QUALITY_CHECK
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  STRIPE
+  PAYHERE
+  COD
+  INSTALLMENT
+}
+
+enum PaymentPlan {
+  FULL
+  INSTALLMENT
+}
+
+enum MovementType {
+  INITIAL // opening balance when an inventory row is created
+  RESERVE // order placed:              reserved += qty
+  RELEASE // order cancelled / failed:  reserved -= qty
+  SALE // payment/COD confirmed:        available -= qty, reserved -= qty
+  PURCHASE // admin restock:            available += qty
+  ADJUSTMENT // admin manual correction: available +/-
+  DAMAGE // admin write-off:            available -= qty
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  phone        String?
+  role         UserRole @default(CUSTOMER)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  orders        Order[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") // SHA-256 hex of the raw token
+  userAgent String?   @map("user_agent")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  imageUrl    String? @map("image_url")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String   @unique
+  description    String?  @db.Text
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @map("compare_at_price") @db.Decimal(10, 2)
+  stockQuantity  Int      @default(0) @map("stock_quantity")
+  sku            String   @unique
+  images         Json     @default("[]")
+  attributes     Json     @default("{}")
+  categoryId     String?  @map("category_id") @db.Uuid
+  subCategory    String?  @map("sub_category")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+  inventory  Inventory?
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([subCategory])
+  @@index([isActive])
+  @@index([price])
+  @@map("products")
+}
+
+model Order {
+  id              String      @id @default(uuid()) @db.Uuid
+  orderNumber     String      @unique @map("order_number")
+  userId          String      @map("user_id") @db.Uuid
+  subtotal        Decimal     @db.Decimal(10, 2)
+  tax             Decimal     @default(0) @db.Decimal(10, 2)
+  shippingCost    Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  status          OrderStatus @default(PENDING)
+  shippingAddress Json?       @map("shipping_address")
+  billingAddress  Json?       @map("billing_address")
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  user               User                 @relation(fields: [userId], references: [id])
+  items              OrderItem[]
+  payment            Payment?
+  statusHistory      OrderStatusHistory[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String  @id @default(uuid()) @db.Uuid
+  orderId            String  @map("order_id") @db.Uuid
+  productId          String  @map("product_id") @db.Uuid
+  quantity           Int
+  unitPrice          Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice         Decimal @map("total_price") @db.Decimal(10, 2)
+  selectedAttributes Json?   @map("selected_attributes")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Payment {
+  id               String        @id @default(uuid()) @db.Uuid
+  orderId          String        @unique @map("order_id") @db.Uuid
+  transactionId    String?       @unique @map("transaction_id")
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("USD")
+  status           PaymentStatus @default(PENDING)
+  method           PaymentMethod @default(STRIPE)
+  paymentPlan      PaymentPlan   @default(FULL) @map("payment_plan")
+  installmentCount Int?          @map("installment_count")
+  gatewayResponse  Json?         @map("gateway_response")
+  paidAt           DateTime?     @map("paid_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  installments Installment[]
+
+  @@index([orderId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Installment {
+  id              String        @id @default(uuid()) @db.Uuid
+  paymentId       String        @map("payment_id") @db.Uuid
+  installmentNo   Int           @map("installment_no")
+  amount          Decimal       @db.Decimal(10, 2)
+  dueDate         DateTime      @map("due_date")
+  status          PaymentStatus @default(PENDING)
+  stripePaymentId String?       @map("stripe_payment_id")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("installments")
+}
+
+// ─── Inventory ledger (D2/D3) — single source of truth for stock ──
+// NOTE: additive for now. Services still use products.stock_quantity until the
+// reserve→deduct rewire lands; a backfill seeds these rows + INITIAL movements.
+
+model Inventory {
+  id                String   @id @default(uuid()) @db.Uuid
+  productId         String   @unique @map("product_id") @db.Uuid
+  quantityAvailable Int      @default(0) @map("quantity_available")
+  quantityReserved  Int      @default(0) @map("quantity_reserved")
+  minimumStockLevel Int      @default(0) @map("minimum_stock_level")
+  lowStockNotified  Boolean  @default(false) @map("low_stock_notified")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements InventoryMovement[]
+
+  @@map("inventory")
+}
+
+model InventoryMovement {
+  id             String       @id @default(uuid()) @db.Uuid
+  inventoryId    String       @map("inventory_id") @db.Uuid
+  type           MovementType
+  quantityChange Int          @map("quantity_change") // signed; see reconciliation invariant
+  note           String?
+  orderId        String?      @map("order_id") @db.Uuid // set for RESERVE/RELEASE/SALE
+  userId         String?      @map("user_id") @db.Uuid // set for admin PURCHASE/ADJUSTMENT/DAMAGE
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  order     Order?    @relation(fields: [orderId], references: [id])
+
+  @@index([inventoryId, createdAt])
+  @@index([orderId])
+  @@map("inventory_movements")
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  orderId    String       @map("order_id") @db.Uuid
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  changedBy  String?      @map("changed_by_user_id") @db.Uuid
+  note       String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+model PaymentWebhookEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  gateway         String // "payhere" | "stripe"
+  transactionId   String?  @map("transaction_id")
+  eventStatus     String   @map("event_status")
+  payload         Json
+  signature       String?
+  signatureValid  Boolean  @default(false) @map("signature_valid")
+  processed       Boolean  @default(false)
+  processingError String?  @map("processing_error")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([gateway, transactionId, eventStatus]) // D5: idempotent — replays no-op
+  @@map("payment_webhook_events")
+}

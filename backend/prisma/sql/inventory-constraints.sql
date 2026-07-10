@@ -1,0 +1,21 @@
+-- BR4 hard floor for the inventory ledger (D2/D3).
+-- Prisma cannot express CHECK constraints in schema.prisma, so this must be
+-- applied after `prisma db push`. When we migrate to `prisma migrate`, fold
+-- this into the migration SQL instead.
+--
+-- Apply:
+--   docker exec -i textile_postgresdocker psql -U textile_admin -d textile_db -f - < prisma/sql/inventory-constraints.sql
+-- (idempotent via IF NOT EXISTS guard)
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'inventory_non_negative'
+  ) THEN
+    ALTER TABLE inventory
+      ADD CONSTRAINT inventory_non_negative
+      CHECK (quantity_available >= 0
+         AND quantity_reserved  >= 0
+         AND quantity_reserved  <= quantity_available);
+  END IF;
+END $$;

@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: textile_postgresdocker
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: textile_admin
+      POSTGRES_PASSWORD: textile_secure_pass_2024
+      POSTGRES_DB: textile_db
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U textile_admin -d textile_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: textile_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: textile-backend:latest
+    container_name: textile_backend
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - DATABASE_URL=postgresql://textile_admin:textile_secure_pass_2024@postgres:5432/textile_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=super-secret-jwt-key-2024
+      - JWT_EXPIRATION=7d
+      - STRIPE_SECRET_KEY=sk_test_mock
+      - STRIPE_WEBHOOK_SECRET=whsec_mock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    image: textile-frontend:dev
+    container_name: textile_frontend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+<<<<<<< HEAD
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+=======
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+>>>>>>> fix/critical-payment-idor-and-stock-race
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,316 @@
+# 00_PROJECT_VISION.md
+
+# Smart Textile Business Management & AI-Powered E-Commerce Platform
+
+**Version:** 1.0.0
+**Document Type:** Project Vision
+**Status:** Draft
+**Project Type:** University Final Year Software Engineering Project
+**Prepared By:** Project Development Team
+**Last Updated:** July 2026
+
+---
+
+# 1. Executive Summary
+
+The Smart Textile Business Management & AI-Powered E-Commerce Platform is a comprehensive digital transformation solution designed for textile retailers and uniform manufacturers. The platform integrates online commerce, inventory management, production tracking, customer relationship management, payment processing, and artificial intelligence into a single, scalable system.
+
+Unlike traditional textile management software that focuses only on inventory or sales, this platform provides complete business process automation from customer order placement to product delivery while supporting intelligent business decision-making through predictive analytics.
+
+The system is designed as a production-ready web application using modern software engineering principles, modular architecture, and cloud-ready technologies.
+
+---
+
+# 2. Project Background
+
+Many small and medium textile businesses in Sri Lanka still rely on manual workflows including paper records, spreadsheets, phone calls, and messaging applications for handling customer orders, inventory, and production.
+
+These traditional processes create numerous operational challenges including:
+
+* Slow order processing
+* Inventory inaccuracies
+* Production delays
+* Poor customer experience
+* Limited online presence
+* Lack of business analytics
+* Reactive decision making
+
+As customer expectations continue to increase and digital commerce becomes the industry standard, businesses require integrated software solutions capable of managing both retail and manufacturing operations efficiently.
+
+---
+
+# 3. Vision Statement
+
+To build an intelligent, scalable, and production-ready textile business management platform that enables local textile businesses to operate digitally, improve efficiency, increase profitability, and make data-driven decisions using modern web technologies and artificial intelligence.
+
+---
+
+# 4. Mission Statement
+
+Our mission is to develop a centralized platform that simplifies textile business operations by integrating customer management, inventory control, production management, online shopping, payment processing, reporting, and AI-powered business intelligence into one unified ecosystem.
+
+---
+
+# 5. Project Objectives
+
+The project aims to achieve the following objectives:
+
+## Business Objectives
+
+* Digitize manual business operations.
+* Improve customer experience through online shopping.
+* Reduce operational costs.
+* Improve production efficiency.
+* Minimize inventory losses.
+* Increase sales through online channels.
+* Improve business decision making using AI.
+
+## Technical Objectives
+
+* Develop a scalable web application.
+* Apply modern software engineering principles.
+* Implement secure authentication and authorization.
+* Build modular backend architecture.
+* Design an optimized relational database.
+* Integrate secure online payment gateways.
+* Build RESTful APIs.
+* Develop AI-assisted business intelligence services.
+
+## Academic Objectives
+
+* Demonstrate software engineering best practices.
+* Apply database design principles.
+* Apply cloud-ready application architecture.
+* Implement secure software development.
+* Gain practical experience with full-stack technologies.
+* Produce industry-standard project documentation.
+
+---
+
+# 6. Business Problems
+
+The client currently experiences several operational problems.
+
+## Order Management
+
+* Manual order recording
+* Difficult order tracking
+* Duplicate records
+* Human errors
+* Slow customer service
+
+## Inventory Management
+
+* Spreadsheet-based stock control
+* Frequent stock discrepancies
+* Overstock and stock shortages
+* No real-time inventory visibility
+
+## Production
+
+* No production workflow tracking
+* Difficult task assignment
+* Unclear production status
+* Delayed deliveries
+
+## Customer Management
+
+* No centralized customer database
+* No purchase history
+* Manual communication
+* No customer analytics
+
+## Sales
+
+* Limited geographical reach
+* No online sales platform
+* Lost sales opportunities
+* Poor product visibility
+
+## Decision Making
+
+* No sales forecasting
+* No inventory prediction
+* No customer insights
+* No automated reporting
+
+---
+
+# 7. Proposed Solution
+
+The proposed solution is an integrated Smart Textile Business Management Platform consisting of several interconnected modules.
+
+### Customer Portal
+
+* Product browsing
+* Product search
+* Shopping cart
+* Secure checkout
+* Online payments
+* Order tracking
+* User accounts
+
+### Administration Portal
+
+* Dashboard
+* Product management
+* Category management
+* Inventory management
+* Customer management
+* Worker management
+* Supplier management
+* Reporting
+* Business analytics
+
+### Production Management
+
+* Production planning
+* Task assignment
+* Worker tracking
+* Quality control
+* Delivery scheduling
+
+### Inventory Management
+
+* Real-time stock management
+* Purchase orders
+* Stock movements
+* Supplier management
+* Reorder recommendations
+
+### AI Business Intelligence
+
+* Demand forecasting
+* Product recommendations
+* Inventory optimization
+* Sales analytics
+* Customer segmentation
+* Business insights
+
+---
+
+# 8. Expected Benefits
+
+## Business Benefits
+
+* Faster order processing
+* Improved inventory accuracy
+* Better production management
+* Increased online sales
+* Better customer satisfaction
+* Reduced operational costs
+* Improved profitability
+
+## Customer Benefits
+
+* Easy online shopping
+* Secure online payments
+* Real-time order tracking
+* Faster service
+* Personalized recommendations
+
+## Management Benefits
+
+* Real-time dashboards
+* Automated reports
+* Sales forecasting
+* Inventory insights
+* Production monitoring
+* Data-driven decisions
+
+---
+
+# 9. Stakeholders
+
+## Primary Stakeholders
+
+* Business Owner
+* Store Manager
+* Production Manager
+* Employees
+* Customers
+
+## Secondary Stakeholders
+
+* Suppliers
+* Delivery Partners
+* University Supervisors
+* Project Development Team
+
+---
+
+# 10. Success Criteria
+
+The project will be considered successful if it achieves the following:
+
+* Complete online shopping experience
+* Secure payment integration
+* Real-time inventory management
+* Production workflow management
+* Customer management system
+* AI-powered reporting
+* Responsive web application
+* Secure authentication
+* Production-ready architecture
+* Successful deployment
+
+---
+
+# 11. Project Scope Summary
+
+### Included
+
+* Customer Website
+* Admin Dashboard
+* Authentication
+* Product Management
+* Category Management
+* Inventory Management
+* Order Management
+* Production Management
+* Customer Management
+* Payment Integration
+* Reporting
+* AI Business Intelligence
+
+### Excluded (Future Enhancements)
+
+* Native Mobile Applications
+* Multi-Branch ERP
+* International Shipping
+* Multi-Currency Payments
+* Supplier Self-Service Portal
+* Accounting ERP
+* HR Management
+
+---
+
+# 12. High-Level System Overview
+
+The system consists of four primary layers:
+
+1. **Presentation Layer** – Customer website and administrative dashboard.
+2. **Application Layer** – Backend services handling business logic, authentication, APIs, payments, and production workflows.
+3. **Data Layer** – PostgreSQL database, caching, and file storage.
+4. **Intelligence Layer** – AI services for forecasting, recommendations, analytics, and business insights.
+
+Each layer is designed to be modular, scalable, and independently maintainable.
+
+---
+
+# 13. Long-Term Vision
+
+Although the initial release focuses on a single textile business, the platform is designed with future expansion in mind. Planned enhancements include:
+
+* Multi-branch management
+* Mobile applications
+* Advanced AI automation
+* WhatsApp order processing
+* Supplier portals
+* Customer loyalty system
+* Barcode and QR inventory management
+* Cloud-native deployment
+* Multi-language support
+* Multi-business SaaS architecture
+
+The long-term goal is to evolve the platform into a comprehensive digital business management solution that can be adopted by textile manufacturers and retailers across Sri Lanka and beyond.

@@ -1,0 +1,449 @@
+# 07_API_DESIGN.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** API Design Specification
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the complete **REST API structure** for the system.
+
+It includes:
+
+* Endpoint definitions
+* Request/response formats
+* Authentication rules
+* Role-based access
+* Payment workflows
+* System integration contracts
+
+---
+
+# 2. API Architecture Style
+
+* RESTful API
+* JSON-based communication
+* Stateless backend (JWT authentication)
+* Versioned API (`/api/v1`)
+
+---
+
+# 3. Base Configuration
+
+```
+Base URL: https://your-domain.com/api/v1
+Content-Type: application/json
+Authentication: Bearer JWT Token
+```
+
+---
+
+# 4. Authentication APIs
+
+---
+
+## 4.1 Register User
+
+**POST** `/auth/register`
+
+### Request
+
+```json id="r001"
+{
+  "firstName": "Kamal",
+  "lastName": "Perera",
+  "email": "kamal@gmail.com",
+  "password": "12345678",
+  "phone": "0711234567"
+}
+```
+
+### Response
+
+```json id="r002"
+{
+  "message": "User registered successfully",
+  "userId": "uuid"
+}
+```
+
+---
+
+## 4.2 Login
+
+**POST** `/auth/login`
+
+### Request
+
+```json id="r003"
+{
+  "email": "kamal@gmail.com",
+  "password": "12345678"
+}
+```
+
+### Response
+
+```json id="r004"
+{
+  "accessToken": "jwt_token_here",
+  "refreshToken": "refresh_token_here",
+  "user": {
+    "userId": "uuid",
+    "role": "customer"
+  }
+}
+```
+
+---
+
+## 4.3 Get Profile
+
+**GET** `/auth/me`
+
+---
+
+# 5. Product APIs
+
+---
+
+## 5.1 Get All Products
+
+**GET** `/products`
+
+### Query Params
+
+```
+?page=1&limit=10&category=fabric&search=cotton
+```
+
+### Response
+
+```json id="r005"
+{
+  "products": [
+    {
+      "productId": "uuid",
+      "name": "Cotton Fabric",
+      "price": 1200,
+      "stock": 50,
+      "image": "url"
+    }
+  ],
+  "total": 120
+}
+```
+
+---
+
+## 5.2 Get Product Details
+
+**GET** `/products/:id`
+
+---
+
+## 5.3 Create Product (Admin)
+
+**POST** `/admin/products`
+
+---
+
+## 5.4 Update Product
+
+**PUT** `/admin/products/:id`
+
+---
+
+# 6. Cart APIs
+
+---
+
+## 6.1 Add to Cart
+
+**POST** `/cart/items`
+
+### Request
+
+```json id="r006"
+{
+  "productId": "uuid",
+  "quantity": 2
+}
+```
+
+---
+
+## 6.2 Get Cart
+
+**GET** `/cart`
+
+---
+
+## 6.3 Remove Item
+
+**DELETE** `/cart/items/:id`
+
+---
+
+# 7. Order APIs
+
+---
+
+## 7.1 Create Order (Checkout)
+
+**POST** `/orders`
+
+### Request
+
+```json id="r007"
+{
+  "items": [
+    {
+      "productId": "uuid",
+      "quantity": 2,
+      "measurements": {}
+    }
+  ],
+  "shippingAddressId": "uuid"
+}
+```
+
+### Response
+
+```json id="r008"
+{
+  "orderId": "uuid",
+  "orderNumber": "ORD-2026-001",
+  "total": 3500,
+  "status": "pending"
+}
+```
+
+---
+
+## 7.2 Get Orders
+
+**GET** `/orders`
+
+---
+
+## 7.3 Get Order Details
+
+**GET** `/orders/:id`
+
+---
+
+## 7.4 Cancel Order
+
+**PUT** `/orders/:id/cancel`
+
+---
+
+# 8. Payment APIs
+
+---
+
+## 8.1 Create Payment Session
+
+**POST** `/payments/create`
+
+### Request
+
+```json id="r009"
+{
+  "orderId": "uuid",
+  "method": "card"
+}
+```
+
+### Response
+
+```json id="r010"
+{
+  "paymentUrl": "https://payhere.com/checkout",
+  "transactionId": "txn_123"
+}
+```
+
+---
+
+## 8.2 Payment Webhook (Critical)
+
+**POST** `/payments/webhook`
+
+### Description:
+
+Called by PayHere/Stripe after payment completion.
+
+### Request
+
+```json id="r011"
+{
+  "transactionId": "txn_123",
+  "status": "success",
+  "orderId": "uuid",
+  "amount": 3500
+}
+```
+
+### Backend Logic:
+
+* Verify signature
+* Update payment status
+* Update order status to “confirmed”
+
+---
+
+## 8.3 Payment Status
+
+**GET** `/payments/:orderId/status`
+
+---
+
+# 9. Inventory APIs
+
+---
+
+## 9.1 Get Inventory
+
+**GET** `/inventory`
+
+---
+
+## 9.2 Update Stock
+
+**PUT** `/inventory/:productId`
+
+---
+
+## 9.3 Low Stock Alerts
+
+**GET** `/inventory/low-stock`
+
+---
+
+# 10. Production APIs
+
+---
+
+## 10.1 Create Production Task
+
+**POST** `/production/tasks`
+
+---
+
+## 10.2 Update Task Status
+
+**PUT** `/production/tasks/:id`
+
+### Request
+
+```json id="r012"
+{
+  "status": "in_progress",
+  "stage": "stitching"
+}
+```
+
+---
+
+## 10.3 Get Production Pipeline
+
+**GET** `/production/pipeline`
+
+---
+
+# 11. Admin APIs
+
+---
+
+## 11.1 Dashboard Analytics
+
+**GET** `/admin/dashboard`
+
+### Response
+
+```json id="r013"
+{
+  "totalSales": 250000,
+  "totalOrders": 120,
+  "lowStockItems": 8,
+  "pendingOrders": 15
+}
+```
+
+---
+
+## 11.2 Manage Users
+
+**GET** `/admin/users`
+
+---
+
+# 12. Authentication Rules
+
+| Role     | Access                 |
+| -------- | ---------------------- |
+| Customer | Products, Orders, Cart |
+| Admin    | Full access            |
+| Worker   | Production tasks only  |
+
+---
+
+# 13. Error Handling Format
+
+All errors follow:
+
+```json id="r014"
+{
+  "error": true,
+  "message": "Description of error",
+  "code": "ERROR_CODE"
+}
+```
+
+---
+
+# 14. Security Rules
+
+* JWT required for protected routes
+* Admin-only routes protected by RBAC
+* Input validation on all endpoints
+* Rate limiting on auth endpoints
+
+---
+
+# 15. Performance Considerations
+
+* Pagination required for large datasets
+* Avoid heavy joins in API responses
+* Cache product listing (future improvement)
+
+---
+
+# 16. API Versioning Strategy
+
+Future updates will use:
+
+```
+/api/v1/
+/api/v2/
+```
+
+to avoid breaking frontend compatibility.
+
+---
+
+# 17. Conclusion
+
+This API design ensures:
+
+* Clear frontend-backend communication
+* Secure and scalable architecture
+* Easy integration with payment systems
+* Clean separation of roles and responsibilities

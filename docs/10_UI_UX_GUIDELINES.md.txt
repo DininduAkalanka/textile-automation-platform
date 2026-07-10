@@ -1,0 +1,429 @@
+# 12_UI_UX_GUIDELINES.md
+
+# Smart Textile Business Management System
+
+**Version:** 1.0.0
+**Document Type:** UI/UX Design Guidelines
+**Status:** Draft
+**Last Updated:** July 2026
+
+---
+
+# 1. Purpose
+
+This document defines the **UI/UX design principles and standards** for the entire system including:
+
+* Customer e-commerce platform
+* Admin dashboard
+* AI chat interfaces
+* Production management UI
+
+The goal is to ensure:
+
+* Consistency across all screens
+* Simple user experience
+* Fast navigation
+* Professional SaaS-level UI quality
+
+---
+
+# 2. Design Philosophy
+
+> “Simple, fast, and decision-oriented design”
+
+The system is built for 3 user types:
+
+* Customers → easy shopping experience
+* Admins → data clarity & control
+* Workers → task-focused minimal UI
+
+---
+
+# 3. Design System
+
+## 3.1 UI Framework
+
+* Tailwind CSS
+* shadcn/ui components
+* Radix UI primitives
+
+---
+
+## 3.2 Design Style
+
+* Modern SaaS dashboard style
+* Clean spacing (not crowded)
+* Soft shadows (minimal)
+* Rounded corners (8px–12px)
+
+---
+
+## 3.3 Color System
+
+### Primary Colors
+
+* Primary: Indigo / Blue (trust + tech)
+* Success: Green
+* Warning: Yellow
+* Error: Red
+* Neutral: Gray scale
+
+---
+
+## 3.4 Typography
+
+* Font: Inter (primary)
+* Headings: Semi-bold
+* Body: Regular
+* Data tables: Monospace optional for alignment
+
+---
+
+# 4. Layout System
+
+## 4.1 Grid System
+
+* 12-column grid for dashboards
+* Responsive breakpoints:
+
+  * Mobile: < 768px
+  * Tablet: 768px – 1024px
+  * Desktop: > 1024px
+
+---
+
+## 4.2 Spacing Rules
+
+* Base unit: 4px system
+* Small: 8px
+* Medium: 16px
+* Large: 24px
+* Section spacing: 32px+
+
+---
+
+# 5. Customer UI Guidelines
+
+---
+
+## 5.1 Homepage
+
+Must include:
+
+* Hero section (clear value proposition)
+* Featured products
+* Categories
+* AI search bar (important feature)
+* Promotions section
+
+---
+
+## 5.2 Product Listing Page
+
+### Layout:
+
+```text id="ui001"
+[Filters] | [Product Grid]
+```
+
+### Features:
+
+* Grid layout (3–4 columns desktop)
+* Infinite scroll or pagination
+* Quick add-to-cart button
+* Price + stock visibility
+
+---
+
+## 5.3 Product Card Design
+
+### Must show:
+
+* Product image
+* Name
+* Price
+* Stock status
+* Add to cart button
+
+### Behavior:
+
+* Hover → quick preview
+* Click → product details page
+
+---
+
+## 5.4 Product Detail Page
+
+Must include:
+
+* Image gallery
+* Price breakdown
+* Stock availability
+* Description
+* “Add to cart”
+* AI suggestion panel
+
+---
+
+## 5.5 AI Chat (Customer Side)
+
+### UI Type:
+
+* Floating chat widget (bottom right)
+
+### Behavior:
+
+* Natural language input
+* Returns product cards inside chat
+* Clickable product links
+
+---
+
+# 6. Admin Dashboard UI Guidelines
+
+---
+
+## 6.1 Dashboard Layout
+
+```text id="ui002"
+Sidebar | Main Content Area
+```
+
+Sidebar includes:
+
+* Dashboard
+* Orders
+* Products
+* Inventory
+* Production
+* AI Insights
+
+---
+
+## 6.2 Dashboard Home
+
+Must show:
+
+* Total revenue
+* Orders today
+* Inventory alerts
+* Sales graph
+* AI insights panel
+
+---
+
+## 6.3 Tables (IMPORTANT UI RULE)
+
+All admin tables must include:
+
+* Search bar
+* Filters
+* Pagination
+* Sortable columns
+* Action buttons (edit/delete/view)
+
+---
+
+## 6.4 Forms
+
+Rules:
+
+* Group fields logically
+* Never overload a single form
+* Use step forms for complex inputs
+* Always show validation errors clearly
+
+---
+
+# 7. AI Chat UI Guidelines (VERY IMPORTANT)
+
+## 7.1 Dual Chat System
+
+### Customer AI Chat:
+
+* Product search assistant
+* Visual product cards
+* Instant purchase links
+
+---
+
+### Admin AI Chat:
+
+* Business analytics assistant
+* Text + charts + insights
+* No product selling
+
+---
+
+## 7.2 Chat Design Rules
+
+* Message bubbles (clean spacing)
+* Loading indicator (typing animation)
+* Structured AI responses:
+
+  * Text
+  * Cards
+  * Tables
+  * Charts
+
+---
+
+## 7.3 AI Response UI Types
+
+### 1. Text Response
+
+Simple explanation
+
+### 2. Product Cards
+
+Clickable items
+
+### 3. Insight Cards
+
+For business analytics
+
+### 4. Chart Blocks
+
+Sales graphs, trends
+
+---
+
+# 8. UX Flow Principles
+
+---
+
+## 8.1 Customer Flow
+
+```text id="ui003"
+Home → Search → Product → Cart → Checkout → Payment
+```
+
+Rules:
+
+* Minimum clicks
+* Always show price early
+* Reduce friction at checkout
+
+---
+
+## 8.2 Admin Flow
+
+```text id="ui004"
+Dashboard → Module → Detail → Action
+```
+
+Rules:
+
+* Data-first design
+* Quick actions always visible
+* No deep navigation confusion
+
+---
+
+# 9. Interaction Design Rules
+
+---
+
+## 9.1 Buttons
+
+* Primary action: solid color
+* Secondary action: outline
+* Dangerous actions: red
+
+---
+
+## 9.2 Loading States
+
+Always include:
+
+* Skeleton loaders for products
+* Spinner for API calls
+* Progress indicators for checkout
+
+---
+
+## 9.3 Notifications
+
+* Toast notifications for actions
+* Success / error / warning types
+* Auto dismiss after 3–5 seconds
+
+---
+
+# 10. Mobile UX Guidelines
+
+* Mobile-first layout
+* Sticky bottom navigation (customer side)
+* Collapsible sidebar (admin)
+* Large touch-friendly buttons
+* Simplified product grids
+
+---
+
+# 11. Accessibility Standards
+
+* WCAG 2.1 compliance
+* Keyboard navigation support
+* High contrast mode support
+* Proper ARIA labels
+* Screen reader friendly UI
+
+---
+
+# 12. Performance UX
+
+* Lazy load images
+* Virtualized lists for large data
+* Preload important routes
+* Avoid blocking UI rendering
+
+---
+
+# 13. Error UX Handling
+
+Always show:
+
+* Clear error message
+* What went wrong
+* How to fix it
+* Retry button
+
+Never show:
+
+* Technical stack traces to users
+
+---
+
+# 14. Design Consistency Rules
+
+* Same button styles everywhere
+* Same spacing system everywhere
+* Same card design system
+* No random custom styling outside system
+
+---
+
+# 15. AI UX Philosophy
+
+AI is not just a feature — it is a **decision helper**
+
+So:
+
+* AI must reduce thinking time
+* AI must suggest actions
+* AI must never overwhelm user
+* AI must always be structured
+
+---
+
+# 16. Conclusion
+
+This UI/UX system ensures:
+
+* Professional SaaS-level interface
+* High usability for customers and admin
+* Scalable design system
+* Strong AI integration experience
+* Consistent development across team
+
+> A good system is not just functional — it must be *effortless to use*
