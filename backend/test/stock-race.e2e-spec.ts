@@ -244,13 +244,17 @@ describe('Stock reservation race (D3 / BR4)', () => {
     // If a future migration drops this, the app guard becomes the only thing
     // standing between a logic bug and negative stock.
     expect(rows).toHaveLength(1);
-    expect(rows[0].definition).toMatch(/quantity_reserved <= quantity_available/);
+    expect(rows[0].definition).toMatch(
+      /quantity_reserved <= quantity_available/,
+    );
   });
 
   it('rejects a single order larger than available stock (BR4)', async () => {
     const productId = await seedProduct(2, 'too-big');
 
-    await expect(orders.create(userId, orderFor(productId, 3))).rejects.toThrow();
+    await expect(
+      orders.create(userId, orderFor(productId, 3)),
+    ).rejects.toThrow();
 
     const ledger = await ledgerOf(productId);
     expect(ledger.reserved).toBe(0);

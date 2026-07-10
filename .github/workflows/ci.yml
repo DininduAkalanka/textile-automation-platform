@@ -17,6 +17,41 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    # A real Postgres. The integration suite (test/stock-race.e2e-spec.ts) proves
+    # the oversell guard by racing concurrent transactions, and that cannot be
+    # faked: row locking is a property of the database, not of our TypeScript.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: textile_admin
+          POSTGRES_PASSWORD: textile_ci_password
+          POSTGRES_DB: textile_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U textile_admin -d textile_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+      NODE_ENV: test
+      PORT: 3001
+      FRONTEND_URL: http://localhost:3000
+      # Test-only values. These are not secrets and must never be reused.
+      JWT_SECRET: ci-only-secret-not-used-outside-github-actions
+      JWT_EXPIRATION: 7d
+      PAYHERE_MERCHANT_ID: '1221149'
+      PAYHERE_MERCHANT_SECRET: ci-only-sandbox-secret
+      PAYHERE_MODE: sandbox
+      PAYHERE_NOTIFY_URL: http://localhost:3001/api/v1/payments/payhere/notify
+      STRIPE_SECRET_KEY: sk_test_mock
+      STRIPE_PUBLISHABLE_KEY: pk_test_mock
+      STRIPE_WEBHOOK_SECRET: whsec_mock
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,20 +59,39 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: backend/package-lock.json
+
       - run: npm ci
-      # Prisma client is needed for typecheck/build/tests (unit tests mock the
-      # DB, so no Postgres service is required here).
+
+      # Prisma client is needed for typecheck, build, and every test layer.
       - run: npx prisma generate
+
+      # TODO: drop continue-on-error once the 129 pre-existing lint errors
+      # (mostly @typescript-eslint/no-unsafe-* and prettier) are cleaned up.
+      # Failing this gate today would block every PR on unrelated debt.
       - name: Lint
         run: npx eslint "{src,test}/**/*.ts"
         continue-on-error: true
+
       - name: Build (typecheck)
         run: npm run build
+
+      # Unit tests mock Prisma, so they need no database.
       - name: Unit tests
         run: npm test
 
+      # Replays the committed migration history onto an empty database. This is
+      # the guard against a migration that only works on one developer's laptop:
+      # prisma/migrations was gitignored until recently, and a clone without it
+      # silently creates no tables at all.
+      - name: Apply migrations to a clean database
+        run: npx prisma migrate deploy
+
+      # Race, oversell, BR4, and the CHECK-constraint backstop.
+      - name: Integration tests (real Postgres)
+        run: npm run test:integration
+
   frontend:
-    name: Frontend · typecheck
+    name: Frontend · build + typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,9 +103,17 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
       - run: npm ci
+
       - name: Lint
         run: npx eslint .
         continue-on-error: true
+
       - name: Typecheck
         run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
