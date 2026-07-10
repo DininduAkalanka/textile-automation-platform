@@ -9,8 +9,10 @@ node_modules/
 # build
 dist/
 
-# prisma
-prisma/migrations/
+# Prisma migrations are SOURCE, not build output — they must be committed.
+# `prisma migrate deploy` replays this folder to build the schema on every
+# environment, so a clone without it creates no tables at all. (This entry was
+# harmless while the project used `db push`; it is not any more.)
 
 # IDE
 .vscode/

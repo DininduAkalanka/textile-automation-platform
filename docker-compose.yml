@@ -64,16 +64,12 @@ services:
     ports:
       - '3000:3000'
     environment:
-<<<<<<< HEAD
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
       - WATCHPACK_POLLING=true
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
-=======
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
->>>>>>> fix/critical-payment-idor-and-stock-race
     depends_on:
       - backend
 
