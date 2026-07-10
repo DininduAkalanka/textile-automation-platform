@@ -1,0 +1,2 @@
+# Smart-Textile-Business-Management-E-Commerce-Platform-with-AI-Intelligence
+This project aims to develop an integrated, intelligent business management system for a textile and uniform manufacturing business. The system combines customer-facing e-commerce capabilities with comprehensive backend business management tools, enhanced by artificial intelligence for predictive analytics and automated decision support.
