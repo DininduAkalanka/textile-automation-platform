@@ -5,7 +5,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { ProductionService } from '../production/production.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { validateMeasurements } from './measurements.config';
 import { OrderStatus, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -13,6 +15,7 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private inventory: InventoryService,
+    private production: ProductionService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -45,6 +48,26 @@ export class OrdersService {
       }
     }
 
+    // BR3 — custom orders require measurement data (doc 01 §7).
+    //
+    // Validated against the PRODUCT row, never against anything the client
+    // asserts, so a tampered request cannot dodge the rule by mislabelling a
+    // uniform as ready-made. Every failing line is reported at once rather than
+    // one per round trip.
+    const measurementErrors = dto.items.flatMap((item) => {
+      const product = products.find((p) => p.id === item.productId)!;
+      return validateMeasurements(
+        product.name,
+        product.productType,
+        product.requiresMeasurement,
+        item.measurements ?? null,
+      );
+    });
+
+    if (measurementErrors.length > 0) {
+      throw new BadRequestException(measurementErrors);
+    }
+
     // Calculate totals
     let subtotal = new Prisma.Decimal(0);
     const orderItems = dto.items.map((item) => {
@@ -58,6 +81,11 @@ export class OrdersService {
         quantity: item.quantity,
         unitPrice,
         totalPrice,
+        // Snapshotted onto the line, so a later edit to the customer's saved
+        // measurements never rewrites what was actually cut and stitched.
+        measurements: (item.measurements ?? undefined) as
+          | Prisma.InputJsonValue
+          | undefined,
       };
     });
 
@@ -286,6 +314,18 @@ export class OrdersService {
           changedBy: changedBy ?? null,
         },
       });
+
+      // ProductionTrigger (decision D8, FR-P1). Fires here rather than in the
+      // payment module so that ALL three confirmation paths — PayHere webhook,
+      // COD placement and admin bank-slip verification — create tasks through
+      // one pipeline. Inside the same transaction as the SALE deduction, so a
+      // confirmed order and its production tasks exist together or not at all.
+      //
+      // The early return above already makes this run once per order; the
+      // trigger is independently idempotent as well, because the cost of a
+      // duplicate task set (a garment cut twice) is far higher than the cost of
+      // the extra COUNT.
+      await this.production.createTasksForOrder(tx, orderId);
     });
   }
 

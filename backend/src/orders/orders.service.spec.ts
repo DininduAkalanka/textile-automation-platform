@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { ProductionService } from '../production/production.service';
 
 /**
  * Unit tests for order creation after the inventory-ledger rewire (D3).
@@ -19,6 +20,7 @@ describe('OrdersService — reserve on create (D3)', () => {
     $transaction: jest.Mock;
   };
   let inventory: { reserve: jest.Mock; sale: jest.Mock; release: jest.Mock; restock: jest.Mock };
+  let production: { createTasksForOrder: jest.Mock };
   let tx: {
     order: { create: jest.Mock };
     orderStatusHistory: { create: jest.Mock };
@@ -54,11 +56,17 @@ describe('OrdersService — reserve on create (D3)', () => {
       $transaction: jest.fn().mockImplementation((cb: any) => cb(tx)),
     };
 
+    // confirmOrder fires the ProductionTrigger (D8). These tests only exercise
+    // create(), which never calls it, so a stub is enough — the trigger itself is
+    // covered against a real database in test/production.e2e-spec.ts.
+    production = { createTasksForOrder: jest.fn().mockResolvedValue(0) };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: prisma },
         { provide: InventoryService, useValue: inventory },
+        { provide: ProductionService, useValue: production },
       ],
     }).compile();
 
