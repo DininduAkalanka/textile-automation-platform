@@ -146,7 +146,14 @@ export default function CheckoutPage() {
     try {
       // 1. Create the order (server reserves stock).
       const order = await api.createOrder({
-        items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          // BR3. The server re-validates these against the product row and
+          // rejects the order if any are missing, so this is a transport, not
+          // a trust boundary.
+          measurements: item.measurements,
+        })),
         shippingAddress: address,
       });
 

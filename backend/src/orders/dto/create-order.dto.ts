@@ -17,6 +17,20 @@ export class OrderItemDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  /**
+   * BR3 measurements for this line (doc 01 §7).
+   *
+   * Shape: { personName, label?, values: { chest: 96, ... } }. Typed loosely
+   * here because the required field set depends on the PRODUCT's type, which is
+   * only known once the product is loaded from the database. The real check runs
+   * in OrdersService.create via validateMeasurements(), against the product row
+   * rather than anything the client claims — so a client cannot dodge BR3 by
+   * mislabelling a uniform.
+   */
+  @IsOptional()
+  @IsObject()
+  measurements?: Record<string, unknown>;
 }
 
 export class AddressDto {

@@ -1,10 +1,32 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { AlertTriangle, Ruler } from 'lucide-react';
+
+import { MeasurementDialog } from '@/components/cart/measurement-dialog';
+import { Button } from '@/components/ui/button';
+import { isComplete, needsMeasurements } from '@/lib/measurements';
 import { useCartStore } from '@/store/useCartStore';
+import { Product } from '@/types';
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCartStore();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    subtotal,
+    totalItems,
+    setMeasurements,
+    itemsMissingMeasurements,
+    canCheckout,
+  } = useCartStore();
+
+  const [measuring, setMeasuring] = useState<Product | null>(null);
+
+  const missing = itemsMissingMeasurements();
+  const checkoutAllowed = canCheckout();
 
   if (items.length === 0) {
     return (
@@ -94,6 +116,26 @@ export default function CartPage() {
                   Rs. {Number(item.product.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
                 </p>
               </div>
+
+              {/* BR3: a measured garment cannot be ordered until it has measurements. */}
+              {needsMeasurements(item.product) && (
+                <button
+                  onClick={() => setMeasuring(item.product)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                    cursor: 'pointer', fontSize: '0.75rem',
+                    borderRadius: '0.5rem', padding: '0.375rem 0.75rem',
+                    ...(isComplete(item.product, item.measurements)
+                      ? { fontWeight: 500, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0' }
+                      : { fontWeight: 600, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d' }),
+                  }}
+                >
+                  <Ruler size={12} aria-hidden />
+                  {isComplete(item.product, item.measurements)
+                    ? `Measured — ${item.measurements?.personName}`
+                    : 'Add measurements'}
+                </button>
+              )}
 
               {/* Quantity */}
               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--color-border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
@@ -194,15 +236,60 @@ export default function CartPage() {
             <span>Rs. {subtotal().toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
           </div>
 
-          <Link href="/checkout" className="btn btn-primary btn-lg" style={{ width: '100%', marginBottom: '0.75rem' }}>
-            Proceed to Checkout
-          </Link>
+          {/* BR3 (doc 01 §7): checkout is blocked while any measured garment is
+              missing its measurements. Blocked rather than hidden, with the
+              reason stated — a disabled button that does not say why is worse
+              than no button (doc 10 §13). The API enforces this regardless. */}
+          {!checkoutAllowed && missing.length > 0 && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex', gap: '0.5rem',
+                background: '#fffbeb', border: '1px solid #fcd34d',
+                borderRadius: '0.5rem', padding: '0.75rem',
+                marginBottom: '0.75rem', fontSize: '0.8125rem', color: '#92400e',
+              }}
+            >
+              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '1px' }} aria-hidden />
+              <span>
+                Measurements needed for{' '}
+                <strong>{missing.map((i) => i.product.name).join(', ')}</strong>{' '}
+                before you can check out.
+              </span>
+            </div>
+          )}
+
+          {checkoutAllowed ? (
+            <Link
+              href="/checkout"
+              className="btn btn-primary btn-lg"
+              style={{ width: '100%', marginBottom: '0.75rem' }}
+            >
+              Proceed to Checkout
+            </Link>
+          ) : (
+            <Button size="lg" disabled className="mb-3 w-full">
+              Proceed to Checkout
+            </Button>
+          )}
 
           <Link href="/products" className="btn btn-outline" style={{ width: '100%', textAlign: 'center' }}>
             Continue Shopping
           </Link>
         </div>
       </div>
+
+      <MeasurementDialog
+        product={measuring}
+        existing={
+          items.find((i) => i.product.id === measuring?.id)?.measurements
+        }
+        open={measuring !== null}
+        onOpenChange={(open) => !open && setMeasuring(null)}
+        onSave={(set) => {
+          if (measuring) setMeasurements(measuring.id, set);
+        }}
+      />
     </div>
   );
 }

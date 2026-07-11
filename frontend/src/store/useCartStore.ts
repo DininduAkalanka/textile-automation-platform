@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem, Product } from '@/types';
+import { MeasurementSet, isComplete } from '@/lib/measurements';
 
 interface CartState {
   items: CartItem[];
@@ -9,6 +10,7 @@ interface CartState {
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  setMeasurements: (productId: string, measurements: MeasurementSet) => void;
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (open: boolean) => void;
@@ -16,6 +18,10 @@ interface CartState {
   // Computed
   totalItems: () => number;
   subtotal: () => number;
+  /** BR3: line items still missing the measurements their product requires. */
+  itemsMissingMeasurements: () => CartItem[];
+  /** BR3: checkout is blocked while any required measurements are absent. */
+  canCheckout: () => boolean;
 }
 
 export const useCartStore = create<CartState>()(
@@ -61,6 +67,14 @@ export const useCartStore = create<CartState>()(
         });
       },
 
+      setMeasurements: (productId: string, measurements: MeasurementSet) => {
+        set({
+          items: get().items.map((item) =>
+            item.product.id === productId ? { ...item, measurements } : item,
+          ),
+        });
+      },
+
       clearCart: () => set({ items: [] }),
 
       toggleCart: () => set({ isOpen: !get().isOpen }),
@@ -75,6 +89,18 @@ export const useCartStore = create<CartState>()(
           (sum, item) => sum + Number(item.product.price) * item.quantity,
           0,
         ),
+
+      // BR3 (doc 01 §7). This is a UX guard so the customer is told what is
+      // missing before they try; the API enforces the rule for real and rejects
+      // the order regardless of what this returns.
+      itemsMissingMeasurements: () =>
+        get().items.filter(
+          (item) => !isComplete(item.product, item.measurements),
+        ),
+
+      canCheckout: () =>
+        get().items.length > 0 &&
+        get().itemsMissingMeasurements().length === 0,
     }),
     {
       name: 'textile-cart',

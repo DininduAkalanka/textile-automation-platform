@@ -21,6 +21,13 @@ export interface Category {
   };
 }
 
+export type ProductType =
+  | 'FABRIC'
+  | 'READY_MADE'
+  | 'UNIFORM'
+  | 'CUSTOM'
+  | 'ACCESSORY';
+
 export interface Product {
   id: string;
   name: string;
@@ -35,6 +42,9 @@ export interface Product {
   categoryId?: string;
   category?: Category;
   isActive: boolean;
+  /** Drives BR3 and the D8 production gate. */
+  productType?: ProductType;
+  requiresMeasurement?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -215,6 +225,16 @@ export interface Address {
 export interface CartItem {
   product: Product;
   quantity: number;
+  /**
+   * BR3. Present only for products whose type requires it (uniform/custom, or
+   * requires_measurement). Snapshotted onto the order item at checkout so a later
+   * edit to the customer's saved measurements never rewrites what was stitched.
+   */
+  measurements?: {
+    personName: string;
+    label?: string;
+    values: Record<string, number>;
+  };
 }
 
 // ─── API Response Types ───────────────────────────────────

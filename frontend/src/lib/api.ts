@@ -190,7 +190,16 @@ class ApiClient {
   // ─── Orders ───────────────────────────────────────────
 
   async createOrder(data: {
-    items: { productId: string; quantity: number }[];
+    items: {
+      productId: string;
+      quantity: number;
+      /** BR3 measurements, required for uniform/custom garments. */
+      measurements?: {
+        personName: string;
+        label?: string;
+        values: Record<string, number>;
+      };
+    }[];
     shippingAddress: any;
     billingAddress?: any;
     notes?: string;
