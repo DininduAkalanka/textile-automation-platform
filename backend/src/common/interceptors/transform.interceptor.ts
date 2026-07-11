@@ -1,15 +1,26 @@
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+/**
+ * The standard success envelope (CODING_STANDARDS §5.3):
+ *
+ *   { success, message, data, error }
+ *
+ * `message` and `error` were missing, so the client had no uniform place to look
+ * for either. They are added here rather than changing `data`, keeping existing
+ * consumers working.
+ */
 export interface ApiResponse<T> {
   success: boolean;
+  message: string | null;
   data: T;
+  error: null;
   timestamp: string;
 }
 
@@ -24,7 +35,9 @@ export class TransformInterceptor<T>
     return next.handle().pipe(
       map((data) => ({
         success: true,
+        message: null,
         data,
+        error: null,
         timestamp: new Date().toISOString(),
       })),
     );

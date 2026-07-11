@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   Request,
@@ -36,7 +37,7 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findById(@Request() req: any, @Param('id') id: string) {
+  findById(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     // Admin can see any order, customer can only see their own
     const userId = req.user.role === UserRole.ADMIN ? undefined : req.user.sub;
     return this.ordersService.findById(id, userId);
@@ -60,7 +61,7 @@ export class OrdersController {
   @Roles(UserRole.ADMIN)
   updateStatus(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: OrderStatus,
   ) {
     return this.ordersService.updateStatus(id, status, req.user.sub);

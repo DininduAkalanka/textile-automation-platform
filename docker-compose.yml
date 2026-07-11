@@ -44,8 +44,11 @@ services:
       - DATABASE_URL=postgresql://textile_admin:textile_secure_pass_2024@postgres:5432/textile_db?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET=super-secret-jwt-key-2024
+      # Local development only. Must be >= 32 chars (validated at boot).
+      # Production generates a fresh secret: openssl rand -hex 32
+      - JWT_SECRET=local-dev-only-jwt-secret-do-not-use-in-production-0f3a9c
       - JWT_EXPIRATION=7d
+      - FRONTEND_URL=http://localhost:3000
       - STRIPE_SECRET_KEY=sk_test_mock
       - STRIPE_WEBHOOK_SECRET=whsec_mock
     depends_on:

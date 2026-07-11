@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   Request,
@@ -78,7 +79,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   payInstallment(
     @Request() req: any,
-    @Param('installmentId') installmentId: string,
+    @Param('installmentId', ParseUUIDPipe) installmentId: string,
   ) {
     return this.paymentsService.payInstallment(installmentId, req.user.sub);
   }
@@ -100,14 +101,14 @@ export class PaymentsController {
   @Post('admin/:orderId/mark-paid')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  markPaid(@Request() req: any, @Param('orderId') orderId: string) {
+  markPaid(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.paymentsService.markPaymentPaid(orderId, req.user.sub);
   }
 
   @Post('admin/:orderId/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  rejectPayment(@Param('orderId') orderId: string) {
+  rejectPayment(@Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.paymentsService.rejectPayment(orderId);
   }
 
@@ -115,7 +116,7 @@ export class PaymentsController {
 
   @Get(':orderId')
   @UseGuards(JwtAuthGuard)
-  getPayment(@Request() req: any, @Param('orderId') orderId: string) {
+  getPayment(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.paymentsService.getPaymentByOrderId(
       orderId,
       req.user.sub,
@@ -127,7 +128,7 @@ export class PaymentsController {
 
   @Get(':orderId/installments')
   @UseGuards(JwtAuthGuard)
-  getInstallmentSchedule(@Request() req: any, @Param('orderId') orderId: string) {
+  getInstallmentSchedule(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.paymentsService.getInstallmentSchedule(
       orderId,
       req.user.sub,
@@ -139,7 +140,7 @@ export class PaymentsController {
 
   @Post('confirm/:orderId')
   @UseGuards(JwtAuthGuard)
-  confirmPayment(@Request() req: any, @Param('orderId') orderId: string) {
+  confirmPayment(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.paymentsService.confirmPayment(orderId, req.user.sub);
   }
 
@@ -149,7 +150,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   confirmInstallment(
     @Request() req: any,
-    @Param('installmentId') installmentId: string,
+    @Param('installmentId', ParseUUIDPipe) installmentId: string,
   ) {
     return this.paymentsService.confirmInstallment(installmentId, req.user.sub);
   }
