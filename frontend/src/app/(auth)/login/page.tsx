@@ -1,147 +1,102 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const login = useAuthStore((s) => s.login);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/ui/form-field';
+import { useLogin } from '@/hooks/use-auth';
+import { LoginInput, loginSchema } from '@/lib/schemas';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    try {
-      await login(email, password);
-      router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
-    }
-  };
+function LoginForm() {
+  const searchParams = useSearchParams();
+  // proxy.ts sets this when it bounces an unauthenticated user off a gated page.
+  const returnTo = searchParams.get('returnTo') ?? undefined;
+
+  const login = useLogin(returnTo);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-        padding: '2rem',
-      }}
+    <form
+      onSubmit={handleSubmit((values) => login.mutate(values))}
+      className="flex flex-col gap-5"
+      noValidate
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          background: 'white',
-          borderRadius: '1rem',
-          padding: '2.5rem',
-          boxShadow: 'var(--shadow-xl)',
-        }}
+      <FormField
+        label="Email address"
+        type="email"
+        autoComplete="email"
+        placeholder="you@example.com"
+        error={errors.email?.message}
+        {...register('email')}
+      />
+
+      <FormField
+        label="Password"
+        type="password"
+        autoComplete="current-password"
+        placeholder="••••••••"
+        error={errors.password?.message}
+        {...register('password')}
+      />
+
+      <Button
+        type="submit"
+        size="lg"
+        loading={login.isPending}
+        className="mt-2 w-full"
       >
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div
-              style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '0.625rem',
-                background: 'linear-gradient(135deg, var(--color-accent), var(--color-gold))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '1.125rem',
-                fontWeight: 700,
-              }}
-            >
+        {login.isPending ? 'Signing in…' : 'Sign in'}
+      </Button>
+    </form>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-200 p-8">
+      <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl">
+        <div className="mb-8 text-center">
+          <Link href="/" className="inline-flex items-center gap-2 no-underline">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-indigo-600 text-lg font-bold text-white">
               T
             </div>
-            <span className="font-display" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+            <span className="font-display text-2xl font-bold text-neutral-900">
               TextileShop
             </span>
           </Link>
         </div>
 
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, textAlign: 'center', marginBottom: '0.5rem' }}>
-          Welcome Back
-        </h1>
-        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '2rem' }}>
+        <h1 className="mb-1 text-center text-2xl font-bold">Welcome back</h1>
+        <p className="mb-8 text-center text-sm text-neutral-500">
           Sign in to your account to continue
         </p>
 
-        {error && (
-          <div style={{
-            background: '#fef2f2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            marginBottom: '1.5rem',
-            border: '1px solid #fecaca',
-          }}>
-            {error}
-          </div>
-        )}
+        {/* useSearchParams needs a Suspense boundary to keep the page static. */}
+        <Suspense fallback={<div className="h-64" />}>
+          <LoginForm />
+        </Suspense>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div>
-            <label className="input-label">Email Address</label>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="input-label">Password</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={8}
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn btn-primary btn-lg"
-            disabled={isLoading}
-            style={{ width: '100%', marginTop: '0.5rem' }}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+        <p className="mt-6 text-center text-sm text-neutral-500">
           Don&apos;t have an account?{' '}
-          <Link href="/register" style={{ color: 'var(--color-accent)', fontWeight: 500, textDecoration: 'none' }}>
+          <Link href="/register" className="font-medium text-indigo-600">
             Create one
           </Link>
         </p>
 
-        {/* Demo credentials */}
-        <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          background: 'var(--color-border-light)',
-          borderRadius: '0.5rem',
-          fontSize: '0.75rem',
-          color: 'var(--color-text-muted)',
-        }}>
-          <p style={{ fontWeight: 600, marginBottom: '0.375rem' }}>Demo Credentials:</p>
+        <div className="mt-6 rounded-lg bg-neutral-100 p-4 text-xs text-neutral-500">
+          <p className="mb-1.5 font-semibold">Demo credentials</p>
           <p>Admin: admin@textileshop.com / Admin@123456</p>
           <p>Customer: customer@example.com / Customer@123456</p>
         </div>
