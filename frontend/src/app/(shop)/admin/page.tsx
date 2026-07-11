@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { Order, Product } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDashboard } from '@/hooks/use-dashboard';
 import { formatLKR } from '@/lib/format';
 
 /** Server-computed. Revenue is a decimal string and is never parsed to a float here. */
@@ -19,29 +21,35 @@ const EMPTY_TOTALS = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated } = useAuthStore();
+  const isAdmin = isAuthenticated && user?.role === 'ADMIN';
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totals, setTotals] = useState(EMPTY_TOTALS);
+  const [listsLoading, setListsLoading] = useState(true);
 
+  // Metrics via TanStack Query (doc 05 §3.4): caching, loading and error states
+  // are handled by the hook rather than three useState flags.
+  const { data: dashboard, isLoading: metricsLoading } = useDashboard();
+  const totals = dashboard?.totals ?? EMPTY_TOTALS;
+
+  // The two tables below still use the legacy client; they are migrated with the
+  // admin catalog UI in Session 2.2.
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'ADMIN') {
-      // Metrics come from GET /admin/dashboard, which aggregates in SQL over
-      // COMPLETED payments. Summing order totals client-side (as this page used
-      // to) counted cancelled and unpaid orders, and only ever saw page one.
-      Promise.all([
-        api.getAdminDashboard(),
-        api.getAllOrders(1, 10),
-        api.getProducts({ limit: 100 }),
-      ]).then(([dashboard, ordersRes, productsRes]) => {
-        setTotals(dashboard.totals);
+    if (!isAdmin) {
+      setListsLoading(false);
+      return;
+    }
+
+    Promise.all([api.getAllOrders(1, 10), api.getProducts({ limit: 100 })])
+      .then(([ordersRes, productsRes]) => {
         setOrders(ordersRes.orders || []);
         setProducts(productsRes.products || []);
-      }).catch(console.error).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [isAuthenticated, user]);
+      })
+      .catch(() => toast.error('Could not load orders and products'))
+      .finally(() => setListsLoading(false));
+  }, [isAdmin]);
+
+  const loading = metricsLoading || listsLoading;
 
   if (!isAuthenticated || user?.role !== 'ADMIN') {
     return (
@@ -69,8 +77,11 @@ export default function AdminDashboard() {
       await api.updateOrderStatus(orderId, newStatus);
       const updated = await api.getAllOrders(1, 10);
       setOrders(updated.orders || []);
-    } catch (error: any) {
-      alert(error.message || 'Failed to update status');
+      toast.success(`Order moved to ${newStatus}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update status',
+      );
     }
   };
 
@@ -82,6 +93,7 @@ export default function AdminDashboard() {
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Welcome back, {user?.firstName}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link href="/admin/production" className="btn btn-outline btn-sm">🧵 Production</Link>
           <Link href="/admin/payments" className="btn btn-outline btn-sm">💳 Payments</Link>
           <Link href="/" className="btn btn-outline btn-sm">← Back to Shop</Link>
         </div>
