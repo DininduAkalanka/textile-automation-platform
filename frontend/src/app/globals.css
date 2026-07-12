@@ -132,23 +132,37 @@
 
 /* ════════════════════════════════════════════════════════════════
    RESET
+   ────────────────────────────────────────────────────────────────
+   MUST live in @layer base. These are bare element selectors, and
+   unlayered CSS beats EVERY cascade layer regardless of specificity —
+   so an unlayered `button { background: none }` silently overrides
+   Tailwind's `.bg-indigo-600` (which sits in @layer utilities), and
+   every shadcn button renders with no background. That is not a
+   specificity fight you can win with `!important` sprinkles; the layer
+   is the fix.
+
+   Custom component classes below (.btn, .card, …) stay unlayered on
+   purpose: they SHOULD beat Tailwind utilities, because a page that
+   opts into .btn is asking for this design system, not for utilities.
 ════════════════════════════════════════════════════════════════ */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; font-size: 16px; -webkit-text-size-adjust: 100%; }
-body {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.65;
-  color: var(--clr-text);
-  background: var(--clr-surface);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+@layer base {
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; font-size: 16px; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--clr-text);
+    background: var(--clr-surface);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  img, video { max-width: 100%; height: auto; display: block; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select, textarea { font-family: inherit; }
+  button { cursor: pointer; border: none; background: none; }
 }
-img, video { max-width: 100%; height: auto; display: block; }
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font-family: inherit; }
-button { cursor: pointer; border: none; background: none; }
 
 /* ════════════════════════════════════════════════════════════════
    SCROLLBAR
