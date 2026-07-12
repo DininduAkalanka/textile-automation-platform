@@ -51,10 +51,45 @@ services:
       - FRONTEND_URL=http://localhost:3000
       - STRIPE_SECRET_KEY=sk_test_mock
       - STRIPE_WEBHOOK_SECRET=whsec_mock
+      # AI gateway. Deliberately NOT depends_on the ai service: the API must
+      # start and serve the shop whether or not the assistant is up, and it
+      # falls back to plain product search when it cannot reach it.
+      - AI_SERVICE_URL=http://ai:8000
+      - INTERNAL_API_KEY=local-dev-internal-key
+      - AI_TIMEOUT_MS=12000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  # ─── AI service (Phase 9, decision D9/D10) ─────────────────────────────────
+  # A separate container because it is Python, and because an LLM call that hangs
+  # must not be able to occupy the API's event loop or connection pool. A slow
+  # assistant must never slow down checkout.
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    image: textile-ai:latest
+    container_name: textile_ai
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    environment:
+      # READ-ONLY role. It can SELECT products, categories and inventory, and
+      # nothing else — Postgres itself refuses writes and refuses to show it the
+      # users table. See the ai_readonly_role migration.
+      - DATABASE_URL_READONLY=postgresql://textile_ai_readonly:ai_readonly_local_dev_password@postgres:5432/textile_db
+      - INTERNAL_API_KEY=local-dev-internal-key
+      # No key -> the service still runs and returns ranked products from the
+      # retriever. Add one to enable the LLM:
+      #   LLM_API_KEY=sk-ant-...
+      - LLM_PROVIDER=anthropic
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=claude-sonnet-5
+    depends_on:
+      postgres:
         condition: service_healthy
 
   frontend:

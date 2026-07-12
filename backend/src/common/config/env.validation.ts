@@ -78,6 +78,23 @@ export class EnvironmentVariables {
   @IsString()
   PAYHERE_NOTIFY_URL?: string;
 
+  // ─── AI service (Phase 9) ───────────────────────────────────────────────
+  // Optional: without them the API falls back to plain product search, so the
+  // shop works whether or not the AI service is deployed.
+  @IsOptional()
+  @IsString()
+  AI_SERVICE_URL?: string;
+
+  /** Shared secret with the AI service. It rejects calls that lack it. */
+  @IsOptional()
+  @IsString()
+  INTERNAL_API_KEY?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  AI_TIMEOUT_MS?: number;
+
   // ─── Stripe: cut from MVP (D12), retained only for the legacy mock path ───
   @IsOptional()
   @IsString()

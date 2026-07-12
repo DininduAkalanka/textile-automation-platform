@@ -1,6 +1,13 @@
 # Dependencies
 node_modules/
 
+# Python (the ai/ service)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # Build output
 dist/
 build/
