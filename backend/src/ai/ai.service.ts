@@ -25,6 +25,27 @@ export interface ChatReply {
   llm: boolean;
 }
 
+export interface ChartSpec {
+  type: 'line' | 'bar' | 'donut';
+  title: string;
+  categories: string[];
+  series: number[];
+}
+
+export interface BusinessReply {
+  insight: string;
+  /** The raw tool outputs, so every figure the owner sees is auditable. */
+  data: Record<string, unknown>;
+  recommendation: string | null;
+  chartSpec: ChartSpec | null;
+  /**
+   * False when the AI service caught the model stating a number that appears in
+   * no tool's output. The UI must not present such an answer as fact.
+   */
+  grounded: boolean;
+  toolsUsed: string[];
+}
+
 /**
  * Gateway to the AI service (plan Session 9.1, task 5).
  *
@@ -113,6 +134,65 @@ export class AiService {
         `AI service unavailable (${error instanceof Error ? error.message : 'unknown'}); falling back to product search`,
       );
       return this.fallbackSearch(message);
+    }
+  }
+
+  /**
+   * The owner's analyst (Session 9.2, decision D9).
+   *
+   * The caller's role has ALREADY been verified by RolesGuard on the controller.
+   * We forward it as a header, and the AI service trusts it — but only because
+   * X-Internal-Key has first established that the caller is this gateway. Without
+   * that shared secret, anyone could set X-User-Role: ADMIN and read the shop's
+   * revenue.
+   *
+   * No fallback to a fabricated summary here. If the analyst is unavailable, the
+   * owner is TOLD so. Inventing a plausible-looking business figure because the
+   * service is cold would be far worse than an error message.
+   */
+  async businessChat(
+    message: string,
+    role: string,
+    history: ChatTurn[] = [],
+  ): Promise<BusinessReply> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/chat/business`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': this.internalKey,
+          'X-User-Role': role,
+        },
+        body: JSON.stringify({ message, history }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai service returned ${response.status}`);
+      }
+
+      return (await response.json()) as BusinessReply;
+    } catch (error) {
+      this.logger.warn(
+        `Business assistant unavailable: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+
+      return {
+        insight:
+          'The business assistant is not available right now. Your dashboard figures are unaffected.',
+        data: {},
+        recommendation: null,
+        chartSpec: null,
+        // Not grounded: there is no data behind this sentence, and the UI should
+        // not dress it up as an insight.
+        grounded: false,
+        toolsUsed: [],
+      };
+    } finally {
+      clearTimeout(timer);
     }
   }
 

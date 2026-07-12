@@ -4,10 +4,16 @@ from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
+from app.business import BusinessChatService
 from app.chat import CustomerChatService
 from app.config import Settings, get_settings
 from app.llm import build_client
-from app.models import ChatRequest, ChatResponse
+from app.models import (
+    BusinessRequest,
+    BusinessResponse,
+    ChatRequest,
+    ChatResponse,
+)
 from app.retrieval import FtsRetriever
 
 logging.basicConfig(
@@ -93,6 +99,46 @@ async def customer_chat(request: ChatRequest) -> ChatResponse:
     service = CustomerChatService(
         pool=_state["pool"],
         retriever=FtsRetriever(_state["pool"]),
+        llm=_state["llm"],
+        settings=settings,
+    )
+    return await service.answer(request)
+
+
+def require_admin(x_user_role: str = Header(default="")) -> None:
+    """
+    The business assistant is for the owner alone (doc 09 §4.2: "View AI Reports —
+    Admin only").
+
+    The role is asserted by the NestJS gateway, which has already verified the JWT
+    with RolesGuard. This header is a claim FORWARDED by a trusted caller, not a
+    credential — and it is only trustworthy because require_internal_key has
+    already established that the caller IS the gateway. Without that shared secret,
+    anyone could set this header and read the shop's revenue.
+    """
+    if x_user_role.upper() != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="business insights are available to admins only",
+        )
+
+
+@app.post(
+    "/v1/chat/business",
+    response_model=BusinessResponse,
+    dependencies=[Depends(require_internal_key), Depends(require_admin)],
+)
+async def business_chat(request: BusinessRequest) -> BusinessResponse:
+    """
+    The owner's analyst (decision D9).
+
+    The model NEVER emits SQL. It picks tools by name from a fixed whitelist; we
+    run our own parameterised queries against PII-free views. Every number it then
+    states is checked against those tool outputs before the answer is returned.
+    """
+    settings: Settings = _state["settings"]
+    service = BusinessChatService(
+        pool=_state["pool"],
         llm=_state["llm"],
         settings=settings,
     )

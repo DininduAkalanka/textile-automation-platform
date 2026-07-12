@@ -93,6 +93,7 @@ export default function AdminDashboard() {
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Welcome back, {user?.firstName}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link href="/admin/ai-insights" className="btn btn-outline btn-sm">✨ AI Insights</Link>
           <Link href="/admin/production" className="btn btn-outline btn-sm">🧵 Production</Link>
           <Link href="/admin/payments" className="btn btn-outline btn-sm">💳 Payments</Link>
           <Link href="/" className="btn btn-outline btn-sm">← Back to Shop</Link>
