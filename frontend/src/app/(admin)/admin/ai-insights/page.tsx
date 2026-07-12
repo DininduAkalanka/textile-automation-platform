@@ -86,22 +86,15 @@ export default function AiInsightsPage() {
   };
 
   return (
-    <div className="container max-w-3xl py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-display flex items-center gap-2 text-2xl font-bold">
-            <Sparkles className="h-6 w-6 text-indigo-600" aria-hidden />
-            Business insights
-          </h1>
-          <p className="text-sm text-neutral-500">
-            Ask about your sales, stock and margins in plain English.
-          </p>
-        </div>
-        <Link href="/admin">
-          <Button variant="outline" size="sm">
-            ← Dashboard
-          </Button>
-        </Link>
+    <div className="max-w-3xl">
+      <div className="mb-6">
+        <h1 className="font-display flex items-center gap-2 text-2xl font-bold tracking-tight text-neutral-900">
+          <Sparkles className="h-5 w-5 text-[#CC0000]" strokeWidth={1.75} aria-hidden />
+          Business insights
+        </h1>
+        <p className="mt-0.5 text-sm text-neutral-400">
+          Ask about your sales, stock and margins in plain English.
+        </p>
       </div>
 
       {turns.length === 0 && (

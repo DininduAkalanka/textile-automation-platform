@@ -190,6 +190,17 @@ export interface DashboardResponse {
     totalOrders: number;
     totalProducts: number;
   };
+  /**
+   * The same metrics over the previous window of equal length. `null` percentages
+   * mean there was no prior data — the UI must say so rather than print "+100%",
+   * because a first sale is not growth.
+   */
+  deltas: {
+    previousRevenue: string;
+    revenueChangePercent: number | null;
+    previousPaidOrders: number;
+    paidOrdersChangePercent: number | null;
+  };
   salesByDay: Array<{ date: string; revenue: string; orders: number }>;
   topProducts: Array<{
     productId: string;

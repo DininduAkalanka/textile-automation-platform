@@ -38,6 +38,24 @@ export interface DashboardTotals {
   totalProducts: number;
 }
 
+/**
+ * The same metric over the PREVIOUS window of equal length.
+ *
+ * A revenue figure on its own is a number, not an insight — "Rs 21,900" tells an
+ * owner nothing until they know whether that is up or down. This is what turns a
+ * stat tile into information (plan Session 8.1: "StatCards w/ delta vs previous
+ * period").
+ */
+export interface DashboardDeltas {
+  /** Decimal string — revenue in the immediately preceding window. */
+  previousRevenue: string;
+  /** Percent change, or null when the previous window had no revenue (division
+   * by zero is not "infinite growth", it is "no basis for comparison"). */
+  revenueChangePercent: number | null;
+  previousPaidOrders: number;
+  paidOrdersChangePercent: number | null;
+}
+
 export interface SalesByDayPoint {
   /** YYYY-MM-DD */
   date: string;
@@ -74,6 +92,7 @@ export interface RecentOrder {
 export interface DashboardPayload {
   range: { from: string; to: string };
   totals: DashboardTotals;
+  deltas: DashboardDeltas;
   salesByDay: SalesByDayPoint[];
   topProducts: TopProduct[];
   ordersByStatus: OrderStatusCount[];
@@ -93,6 +112,53 @@ export class AnalyticsService {
       ? new Date(from)
       : new Date(end.getTime() - DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     return { from: start, to: end };
+  }
+
+  /**
+   * The window immediately before this one, of exactly the same length.
+   *
+   * "Same length" matters: comparing a 30-day month against a 31-day one would
+   * manufacture a 3% swing out of the calendar.
+   */
+  private previousRange({ from, to }: DateRange): DateRange {
+    const span = to.getTime() - from.getTime();
+    return { from: new Date(from.getTime() - span), to: new Date(from) };
+  }
+
+  async getDeltas(range: DateRange): Promise<DashboardDeltas> {
+    const previous = this.previousRange(range);
+
+    const [current, prior] = await Promise.all([
+      this.paidTotals(range),
+      this.paidTotals(previous),
+    ]);
+
+    return {
+      previousRevenue: prior.revenue,
+      revenueChangePercent: percentChange(
+        Number(current.revenue),
+        Number(prior.revenue),
+      ),
+      previousPaidOrders: prior.paidOrders,
+      paidOrdersChangePercent: percentChange(
+        current.paidOrders,
+        prior.paidOrders,
+      ),
+    };
+  }
+
+  /** Revenue + paid-order count for one window. Shared by totals and deltas. */
+  private async paidTotals({ from, to }: DateRange) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ revenue: string; paidOrders: number }>
+    >`
+      SELECT COALESCE(SUM(amount), 0)::text            AS "revenue",
+             COUNT(DISTINCT order_id)::int             AS "paidOrders"
+        FROM payments
+       WHERE status = 'COMPLETED'
+         AND COALESCE(paid_at, created_at) BETWEEN ${from} AND ${to}
+    `;
+    return rows[0];
   }
 
   async getTotals({ from, to }: DateRange): Promise<DashboardTotals> {
@@ -201,9 +267,10 @@ export class AnalyticsService {
   async getDashboard(from?: string, to?: string): Promise<DashboardPayload> {
     const range = this.resolveRange(from, to);
 
-    const [totals, salesByDay, topProducts, ordersByStatus, recentOrders] =
+    const [totals, deltas, salesByDay, topProducts, ordersByStatus, recentOrders] =
       await Promise.all([
         this.getTotals(range),
+        this.getDeltas(range),
         this.getSalesByDay(range),
         this.getTopProducts(range),
         this.getOrdersByStatus(),
@@ -216,10 +283,23 @@ export class AnalyticsService {
         to: range.to.toISOString(),
       },
       totals,
+      deltas,
       salesByDay,
       topProducts,
       ordersByStatus,
       recentOrders,
     };
   }
+}
+
+/**
+ * Percent change, or null when there is nothing to compare against.
+ *
+ * Returning null rather than 100 (or Infinity) for a zero baseline is deliberate:
+ * going from Rs 0 to Rs 21,900 is not "+100% growth", it is a first sale. The UI
+ * shows "no prior data" instead of a triumphant and meaningless number.
+ */
+function percentChange(current: number, previous: number): number | null {
+  if (!previous) return null;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
 }

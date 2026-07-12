@@ -41,21 +41,18 @@ export default function ProductionBoardPage() {
     : 0;
 
   return (
-    <div className="container py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Production</h1>
-          <p className="text-sm text-neutral-500">
-            {isLoading
-              ? 'Loading the floor…'
-              : `${totalTasks} task${totalTasks === 1 ? '' : 's'} on the floor`}
-          </p>
-        </div>
-        <Link href="/admin">
-          <Button variant="outline" size="sm">
-            ← Dashboard
-          </Button>
-        </Link>
+    <div>
+      {/* No "back to dashboard" link and no container: the admin shell provides
+          both the sidebar navigation and the page padding. */}
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-900">
+          Production
+        </h1>
+        <p className="mt-0.5 text-sm text-neutral-400">
+          {isLoading
+            ? 'Loading the floor…'
+            : `${totalTasks} task${totalTasks === 1 ? '' : 's'} on the floor`}
+        </p>
       </div>
 
       {isError && (
