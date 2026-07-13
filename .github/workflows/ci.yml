@@ -86,9 +86,34 @@ jobs:
       - name: Apply migrations to a clean database
         run: npx prisma migrate deploy
 
-      # Race, oversell, BR4, and the CHECK-constraint backstop.
+      # Seeding in CI does double duty. It gives the reconciliation step below a
+      # database with real products in it to audit — and it proves the seed itself
+      # still works, which matters because the container runs it on every boot
+      # (Dockerfile: migrate deploy && db:seed && start:prod). The seed has already
+      # shipped two real bugs: it created products with no inventory ledger, and it
+      # clobbered the stock cache on every restart.
+      - name: Seed
+        run: npm run db:seed
+
+      # Race, oversell, BR4, the CHECK-constraint backstop, and the 50-operation
+      # inventory storm.
       - name: Integration tests (real Postgres)
         run: npm run test:integration
+
+      # A whole-database audit of the stock ledger:
+      #
+      #   available = Σ(INITIAL,PURCHASE,ADJUSTMENT,DAMAGE,SALE)
+      #   reserved  = Σ(RESERVE,RELEASE,SALE)
+      #
+      # To be clear about what this does and does not prove: the integration suite
+      # already asserts reconciliation against its own 50-operation storm, in-test,
+      # via the same findDrift() this script calls — that is the real guarantee.
+      # This step audits the SEEDED catalogue (every product must open a ledger),
+      # catches anything the suite failed to clean up, and proves the CLI itself
+      # runs. A reconciler that crashes on startup is worse than no reconciler,
+      # because you believe you have one.
+      - name: Reconcile inventory (plan 5.1, task 4)
+        run: npm run reconcile
 
   frontend:
     name: Frontend · build + typecheck

@@ -25,7 +25,8 @@
     "db:reset": "npx prisma migrate reset",
     "db:seed": "npx prisma db seed",
     "db:studio": "npx prisma studio",
-    "db:generate": "npx prisma generate"
+    "db:generate": "npx prisma generate",
+    "reconcile": "ts-node -r tsconfig-paths/register scripts/reconcile-inventory.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

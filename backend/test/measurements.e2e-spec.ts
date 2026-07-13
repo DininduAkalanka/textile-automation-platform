@@ -117,6 +117,11 @@ describe('BR3 measurements at checkout', () => {
   });
 
   afterAll(async () => {
+    // Movements before orders: the FK is ON DELETE RESTRICT so an order's stock
+    // history cannot be silently erased with it (see the 20260712100000 migration).
+    await prisma.inventoryMovement.deleteMany({
+      where: { inventory: { product: { sku: { startsWith: TAG } } } },
+    });
     await prisma.order.deleteMany({ where: { userId } });
     await prisma.product.deleteMany({ where: { sku: { startsWith: TAG } } });
     await prisma.user.deleteMany({ where: { id: userId } });
