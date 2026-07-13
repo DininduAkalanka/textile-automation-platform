@@ -1,4 +1,4 @@
-import { ApiResponse, AuthResponse, ProductsResponse, Product, OrdersResponse, Order, Category, PaymentIntentResponse, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse } from '@/types';
+import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, PaymentIntentResponse, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -153,38 +153,14 @@ class ApiClient {
     return this.request<Product>(`/products/${id}`);
   }
 
-  async createProduct(data: any): Promise<Product> {
-    return this.request<Product>('/products', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async updateProduct(id: string, data: any): Promise<Product> {
-    return this.request<Product>(`/products/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteProduct(id: string): Promise<void> {
-    return this.request(`/products/${id}`, { method: 'DELETE' });
-  }
-
   // ─── Categories ───────────────────────────────────────
+  // Admin mutations (create/update/delete product or category) live in
+  // services/products.service.ts + services/categories.service.ts instead —
+  // typed, and going through the axios `http` client's single-flight token
+  // refresh rather than this class's separate fetch wrapper.
 
   async getCategories(): Promise<Category[]> {
     return this.request<Category[]>('/categories');
-  }
-
-  async createCategory(data: {
-    name: string;
-    description?: string;
-  }): Promise<Category> {
-    return this.request<Category>('/categories', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
 
   // ─── Orders ───────────────────────────────────────────
@@ -210,20 +186,6 @@ class ApiClient {
     });
   }
 
-  async getOrders(page = 1, limit = 10): Promise<OrdersResponse> {
-    return this.request<OrdersResponse>(`/orders?page=${page}&limit=${limit}`);
-  }
-
-  async getOrderById(id: string): Promise<Order> {
-    return this.request<Order>(`/orders/${id}`);
-  }
-
-  async getAllOrders(page = 1, limit = 20, status?: string): Promise<OrdersResponse> {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (status) params.set('status', status);
-    return this.request<OrdersResponse>(`/orders/admin/all?${params}`);
-  }
-
   /**
    * Server-aggregated dashboard metrics. Revenue counts COMPLETED payments only
    * and is computed in SQL — never summed client-side over a page of orders.
@@ -234,13 +196,6 @@ class ApiClient {
     if (to) params.set('to', to);
     const query = params.toString();
     return this.request<DashboardResponse>(`/admin/dashboard${query ? `?${query}` : ''}`);
-  }
-
-  async updateOrderStatus(id: string, status: string): Promise<Order> {
-    return this.request<Order>(`/orders/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
   }
 
   // ─── Payments ─────────────────────────────────────────

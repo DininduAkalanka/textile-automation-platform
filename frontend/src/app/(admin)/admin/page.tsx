@@ -91,12 +91,13 @@ export default function AdminDashboardPage() {
           loading={isLoading}
         />
         <StatCard
+          href="/admin/inventory"
           label="Low stock"
           value={totals?.lowStockCount ?? '—'}
           icon={totals?.lowStockCount ? AlertTriangle : Package}
           hint={
             totals?.lowStockCount
-              ? 'At or below minimum level'
+              ? 'Reorder these'
               : 'All products above minimum'
           }
           alert={Boolean(totals?.lowStockCount)}

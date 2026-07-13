@@ -7,7 +7,7 @@ import { Factory } from 'lucide-react';
 import { TaskCard } from '@/components/production/task-card';
 import { TaskDrawer } from '@/components/production/task-drawer';
 import { Button } from '@/components/ui/button';
-import { usePipeline } from '@/hooks/use-production';
+import { usePipeline, useWorkers } from '@/hooks/use-production';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ProductionTask, STAGE_LABEL, STAGE_ORDER } from '@/types/production';
 
@@ -21,7 +21,9 @@ import { ProductionTask, STAGE_LABEL, STAGE_ORDER } from '@/types/production';
 export default function ProductionBoardPage() {
   const { user, isAuthenticated } = useAuthStore();
   const { data: pipeline, isLoading, isError, refetch } = usePipeline();
+  const { data: workers } = useWorkers();
   const [selected, setSelected] = useState<ProductionTask | null>(null);
+  const [workerFilter, setWorkerFilter] = useState('');
 
   // The API is the real gate (401/403); this is only so the page does not flash
   // a broken board at someone who should not be here.
@@ -44,15 +46,33 @@ export default function ProductionBoardPage() {
     <div>
       {/* No "back to dashboard" link and no container: the admin shell provides
           both the sidebar navigation and the page padding. */}
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-900">
-          Production
-        </h1>
-        <p className="mt-0.5 text-sm text-neutral-400">
-          {isLoading
-            ? 'Loading the floor…'
-            : `${totalTasks} task${totalTasks === 1 ? '' : 's'} on the floor`}
-        </p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-900">
+            Production
+          </h1>
+          <p className="mt-0.5 text-sm text-neutral-400">
+            {isLoading
+              ? 'Loading the floor…'
+              : `${totalTasks} task${totalTasks === 1 ? '' : 's'} on the floor`}
+          </p>
+        </div>
+
+        {workers && workers.length > 0 && (
+          <select
+            value={workerFilter}
+            onChange={(e) => setWorkerFilter(e.target.value)}
+            aria-label="Filter by worker"
+            className="h-9 rounded-lg border border-neutral-300 bg-white px-2.5 text-sm text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            <option value="">Everyone</option>
+            {workers.map((worker) => (
+              <option key={worker.id} value={worker.id}>
+                {worker.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {isError && (
@@ -91,7 +111,9 @@ export default function ProductionBoardPage() {
       {pipeline && totalTasks > 0 && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STAGE_ORDER.map((stage) => {
-            const tasks = pipeline[stage];
+            const tasks = workerFilter
+              ? pipeline[stage].filter((t) => t.worker?.id === workerFilter)
+              : pipeline[stage];
 
             return (
               <section

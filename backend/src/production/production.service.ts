@@ -16,6 +16,10 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  assertTransition,
+  orderStatusNotification,
+} from '../orders/order.machine';
+import {
   IllegalTaskTransition,
   TaskAction,
   TaskTransition,
@@ -140,7 +144,23 @@ export class ProductionService {
     };
   }
 
-  /** A worker's own queue (plan Session 6.2, FR-P4). */
+  /**
+   * A worker's own queue, plus what they finished today (plan Session 6.2, FR-P4).
+   *
+   * "Completed" only ever means one thing in this schema: `endTime` is set. Look
+   * at the machine (production.machine.ts) — `finishes: true` is returned by
+   * exactly one action, `qc_pass`. `complete` at CUTTING/STITCHING/FINISHING sets
+   * status DONE but leaves `endTime` null, because the task is done with THAT
+   * stage, not done for good — it is still awaiting `advance` and still belongs in
+   * the queue. So "completed today" is not a second concept bolted on for morale;
+   * it is the one place `endTime` was already meaningful, split out and dated.
+   *
+   * "Today" is computed by Postgres (`date_trunc('day', now())`), not Node, for
+   * the same reason the dashboard's `ordersToday` is: the DB is the one clock the
+   * whole system agrees on, and comparing a JS-local midnight against UTC-stored
+   * timestamps is how "today" quietly becomes "today, unless the server and the
+   * browser disagree about time zones."
+   */
   async getMyTasks(userId: string) {
     const worker = await this.prisma.worker.findUnique({ where: { userId } });
     if (!worker) {
@@ -149,31 +169,54 @@ export class ProductionService {
       );
     }
 
-    const tasks = await this.prisma.productionTask.findMany({
-      where: {
-        assignedWorkerId: worker.id,
-        NOT: { stage: ProductionStage.QUALITY_CHECK, status: TaskStatus.DONE },
-      },
-      include: {
-        order: { select: { orderNumber: true, createdAt: true } },
-        orderItem: {
-          select: {
-            quantity: true,
-            measurements: true,
-            product: { select: { name: true, productType: true } },
-          },
-        },
-        worker: {
-          select: {
-            id: true,
-            user: { select: { firstName: true, lastName: true } },
-          },
+    const include = {
+      order: { select: { orderNumber: true, createdAt: true } },
+      orderItem: {
+        select: {
+          quantity: true,
+          measurements: true,
+          product: { select: { name: true, productType: true } },
         },
       },
-      orderBy: { createdAt: 'asc' },
-    });
+      worker: {
+        select: {
+          id: true,
+          user: { select: { firstName: true, lastName: true } },
+        },
+      },
+    } as const;
 
-    return tasks.map((task) => this.shape(task));
+    const [{ today }] = await this.prisma.$queryRaw<Array<{ today: Date }>>`
+      SELECT date_trunc('day', now()) AS today`;
+
+    const [queue, completedToday] = await Promise.all([
+      this.prisma.productionTask.findMany({
+        where: {
+          assignedWorkerId: worker.id,
+          NOT: {
+            stage: ProductionStage.QUALITY_CHECK,
+            status: TaskStatus.DONE,
+          },
+        },
+        include,
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.productionTask.findMany({
+        where: {
+          assignedWorkerId: worker.id,
+          stage: ProductionStage.QUALITY_CHECK,
+          status: TaskStatus.DONE,
+          endTime: { gte: today },
+        },
+        include,
+        orderBy: { endTime: 'desc' },
+      }),
+    ]);
+
+    return {
+      queue: queue.map((task) => this.shape(task)),
+      completedToday: completedToday.map((task) => this.shape(task)),
+    };
   }
 
   /** Workers available for assignment (the admin's searchable select). */
@@ -317,6 +360,14 @@ export class ProductionService {
    * FINISHING) correctly pulls the order back from QUALITY_CHECK to
    * IN_PRODUCTION — an increment-only design would leave the order claiming it
    * was being inspected while a worker re-stitched it.
+   *
+   * The computed target is validated through order.machine.ts's canTransition()
+   * before it is written — the SAME graph orders.service.ts's admin actions use.
+   * That is what makes "never hand-set" true rather than aspirational: if this
+   * function's derivation logic and the graph ever disagreed, assertTransition()
+   * throws instead of silently writing a status the graph forbids. It used to just
+   * write it — which is exactly how the QUALITY_CHECK→IN_PRODUCTION move went
+   * unnoticed for as long as it did.
    */
   private async syncOrderStatus(tx: Tx, orderId: string, changedBy: string) {
     const [order, tasks] = await Promise.all([
@@ -352,6 +403,14 @@ export class ProductionService {
 
     if (!target || target === order.status) return;
 
+    // Not a duplicate of the branches above: THIS is what makes it impossible for
+    // this function's own logic to drift from the graph everyone else uses. If a
+    // future edit to allDone/allAtQc/anyStarted ever computed a target the shared
+    // machine disagrees with, this throws — loudly, in the transaction that made
+    // the mistake — rather than writing a status nothing else would recognise as
+    // reachable.
+    assertTransition(order.status, target);
+
     await tx.order.update({
       where: { id: orderId },
       data: { status: target },
@@ -367,6 +426,27 @@ export class ProductionService {
         note: 'Automatic — production progress',
       },
     });
+
+    // Plan 7.1 task 4: EVERY order status change notifies the customer, not just
+    // the ones an admin's click causes. Before this line, a customer who ordered
+    // a uniform heard "confirmed" and then NOTHING until someone hit "Deliver" —
+    // no "in production", no "being inspected", no "ready" — because those three
+    // transitions are entirely driven from here, never from orders.service.ts.
+    // The COPY is shared (order.machine.ts's orderStatusNotification, the same
+    // function orders.service.ts calls); only the WRITE is duplicated, four
+    // lines, because notifyStatus() is private to OrdersService and this module
+    // has no business reaching into it.
+    const copy = orderStatusNotification(target, order.orderNumber);
+    if (copy) {
+      await tx.notification.create({
+        data: {
+          userId: order.userId,
+          type: 'order.status_changed',
+          title: copy.title,
+          body: copy.body,
+        },
+      });
+    }
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────

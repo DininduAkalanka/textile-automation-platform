@@ -122,7 +122,7 @@ export default function AdminPaymentsPage() {
                 {payments.map((p) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>
-                      <Link href={`/orders/${p.orderId}`} style={{ color: 'var(--color-accent)' }}>#{p.order.orderNumber}</Link>
+                      <Link href={`/admin/orders/${p.orderId}`} style={{ color: 'var(--color-accent)' }}>#{p.order.orderNumber}</Link>
                     </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       {p.order.user ? `${p.order.user.firstName} ${p.order.user.lastName}` : '—'}

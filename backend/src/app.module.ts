@@ -9,6 +9,8 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ProductionModule } from './production/production.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { validateEnv } from './common/config/env.validation';
@@ -32,6 +34,8 @@ import { validateEnv } from './common/config/env.validation';
     PaymentsModule,
     AnalyticsModule,
     ProductionModule,
+    InventoryModule,
+    NotificationsModule,
     AiModule,
   ],
   controllers: [AppController],

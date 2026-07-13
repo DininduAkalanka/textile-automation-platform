@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { formatLKR } from '@/lib/format';
 import { InstallmentSchedule } from '@/types';
 
 export default function InstallmentsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -63,7 +64,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Something went wrong</h2>
         <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>{error}</p>
-        <Link href="/orders" className="btn btn-primary">Back to Orders</Link>
+        <Link href="/account/orders" className="btn btn-primary">Back to Orders</Link>
       </div>
     );
   }
@@ -107,7 +108,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
             Order {schedule.orderNumber}
           </h1>
         </div>
-        <Link href={`/orders/${orderId}`} className="btn btn-outline btn-sm">
+        <Link href={`/account/orders/${orderId}`} className="btn btn-outline btn-sm">
           View Order Details
         </Link>
       </div>
@@ -124,7 +125,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--clr-text-2)' }}>Total Amount</p>
             <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--clr-text)', marginTop: '0.25rem' }}>
-              ${Number(schedule.totalAmount).toFixed(2)}
+              {formatLKR(schedule.totalAmount)}
             </p>
           </div>
         </div>
@@ -248,7 +249,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
                   fontWeight: 700,
                   color: isPaid ? '#16a34a' : 'var(--clr-text)',
                 }}>
-                  ${Number(inst.amount).toFixed(2)}
+                  {formatLKR(inst.amount)}
                 </p>
 
                 {!isPaid && isNext && (
@@ -275,7 +276,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
 
       {/* Back to Orders */}
       <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-        <Link href="/orders" className="btn btn-outline">
+        <Link href="/account/orders" className="btn btn-outline">
           ← Back to My Orders
         </Link>
       </div>

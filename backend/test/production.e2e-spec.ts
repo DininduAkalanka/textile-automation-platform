@@ -123,7 +123,11 @@ describe('Production pipeline (Phase 6)', () => {
 
   /** Place an order and confirm it, which is what fires the ProductionTrigger. */
   async function placeAndConfirm(
-    items: Array<{ productId: string; quantity: number; measurements?: object }>,
+    items: Array<{
+      productId: string;
+      quantity: number;
+      measurements?: Record<string, unknown>;
+    }>,
   ) {
     const order = await orders.create(customerId, {
       items,
@@ -174,6 +178,11 @@ describe('Production pipeline (Phase 6)', () => {
   });
 
   afterAll(async () => {
+    // Movements before orders: the FK is ON DELETE RESTRICT so an order's
+    // stock history cannot be silently erased with it (20260712100000).
+    await prisma.inventoryMovement.deleteMany({
+      where: { inventory: { product: { sku: { startsWith: TAG } } } },
+    });
     await prisma.order.deleteMany({ where: { userId: customerId } });
     await prisma.product.deleteMany({ where: { sku: { startsWith: TAG } } });
     await prisma.user.deleteMany({
@@ -363,8 +372,59 @@ describe('Production pipeline (Phase 6)', () => {
       const mine = await production.getMyTasks(workerUserId);
       const theirs = await production.getMyTasks(otherWorkerUserId);
 
-      expect(mine.map((t) => t.id)).toContain(task.id);
-      expect(theirs.map((t) => t.id)).not.toContain(task.id);
+      expect(mine.queue.map((t) => t.id)).toContain(task.id);
+      expect(theirs.queue.map((t) => t.id)).not.toContain(task.id);
+    });
+  });
+
+  describe('getMyTasks — queue vs completed today (plan Session 6.2, FR-P4)', () => {
+    /** Drive a task all the way through QC to completion (qc_pass). */
+    async function driveToCompletion(taskId: string) {
+      await production.act(taskId, 'start', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'complete', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'advance', adminId, UserRole.ADMIN); // STITCHING
+      await production.act(taskId, 'start', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'complete', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'advance', adminId, UserRole.ADMIN); // FINISHING
+      await production.act(taskId, 'start', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'complete', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'advance', adminId, UserRole.ADMIN); // QUALITY_CHECK
+      await production.act(taskId, 'start', adminId, UserRole.ADMIN);
+      await production.act(taskId, 'qc_pass', adminId, UserRole.ADMIN);
+    }
+
+    it('moves a qc_pass task out of the queue and into completedToday', async () => {
+      const orderId = await placeAndConfirm([
+        { productId: uniformId, quantity: 1, measurements },
+      ]);
+      const [task] = await tasksOf(orderId);
+      await production.assign(task.id, workerId);
+
+      await driveToCompletion(task.id);
+
+      const { queue, completedToday } = await production.getMyTasks(workerUserId);
+      expect(queue.map((t) => t.id)).not.toContain(task.id);
+      expect(completedToday.map((t) => t.id)).toContain(task.id);
+    });
+
+    it('does not count a task completed on an earlier day as completed today', async () => {
+      const orderId = await placeAndConfirm([
+        { productId: uniformId, quantity: 1, measurements },
+      ]);
+      const [task] = await tasksOf(orderId);
+      await production.assign(task.id, workerId);
+
+      await driveToCompletion(task.id);
+
+      // Backdated exactly as if this had finished yesterday — "today" is a
+      // property of endTime, not of when the test happens to run.
+      await prisma.productionTask.update({
+        where: { id: task.id },
+        data: { endTime: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      });
+
+      const { completedToday } = await production.getMyTasks(workerUserId);
+      expect(completedToday.map((t) => t.id)).not.toContain(task.id);
     });
   });
 

@@ -91,8 +91,18 @@ describe('Stock reservation race (D3 / BR4)', () => {
   });
 
   afterAll(async () => {
-    // Orders first: inventory_movements.order_id references them. Deleting the
-    // product then cascades inventory -> inventory_movements.
+    // Teardown order is dictated by the FKs, and it is NOT arbitrary:
+    //
+    //   movements -> orders is ON DELETE RESTRICT, so an order that moved stock
+    //   cannot be deleted while its ledger rows survive. (That restriction is the
+    //   point: in production it means an order's audit trail can never be erased.
+    //   See the 20260712100000 migration.) So the movements go first, explicitly.
+    //
+    // Then orders (cascading their items), then products (cascading the now-empty
+    // inventory rows), then the user.
+    await prisma.inventoryMovement.deleteMany({
+      where: { inventory: { product: { sku: { startsWith: TAG } } } },
+    });
     await prisma.order.deleteMany({ where: { userId } });
     await prisma.product.deleteMany({ where: { sku: { startsWith: TAG } } });
     await prisma.user.deleteMany({ where: { id: userId } });

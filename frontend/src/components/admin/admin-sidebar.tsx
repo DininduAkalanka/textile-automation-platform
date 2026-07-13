@@ -7,6 +7,7 @@ import {
   Boxes,
   CreditCard,
   FileText,
+  FolderTree,
   LayoutDashboard,
   LogOut,
   Package,
@@ -16,6 +17,7 @@ import {
   Store,
 } from 'lucide-react';
 
+import { useLowStock } from '@/hooks/use-inventory';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -25,6 +27,8 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   /** Not built yet — shown, but honestly marked. Hiding it would hide the roadmap. */
   soon?: boolean;
+  /** Renders the live low-stock count. Only Inventory carries one today. */
+  alertCount?: boolean;
 }
 
 const NAV: { section: string; items: NavItem[] }[] = [
@@ -38,7 +42,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Operations',
     items: [
-      { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, soon: true },
+      { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
       { href: '/admin/production', label: 'Production', icon: Scissors },
       { href: '/admin/payments', label: 'Payments', icon: CreditCard },
     ],
@@ -46,8 +50,9 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Catalogue',
     items: [
-      { href: '/admin/products', label: 'Products', icon: Package, soon: true },
-      { href: '/admin/inventory', label: 'Inventory', icon: Boxes, soon: true },
+      { href: '/admin/products', label: 'Products', icon: Package },
+      { href: '/admin/categories', label: 'Categories', icon: FolderTree },
+      { href: '/admin/inventory', label: 'Inventory', icon: Boxes, alertCount: true },
     ],
   },
   {
@@ -75,6 +80,13 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  // Polled, so the badge appears while the owner is sitting on the dashboard —
+  // the moment a sale takes something under its reorder level, without them
+  // having to navigate anywhere to find out. Every stock mutation also
+  // invalidates this key, so an admin's own adjustment updates it instantly.
+  const { data: lowStock } = useLowStock();
+  const lowCount = lowStock?.count ?? 0;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#0A0A0A] lg:flex">
@@ -159,6 +171,20 @@ export function AdminSidebar() {
                         aria-hidden
                       />
                       {item.label}
+
+                      {/* The count is the alert. No bell, no dot, no separate
+                          notification centre to go and check — the number that
+                          needs reordering sits on the thing you would click to
+                          reorder it. It is absent when there is nothing to say,
+                          which is what makes it worth looking at when it appears. */}
+                      {item.alertCount && lowCount > 0 && (
+                        <span
+                          className="ml-auto rounded-full bg-[#CC0000] px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-[0_0_10px_-1px_rgba(204,0,0,0.8)]"
+                          aria-label={`${lowCount} products need reordering`}
+                        >
+                          {lowCount}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );

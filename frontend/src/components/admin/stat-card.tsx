@@ -1,10 +1,21 @@
 'use client';
 
-import { LucideIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import type { Route } from 'next';
+import Link from 'next/link';
+import { ArrowUpRight, LucideIcon, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
+  /**
+   * Makes the card a link. A number that demands an action should take you to the
+   * place you act on it — "12 low on stock" is useless if the next step is to go
+   * and find the stock page yourself.
+   *
+   * Typed as `Route`, not `string`: typedRoutes is on, so a link to a page that
+   * does not exist is a COMPILE error rather than a 404 someone finds in a demo.
+   */
+  href?: Route;
   label: string;
   value: string | number;
   icon: LucideIcon;
@@ -29,6 +40,7 @@ interface StatCardProps {
 }
 
 export function StatCard({
+  href,
   label,
   value,
   icon: Icon,
@@ -43,20 +55,25 @@ export function StatCard({
   const up = (changePercent ?? 0) > 0;
   const flat = changePercent === 0;
 
-  return (
-    <div
-      className={cn(
-        'group relative overflow-hidden rounded-2xl p-5 transition-all duration-200',
-        hero
-          ? // Obsidian, with a crimson bloom bleeding in from the corner. Depth
-            // comes from the gradient, not from a heavy shadow.
-            'bg-[#0F0F0F] shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_-8px_rgba(204,0,0,0.28)]'
-          : // Warm white on a warm canvas. A cool grey card over a warm brand is a
-            // discord you feel before you can name it.
-            'border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)] hover:border-[#D5D2C8] hover:shadow-[0_2px_8px_rgba(74,71,64,0.06)]',
-        alert && !hero && 'border-[#CC0000]/25',
-      )}
-    >
+  const className = cn(
+    'group relative block overflow-hidden rounded-2xl p-5 transition-all duration-200',
+    hero
+      ? // Obsidian, with a crimson bloom bleeding in from the corner. Depth
+        // comes from the gradient, not from a heavy shadow.
+        'bg-[#0F0F0F] shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_-8px_rgba(204,0,0,0.28)]'
+      : // Warm white on a warm canvas. A cool grey card over a warm brand is a
+        // discord you feel before you can name it.
+        'border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)] hover:border-[#D5D2C8] hover:shadow-[0_2px_8px_rgba(74,71,64,0.06)]',
+    alert && !hero && 'border-[#CC0000]/25',
+    href && 'cursor-pointer hover:-translate-y-px',
+  );
+
+  // Two explicit branches rather than a polymorphic `const Root = href ? Link :
+  // 'div'`. Under typedRoutes, Link.href is a union of the app's real routes, and
+  // spreading an optional `string` into it does not typecheck — the clever version
+  // costs a cast, and a cast here would throw away the very checking we want.
+  const body = (
+    <>
       {hero && (
         <>
           {/* The bloom. Radial, off-centre, barely there — a light source rather
@@ -166,7 +183,28 @@ export function StatCard({
                 : changeLabel
               : '')}
         </span>
+
+        {/* Appears on hover. The card is clickable; it should say so, but not by
+            wearing a button that competes with the number it exists to show. */}
+        {href && (
+          <ArrowUpRight
+            size={13}
+            aria-hidden
+            className={cn(
+              'ml-auto shrink-0 opacity-0 transition-opacity group-hover:opacity-100',
+              hero ? 'text-white/50' : alert ? 'text-[#CC0000]' : 'text-[#928E82]',
+            )}
+          />
+        )}
       </div>
-    </div>
+    </>
+  );
+
+  return href ? (
+    <Link href={href} className={className}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
   );
 }

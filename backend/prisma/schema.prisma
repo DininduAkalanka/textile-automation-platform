@@ -178,7 +178,16 @@ model Product {
   /// Profit tools must exclude products where this is null.
   costPrice Decimal? @map("cost_price") @db.Decimal(10, 2)
 
-  category   Category?   @relation(fields: [categoryId], references: [id])
+  /// onDelete: Restrict is load-bearing, not boilerplate — see the
+  /// 20260714000000 migration. Prisma's default for an optional relation is
+  /// SetNull, which would let deleting a category silently orphan every
+  /// product in it (categoryId -> null) instead of the 409 the plan requires
+  /// ("prevent deleting a category that has products or children"). This is
+  /// the same class of bug the 20260712100000 migration fixed for
+  /// inventory_movements.order_id, caught the same way: by reading the FK
+  /// Prisma actually generated rather than assuming the schema said what it
+  /// should.
+  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   orderItems OrderItem[]
   inventory  Inventory?
 
@@ -315,7 +324,21 @@ model InventoryMovement {
   createdAt      DateTime     @default(now()) @map("created_at")
 
   inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-  order     Order?    @relation(fields: [orderId], references: [id])
+
+  /// onDelete: Restrict is load-bearing, not boilerplate.
+  ///
+  /// Prisma's default for an OPTIONAL relation is SetNull. Under that default,
+  /// deleting an order silently NULLed order_id on every movement it caused — the
+  /// stock had still moved, but the ledger could no longer say why, and the rows
+  /// became unattributable forever. The reconciliation script caught exactly this
+  /// on its first run against the dev database.
+  ///
+  /// Restrict makes the plan's acceptance criterion ("every movement traces to an
+  /// order or an admin") true BY CONSTRUCTION rather than by convention: an order
+  /// that has moved stock can no longer be deleted at all. That is also the real
+  /// business rule — orders are financial records. You cancel them; you do not
+  /// erase them.
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([inventoryId, createdAt])
   @@index([orderId])

@@ -16,8 +16,11 @@ export interface Category {
   slug: string;
   description?: string;
   imageUrl?: string;
+  /** Depth capped at 2 (plan doc 06 §5.2) — null means top-level. */
+  parentId?: string | null;
   _count?: {
     products: number;
+    children?: number;
   };
 }
 
@@ -45,6 +48,12 @@ export interface Product {
   /** Drives BR3 and the D8 production gate. */
   productType?: ProductType;
   requiresMeasurement?: boolean;
+  fabricType?: string;
+  color?: string;
+  unit?: string;
+  /** Nullable, never 0 — see the schema's own comment: unset means unknown
+   *  margin, not zero cost. */
+  costPrice?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +67,55 @@ export interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   selectedAttributes?: Record<string, any>;
+  /** BR3 — snapshotted at checkout, so it never drifts if the customer later
+   *  edits their saved measurements. Present only for uniform/custom items. */
+  measurements?: {
+    personName: string;
+    label?: string;
+    values: Record<string, number>;
+  } | null;
+}
+
+/**
+ * One row of order_status_history. The customer tracking stepper (plan 7.1
+ * task 3) is rendered FROM these timestamps — never from `order.status` alone,
+ * which can say WHERE an order is but not WHEN it got there.
+ */
+export interface OrderStatusHistoryEntry {
+  id: string;
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  changedBy: string | null;
+  /** Resolved name — present ONLY on an admin read; see orders.service.ts's
+   *  resolveChangedByNames. "System" for a transition no one clicked a button
+   *  for (production's floor-driven moves, a webhook confirming payment). */
+  changedByName?: string;
+  note: string | null;
+  createdAt: string;
+}
+
+/** The production timeline widget's data (plan 7.1 task 1) — one row per item
+ *  that entered the pipeline. Absent entirely on a fulfillment-only order. */
+export interface OrderProductionTaskSummary {
+  id: string;
+  stage: 'CUTTING' | 'STITCHING' | 'FINISHING' | 'QUALITY_CHECK';
+  status: 'PENDING' | 'IN_PROGRESS' | 'DONE';
+  orderItemId: string;
+  worker: { user: { firstName: string; lastName: string } } | null;
+}
+
+/**
+ * The single source for the admin order-detail buttons (plan 7.1 tasks 2 and 5).
+ * The server computes ALL FIVE, always, whether allowed or not — the frontend
+ * never infers a reason, it only ever renders the one the server already wrote.
+ */
+export interface AdminOrderAction {
+  action: 'confirm' | 'cancel' | 'advance' | 'deliver' | 'mark_collected';
+  label: string;
+  allowed: boolean;
+  reason: string | null;
+  requiresAcknowledgeRefund?: boolean;
+  destructive?: boolean;
 }
 
 export interface Order {
@@ -77,6 +135,12 @@ export interface Order {
   user?: Pick<User, 'id' | 'email' | 'firstName' | 'lastName'>;
   createdAt: string;
   updatedAt: string;
+  /** Present on every detail read (GET /orders/:id) — absent on list rows. */
+  statusHistory?: OrderStatusHistoryEntry[];
+  productionTasks?: OrderProductionTaskSummary[];
+  /** Present ONLY when the caller is an admin — see orders.service.ts's
+   *  findById: a customer's own read of their own order never gets this. */
+  adminActions?: AdminOrderAction[];
 }
 
 export type OrderStatus =
@@ -101,6 +165,9 @@ export interface Payment {
   paidAt?: string;
   createdAt: string;
   installments?: Installment[];
+  /** The raw gateway payload (PayHere/Stripe webhook body) — the "webhook
+   *  evidence" the admin order page shows. Null for COD, which has no gateway. */
+  gatewayResponse?: Record<string, unknown> | null;
 }
 
 export interface Installment {
@@ -283,6 +350,29 @@ export interface ProductsResponse {
 
 export interface OrdersResponse {
   orders: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+/** The bell, for both navbars (plan 7.1 task 4). `type` is a free-form producer
+ *  tag — "order.status_changed", "inventory.low_stock" — never branched on in
+ *  the UI; only `title`/`body` are ever rendered. */
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  items: Notification[];
+  unreadCount: number;
   pagination: {
     page: number;
     limit: number;

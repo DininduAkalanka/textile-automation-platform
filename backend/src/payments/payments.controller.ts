@@ -15,6 +15,7 @@ import {
   CreateFullPaymentDto,
   CreateInstallmentPaymentDto,
 } from './dto/create-payment.dto';
+import { MarkPaidDto } from './dto/mark-paid.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -101,8 +102,12 @@ export class PaymentsController {
   @Post('admin/:orderId/mark-paid')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  markPaid(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
-    return this.paymentsService.markPaymentPaid(orderId, req.user.sub);
+  markPaid(
+    @Request() req: any,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() dto: MarkPaidDto,
+  ) {
+    return this.paymentsService.markPaymentPaid(orderId, req.user.sub, dto.note);
   }
 
   @Post('admin/:orderId/reject')
