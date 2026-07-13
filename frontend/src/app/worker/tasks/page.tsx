@@ -20,7 +20,7 @@ import { STAGE_LABEL } from '@/types/production';
  * this page answers it from the top down.
  */
 export default function WorkerTasksPage() {
-  const { data: tasks, isLoading, isError, refetch } = useMyTasks();
+  const { data, isLoading, isError, refetch } = useMyTasks();
 
   if (isLoading) {
     return (
@@ -46,7 +46,10 @@ export default function WorkerTasksPage() {
     );
   }
 
-  if (!tasks || tasks.length === 0) {
+  const queue = data?.queue ?? [];
+  const completedToday = data?.completedToday ?? [];
+
+  if (queue.length === 0 && completedToday.length === 0) {
     return (
       <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-20 text-center">
         <ClipboardList className="mb-4 h-10 w-10 text-neutral-400" aria-hidden />
@@ -63,11 +66,17 @@ export default function WorkerTasksPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-neutral-500">
-        {tasks.length} job{tasks.length === 1 ? '' : 's'} — oldest first
-      </p>
+      {queue.length > 0 ? (
+        <p className="text-sm text-neutral-500">
+          {queue.length} job{queue.length === 1 ? '' : 's'} — oldest first
+        </p>
+      ) : (
+        <p className="text-sm text-neutral-500">
+          Nothing left in your queue — nice work.
+        </p>
+      )}
 
-      {tasks.map((task) => (
+      {queue.map((task) => (
         <article
           key={task.id}
           className="rounded-xl border border-neutral-200 bg-white p-4"
@@ -115,6 +124,44 @@ export default function WorkerTasksPage() {
           </div>
         </article>
       ))}
+
+      {/* Separate from the queue on purpose: "completed today" only ever means
+          `endTime` is set (a qc_pass), not "done with this stage" — a task
+          that finished CUTTING is still in the queue, awaiting STITCHING. */}
+      {completedToday.length > 0 && (
+        <div className="mt-2">
+          <p className="mb-2 text-sm font-medium text-neutral-500">
+            Completed today · {completedToday.length}
+          </p>
+          <div className="flex flex-col gap-2">
+            {completedToday.map((task) => (
+              <article
+                key={task.id}
+                className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 opacity-75"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700">
+                      {task.product}
+                      {task.quantity > 1 && (
+                        <span className="ml-1 text-neutral-500">
+                          ×{task.quantity}
+                        </span>
+                      )}
+                    </p>
+                    <p className="font-mono text-xs text-neutral-400">
+                      {task.orderNumber}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    Passed QC
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
