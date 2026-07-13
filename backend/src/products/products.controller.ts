@@ -13,6 +13,9 @@ import {
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { AdminProductsQueryDto } from './dto/admin-products-query.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -70,6 +73,17 @@ export class ProductsController {
   }
 
   // ─── Admin Endpoints ───────────────────────────────────
+  // 'admin/all' is two path segments, so it can never be shadowed by the
+  // single-segment ':id' route above regardless of declaration order — but it
+  // lives here, not there, because an admin listing (sees archived, extra
+  // filters) is conceptually an admin operation, not a public read.
+
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findAllAdmin(@Query() query: AdminProductsQueryDto) {
+    return this.productsService.findAllAdmin(query);
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -81,7 +95,10 @@ export class ProductsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProductDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.productsService.update(id, dto);
   }
 
@@ -107,9 +124,24 @@ export class CategoriesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  create(
-    @Body() body: { name: string; description?: string; imageUrl?: string },
+  create(@Body() dto: CreateCategoryDto) {
+    return this.productsService.createCategory(dto);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateCategoryDto,
   ) {
-    return this.productsService.createCategory(body);
+    return this.productsService.updateCategory(id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.removeCategory(id);
   }
 }
