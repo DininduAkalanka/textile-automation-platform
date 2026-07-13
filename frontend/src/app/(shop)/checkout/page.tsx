@@ -162,7 +162,7 @@ export default function CheckoutPage() {
         // COD confirms the order immediately server-side.
         await api.createCodPayment(order.id);
         clearCart();
-        router.push(`/orders/${order.id}?success=true`);
+        router.push(`/account/orders/${order.id}?success=true`);
         return;
       }
 
@@ -178,7 +178,7 @@ export default function CheckoutPage() {
       await api.createInstallmentPayment(order.id, installmentCount);
       await api.confirmPayment(order.id);
       clearCart();
-      router.push(`/orders/${order.id}/installments?success=true`);
+      router.push(`/account/orders/${order.id}/installments?success=true`);
     } catch (err: any) {
       setError(err.message || 'Failed to place order');
     } finally {

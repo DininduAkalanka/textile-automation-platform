@@ -2,13 +2,27 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductionService } from '../production/production.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { validateMeasurements } from './measurements.config';
-import { OrderStatus, Prisma } from '@prisma/client';
+import {
+  OrderStatus,
+  Prisma,
+  UserRole,
+  PaymentStatus,
+  PaymentMethod,
+} from '@prisma/client';
+import {
+  OrderAction,
+  allowedOrderActions,
+  assertTransition,
+  canTransition,
+  orderStatusNotification,
+} from './order.machine';
 
 @Injectable()
 export class OrdersService {
@@ -178,10 +192,25 @@ export class OrdersService {
     };
   }
 
-  async findById(id: string, userId?: string) {
-    const where: any = { id };
-    if (userId) {
-      where.userId = userId;
+  /**
+   * IDOR-safe by construction: a non-admin read is scoped to `userId` in the
+   * WHERE clause itself, so a mismatched owner comes back as "not found", not
+   * "forbidden" — a 403 would confirm the order exists and belongs to someone
+   * else, which is itself a small leak (doc 09 §2).
+   *
+   * `statusHistory` and `productionTasks` are attached for EVERY caller (the
+   * customer tracking stepper and the admin timeline widget read the same
+   * rows). `adminActions` and each history entry's resolved `changedByName`
+   * are admin-only — see orders.e2e-spec.ts's "never attaches adminActions to
+   * a customer-facing read".
+   */
+  async findById(
+    id: string,
+    opts: { userId?: string; isAdmin?: boolean } = {},
+  ) {
+    const where: Prisma.OrderWhereInput = { id };
+    if (!opts.isAdmin && opts.userId) {
+      where.userId = opts.userId;
     }
 
     const order = await this.prisma.order.findFirst({
@@ -199,6 +228,14 @@ export class OrdersService {
             lastName: true,
           },
         },
+        statusHistory: { orderBy: { createdAt: 'asc' } },
+        productionTasks: {
+          include: {
+            worker: {
+              include: { user: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        },
       },
     });
 
@@ -206,77 +243,239 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    return order;
+    const productionTasks = order.productionTasks.map((t) => ({
+      id: t.id,
+      stage: t.stage,
+      status: t.status,
+      orderItemId: t.orderItemId,
+      worker: t.worker ? { user: t.worker.user } : null,
+    }));
+
+    // One return shape always, admin-gated only in VALUE (not in which keys
+    // exist) — two structurally different return statements would give this
+    // method a union return type, and TypeScript reports `adminActions` as
+    // not existing at all on the branch that omits it, even behind an `!`.
+    const statusHistory = opts.isAdmin
+      ? await this.resolveChangedByNames(order.statusHistory)
+      : order.statusHistory;
+    const adminActions = opts.isAdmin
+      ? this.computeAdminActions({
+          status: order.status,
+          hasProductionTasks: order.productionTasks.length > 0,
+          payment: order.payment,
+        })
+      : undefined;
+
+    return { ...order, productionTasks, statusHistory, adminActions };
   }
 
-  async updateStatus(id: string, status: OrderStatus, changedBy?: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
-    });
+  /**
+   * The three admin-driven verbs that go through the shared graph
+   * (order.machine.ts), plus the customer's own PENDING self-cancel.
+   *
+   * `actor.role` decides two independent things: whether the WHERE clause is
+   * scoped to `actor.id` (IDOR), and whether a non-PENDING order is even
+   * reachable at all (a customer may only cancel their own order before it is
+   * confirmed — a garment may already be cut by then, and that call belongs
+   * to an admin, not to the person who placed the order).
+   */
+  async cancel(
+    orderId: string,
+    actor: { id: string; role: UserRole },
+    options: { acknowledgeRefund?: boolean; note?: string } = {},
+  ) {
+    const isAdmin = actor.role === UserRole.ADMIN;
 
+    const order = await this.prisma.order.findFirst({
+      where: isAdmin ? { id: orderId } : { id: orderId, userId: actor.id },
+      include: { payment: true },
+    });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
 
-    // Validate status transitions
-    // Canonical order machine (docs 02/03 §3.3, plan §4.1). Retail-only orders
-    // can jump CONFIRMED -> COMPLETED; production orders traverse IN_PRODUCTION
-    // -> QUALITY_CHECK -> COMPLETED (driven by the production module). Cancellation
-    // is allowed only before production starts (PENDING or CONFIRMED).
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-      PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-      CONFIRMED: [
-        OrderStatus.IN_PRODUCTION,
-        OrderStatus.COMPLETED,
-        OrderStatus.CANCELLED,
-      ],
-      IN_PRODUCTION: [OrderStatus.QUALITY_CHECK],
-      QUALITY_CHECK: [OrderStatus.COMPLETED],
-      COMPLETED: [OrderStatus.DELIVERED],
-      DELIVERED: [],
-      CANCELLED: [],
-    };
-
-    if (!validTransitions[order.status]?.includes(status)) {
-      throw new BadRequestException(
-        `Cannot transition from ${order.status} to ${status}`,
+    if (!isAdmin && order.status !== OrderStatus.PENDING) {
+      throw new ForbiddenException(
+        'Only an admin can cancel an order that has already been confirmed',
       );
     }
 
-    // Confirmation deducts stock (SALE) through the shared, idempotent path.
-    if (status === OrderStatus.CONFIRMED) {
-      await this.confirmOrder(id, changedBy);
-      return this.findById(id);
+    if (!canTransition(order.status, OrderStatus.CANCELLED)) {
+      throw new BadRequestException(
+        `Cannot cancel an order that is already ${order.status.toLowerCase().replace('_', ' ')}`,
+      );
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      if (status === OrderStatus.CANCELLED) {
-        const orderItems = await tx.orderItem.findMany({
-          where: { orderId: id },
-        });
-        for (const item of orderItems) {
-          if (order.status === OrderStatus.PENDING) {
-            // Not yet sold — free the reservation.
-            await this.inventory.release(tx, item.productId, item.quantity, id);
-          } else {
-            // Already sold (CONFIRMED) — return units to available.
-            await this.inventory.restock(tx, item.productId, item.quantity, id);
-          }
+    if (
+      order.payment?.status === PaymentStatus.COMPLETED &&
+      !options.acknowledgeRefund
+    ) {
+      throw new BadRequestException(
+        'This order is paid in full. Cancelling requires acknowledging that a refund must be issued manually — cancelling does not refund the customer automatically.',
+      );
+    }
+
+    const refundDetail =
+      order.payment?.status === PaymentStatus.COMPLETED
+        ? 'A refund will be processed manually.'
+        : undefined;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const items = await tx.orderItem.findMany({ where: { orderId } });
+      for (const item of items) {
+        if (order.status === OrderStatus.PENDING) {
+          // Not yet sold — free the reservation.
+          await this.inventory.release(tx, item.productId, item.quantity, orderId);
+        } else {
+          // Already sold (CONFIRMED) — return units to available.
+          await this.inventory.restock(tx, item.productId, item.quantity, orderId);
         }
       }
 
-      await tx.order.update({ where: { id }, data: { status } });
+      const result = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELLED },
+      });
       await tx.orderStatusHistory.create({
         data: {
-          orderId: id,
+          orderId,
           fromStatus: order.status,
-          toStatus: status,
-          changedBy: changedBy ?? null,
+          toStatus: OrderStatus.CANCELLED,
+          changedBy: actor.id,
+          note: options.note,
         },
       });
+
+      if (order.payment?.status === PaymentStatus.COMPLETED) {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+      } else if (order.payment?.status === PaymentStatus.PENDING) {
+        // Nothing was ever collected — there is nothing to refund, only a
+        // promise that will now never be honoured.
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+
+      const copy = orderStatusNotification(
+        OrderStatus.CANCELLED,
+        order.orderNumber,
+        refundDetail,
+      );
+      if (copy) {
+        await tx.notification.create({
+          data: {
+            userId: order.userId,
+            type: 'order.status_changed',
+            title: copy.title,
+            body: copy.body,
+          },
+        });
+      }
+
+      return result;
     });
 
-    return this.findById(id);
+    return updated;
+  }
+
+  /**
+   * Fulfillment-only orders (no production tasks) skip straight from
+   * CONFIRMED to COMPLETED on an admin's click — an order WITH tasks reaches
+   * COMPLETED automatically, driven by the production floor, and this button
+   * must refuse rather than race that automation.
+   */
+  async advance(orderId: string, adminId: string, note?: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { _count: { select: { productionTasks: true } } },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    if (order.status !== OrderStatus.CONFIRMED) {
+      throw new BadRequestException(
+        `Cannot mark an order fulfilled from ${order.status}`,
+      );
+    }
+    if (order._count.productionTasks > 0) {
+      throw new BadRequestException(
+        'This order has production tasks and completes automatically once they are done',
+      );
+    }
+    assertTransition(order.status, OrderStatus.COMPLETED);
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.COMPLETED },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus: OrderStatus.COMPLETED,
+          changedBy: adminId,
+          note,
+        },
+      });
+      const copy = orderStatusNotification(OrderStatus.COMPLETED, order.orderNumber);
+      if (copy) {
+        await tx.notification.create({
+          data: {
+            userId: order.userId,
+            type: 'order.status_changed',
+            title: copy.title,
+            body: copy.body,
+          },
+        });
+      }
+      return updated;
+    });
+  }
+
+  async deliver(orderId: string, adminId: string, note?: string) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    if (order.status !== OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        `Cannot mark an order delivered from ${order.status}`,
+      );
+    }
+    assertTransition(order.status, OrderStatus.DELIVERED);
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.DELIVERED },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus: OrderStatus.DELIVERED,
+          changedBy: adminId,
+          note,
+        },
+      });
+      const copy = orderStatusNotification(OrderStatus.DELIVERED, order.orderNumber);
+      if (copy) {
+        await tx.notification.create({
+          data: {
+            userId: order.userId,
+            type: 'order.status_changed',
+            title: copy.title,
+            body: copy.body,
+          },
+        });
+      }
+      return updated;
+    });
   }
 
   /**
@@ -284,11 +483,23 @@ export class OrdersService {
    * SALE. Idempotent and concurrency-safe: the order row is locked FOR UPDATE
    * and a non-PENDING order is a no-op, so a duplicate confirmation (e.g. a mock
    * confirm racing a webhook) can never double-deduct. Called by payments + admin.
+   *
+   * `note` rides along on the CONFIRMED history row this method writes — but
+   * only on that write. The idempotent no-op path (order already confirmed)
+   * writes nothing at all, which is exactly why markPaymentPaid's "mark
+   * collected" edge ALSO writes an unconditional AuditLog row: a note passed
+   * here on a no-op would otherwise simply vanish.
    */
-  async confirmOrder(orderId: string, changedBy?: string): Promise<void> {
+  async confirmOrder(
+    orderId: string,
+    changedBy?: string,
+    note?: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<Array<{ status: OrderStatus }>>`
-        SELECT status FROM orders WHERE id = ${orderId}::uuid FOR UPDATE`;
+      const locked = await tx.$queryRaw<
+        Array<{ status: OrderStatus; order_number: string; user_id: string }>
+      >`
+        SELECT status, order_number, user_id FROM orders WHERE id = ${orderId}::uuid FOR UPDATE`;
 
       if (locked.length === 0) {
         throw new NotFoundException('Order not found');
@@ -312,6 +523,7 @@ export class OrdersService {
           fromStatus: OrderStatus.PENDING,
           toStatus: OrderStatus.CONFIRMED,
           changedBy: changedBy ?? null,
+          note,
         },
       });
 
@@ -326,13 +538,75 @@ export class OrdersService {
       // duplicate task set (a garment cut twice) is far higher than the cost of
       // the extra COUNT.
       await this.production.createTasksForOrder(tx, orderId);
+
+      const copy = orderStatusNotification(
+        OrderStatus.CONFIRMED,
+        locked[0].order_number,
+      );
+      if (copy) {
+        await tx.notification.create({
+          data: {
+            userId: locked[0].user_id,
+            type: 'order.status_changed',
+            title: copy.title,
+            body: copy.body,
+          },
+        });
+      }
     });
   }
 
-  async findAllOrders(page = 1, limit = 20, status?: OrderStatus) {
+  async findAllOrders(query: {
+    page?: number;
+    limit?: number;
+    status?: OrderStatus;
+    paymentStatus?: PaymentStatus;
+    method?: PaymentMethod;
+    from?: string;
+    to?: string;
+    search?: string;
+  }) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
-    const where: any = {};
-    if (status) where.status = status;
+
+    const where: Prisma.OrderWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.from || query.to
+        ? {
+            createdAt: {
+              ...(query.from ? { gte: new Date(query.from) } : {}),
+              ...(query.to ? { lte: new Date(query.to) } : {}),
+            },
+          }
+        : {}),
+      ...(query.paymentStatus || query.method
+        ? {
+            payment: {
+              ...(query.paymentStatus ? { status: query.paymentStatus } : {}),
+              ...(query.method ? { method: query.method } : {}),
+            },
+          }
+        : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { orderNumber: { contains: query.search, mode: 'insensitive' } },
+              {
+                user: {
+                  firstName: { contains: query.search, mode: 'insensitive' },
+                },
+              },
+              {
+                user: {
+                  lastName: { contains: query.search, mode: 'insensitive' },
+                },
+              },
+              { user: { email: { contains: query.search, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -365,5 +639,110 @@ export class OrdersService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  // ─── Helpers ────────────────────────────────────────────────────────────
+
+  /**
+   * The single source for the admin order-detail buttons (plan 7.1 tasks 2
+   * and 5). ALL FIVE are always computed, whether allowed or not — the
+   * frontend never infers a reason, it only ever renders the one written
+   * here. "confirm" and "mark_collected" are payment actions with an
+   * order-status side effect (PaymentsService.markPaymentPaid) — see
+   * order.machine.ts's header comment on why they are not re-derived from
+   * the pure graph the other three use.
+   */
+  private computeAdminActions(order: {
+    status: OrderStatus;
+    hasProductionTasks: boolean;
+    payment: { method: PaymentMethod; status: PaymentStatus } | null;
+  }) {
+    const allowed = new Set(
+      allowedOrderActions({
+        status: order.status,
+        hasProductionTasks: order.hasProductionTasks,
+      }),
+    );
+
+    const confirmAllowed = order.status === OrderStatus.PENDING;
+    const markCollectedAllowed =
+      order.payment?.method === PaymentMethod.COD &&
+      order.payment?.status !== PaymentStatus.COMPLETED;
+
+    const reasonFor = (action: OrderAction): string | null => {
+      if (allowed.has(action)) return null;
+      if (action === 'advance' && order.hasProductionTasks) {
+        return 'This order has production tasks and completes automatically';
+      }
+      return `Not available while the order is ${order.status.toLowerCase().replace('_', ' ')}`;
+    };
+
+    return [
+      {
+        action: 'confirm' as const,
+        label: 'Confirm order',
+        allowed: confirmAllowed,
+        reason: confirmAllowed ? null : 'Only a pending order can be confirmed',
+      },
+      {
+        action: 'cancel' as const,
+        label: 'Cancel order',
+        allowed: allowed.has('cancel'),
+        reason: reasonFor('cancel'),
+        destructive: true,
+        requiresAcknowledgeRefund: order.payment?.status === PaymentStatus.COMPLETED,
+      },
+      {
+        action: 'advance' as const,
+        label: 'Mark fulfilled',
+        allowed: allowed.has('advance'),
+        reason: reasonFor('advance'),
+      },
+      {
+        action: 'deliver' as const,
+        label: 'Mark delivered',
+        allowed: allowed.has('deliver'),
+        reason: reasonFor('deliver'),
+      },
+      {
+        action: 'mark_collected' as const,
+        label: 'Mark cash collected',
+        allowed: markCollectedAllowed,
+        reason: markCollectedAllowed
+          ? null
+          : order.payment?.method !== PaymentMethod.COD
+            ? 'This order was not placed as cash on delivery'
+            : 'This payment has already been collected',
+      },
+    ];
+  }
+
+  /** Admin-only: resolves each history row's actor to a display name.
+   *  `null` (nothing clicked a button — the order's own creation, or a
+   *  production-floor-driven move) resolves to "System", never left blank. */
+  private async resolveChangedByNames<
+    T extends { changedBy: string | null },
+  >(history: T[]): Promise<Array<T & { changedByName: string }>> {
+    const ids = [
+      ...new Set(
+        history
+          .map((h) => h.changedBy)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+    const users = ids.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const nameById = new Map(
+      users.map((u) => [u.id, `${u.firstName} ${u.lastName}`]),
+    );
+
+    return history.map((h) => ({
+      ...h,
+      changedByName: h.changedBy ? (nameById.get(h.changedBy) ?? 'Unknown') : 'System',
+    }));
   }
 }

@@ -790,7 +790,7 @@ export class PaymentsService {
    * order (bank) is confirmed + stock deducted; an already-CONFIRMED order
    * (COD) is a no-op, so it just flips the payment to COMPLETED.
    */
-  async markPaymentPaid(orderId: string, adminId: string) {
+  async markPaymentPaid(orderId: string, adminId: string, note?: string) {
     const payment = await this.prisma.payment.findUnique({ where: { orderId } });
     if (!payment) {
       throw new NotFoundException('Payment not found');
@@ -803,7 +803,22 @@ export class PaymentsService {
       where: { orderId },
       data: { status: PaymentStatus.COMPLETED, paidAt: new Date() },
     });
-    await this.ordersService.confirmOrder(orderId, adminId);
+    await this.ordersService.confirmOrder(orderId, adminId, note);
+
+    // Unconditional write: confirmOrder's own history write only happens on
+    // the bank-pending edge (order still PENDING). On the "mark collected"
+    // edge the order is already CONFIRMED, so confirmOrder no-ops and writes
+    // nothing — without this, a note entered here would be accepted by the
+    // API and then silently vanish.
+    await this.prisma.auditLog.create({
+      data: {
+        userId: adminId,
+        action: 'payment.mark_paid',
+        entityType: 'payment',
+        entityId: payment.id,
+        after: { note: note ?? null },
+      },
+    });
 
     return this.prisma.payment.findUnique({ where: { orderId } });
   }

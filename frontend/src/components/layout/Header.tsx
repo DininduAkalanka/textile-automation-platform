@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 /* ── SVG Icon Components ──────────────────────────────────── */
 const IconSearch = ({ size = 18 }: { size?: number }) => (
@@ -554,6 +555,13 @@ export default function Header() {
               )}
             </Link>
 
+            {/* Notifications (plan 7.1 task 4). mounted-gated the same way the
+                profile button below is — rendering it before hydration would
+                show a bell that can never possibly be right. */}
+            {mounted && isAuthenticated && (
+              <NotificationBell signedIn={isAuthenticated} />
+            )}
+
             {/* Auth — separator line */}
             <div
               className="hide-mobile"
@@ -647,7 +655,7 @@ export default function Header() {
                         </div>
 
                         {[
-                          { label: 'My Orders', href: '/orders' },
+                          { label: 'My Orders', href: '/account/orders' },
                           ...(user?.role === 'ADMIN' ? [{ label: 'Admin Dashboard', href: '/admin' }] : []),
                         ].map(link => (
                           <Link

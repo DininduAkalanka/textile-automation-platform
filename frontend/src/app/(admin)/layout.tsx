@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /**
@@ -25,6 +26,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const loadUser = useAuthStore((s) => s.loadUser);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
@@ -84,6 +86,7 @@ export default function AdminLayout({
                 month: 'short',
               })}
             </span>
+            <NotificationBell signedIn={isAuthenticated} />
           </div>
         </header>
 
