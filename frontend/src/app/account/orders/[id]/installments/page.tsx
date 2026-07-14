@@ -15,7 +15,6 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
   const [schedule, setSchedule] = useState<InstallmentSchedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [payingId, setPayingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSchedule();
@@ -29,23 +28,6 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
       setError(err.message || 'Failed to load installment schedule');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePayInstallment = async (installmentId: string) => {
-    setPayingId(installmentId);
-    setError('');
-    try {
-      // Create a payment intent for this installment
-      await api.payInstallment(installmentId);
-      // In mock mode, confirm it immediately
-      await api.confirmInstallment(installmentId);
-      // Reload schedule
-      await loadSchedule();
-    } catch (err: any) {
-      setError(err.message || 'Payment failed');
-    } finally {
-      setPayingId(null);
     }
   };
 
@@ -253,14 +235,17 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
                 </p>
 
                 {!isPaid && isNext && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handlePayInstallment(inst.id)}
-                    disabled={payingId === inst.id}
-                    style={{ minWidth: '100px' }}
+                  // Online self-service payment for a single installment isn't
+                  // available — the previous "Pay Now" button called an
+                  // endpoint that let a customer mark their own payment paid
+                  // with no verification at all. Collecting this installment
+                  // now goes through the same admin-verified path as bank
+                  // transfer / COD (Admin → Payments → mark received).
+                  <span
+                    style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)', maxWidth: '160px', textAlign: 'right' }}
                   >
-                    {payingId === inst.id ? 'Paying...' : 'Pay Now'}
-                  </button>
+                    Contact us to pay this installment
+                  </span>
                 )}
 
                 {isPaid && (

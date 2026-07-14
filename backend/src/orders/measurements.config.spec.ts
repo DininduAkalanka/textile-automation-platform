@@ -26,7 +26,12 @@ describe('BR3 measurement validation', () => {
   describe('products that do NOT need measurements', () => {
     it('accepts a ready-made item with no measurements', () => {
       expect(
-        validateMeasurements('Cotton Shirt', ProductType.READY_MADE, false, null),
+        validateMeasurements(
+          'Cotton Shirt',
+          ProductType.READY_MADE,
+          false,
+          null,
+        ),
       ).toEqual([]);
     });
 
@@ -85,36 +90,56 @@ describe('BR3 measurement validation', () => {
     });
 
     it('rejects out-of-range values rather than cutting a 5000cm sleeve', () => {
-      const errors = validateMeasurements('School Uniform', ProductType.UNIFORM, true, {
-        ...validUniform,
-        values: { ...validUniform.values, sleeveLength: 5000 },
-      });
+      const errors = validateMeasurements(
+        'School Uniform',
+        ProductType.UNIFORM,
+        true,
+        {
+          ...validUniform,
+          values: { ...validUniform.values, sleeveLength: 5000 },
+        },
+      );
 
       expect(errors).toHaveLength(1);
       expect(errors[0]).toMatch(/Sleeve length must be between/i);
     });
 
     it('rejects a zero measurement (a plausible empty-input bug)', () => {
-      const errors = validateMeasurements('School Uniform', ProductType.UNIFORM, true, {
-        ...validUniform,
-        values: { ...validUniform.values, chest: 0 },
-      });
+      const errors = validateMeasurements(
+        'School Uniform',
+        ProductType.UNIFORM,
+        true,
+        {
+          ...validUniform,
+          values: { ...validUniform.values, chest: 0 },
+        },
+      );
       expect(errors[0]).toMatch(/Chest must be between/i);
     });
 
     it('rejects a string where a number is expected ("96" is not 96)', () => {
-      const errors = validateMeasurements('School Uniform', ProductType.UNIFORM, true, {
-        ...validUniform,
-        values: { ...validUniform.values, chest: '96' },
-      });
+      const errors = validateMeasurements(
+        'School Uniform',
+        ProductType.UNIFORM,
+        true,
+        {
+          ...validUniform,
+          values: { ...validUniform.values, chest: '96' },
+        },
+      );
       expect(errors[0]).toMatch(/Chest is required/i);
     });
 
     it('reports EVERY bad field at once, not just the first', () => {
-      const errors = validateMeasurements('School Uniform', ProductType.UNIFORM, true, {
-        personName: 'Nimal',
-        values: { chest: 76 },
-      });
+      const errors = validateMeasurements(
+        'School Uniform',
+        ProductType.UNIFORM,
+        true,
+        {
+          personName: 'Nimal',
+          values: { chest: 76 },
+        },
+      );
 
       // 8 uniform fields, one supplied -> 7 outstanding.
       expect(errors).toHaveLength(7);

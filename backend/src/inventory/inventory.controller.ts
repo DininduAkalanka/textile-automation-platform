@@ -63,7 +63,11 @@ export class InventoryController {
     @Param('productId', ParseUUIDPipe) productId: string,
     @Query() query: MovementsQueryDto,
   ) {
-    return this.inventory.movements(productId, query.page ?? 1, query.limit ?? 25);
+    return this.inventory.movements(
+      productId,
+      query.page ?? 1,
+      query.limit ?? 25,
+    );
   }
 
   /**

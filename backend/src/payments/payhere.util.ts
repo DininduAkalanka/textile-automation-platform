@@ -33,7 +33,11 @@ export function payhereCheckoutHash(params: {
 }): string {
   const { merchantId, orderId, amount, currency, merchantSecret } = params;
   return md5Hex(
-    merchantId + orderId + amount + currency + payhereSecretHash(merchantSecret),
+    merchantId +
+      orderId +
+      amount +
+      currency +
+      payhereSecretHash(merchantSecret),
   ).toUpperCase();
 }
 

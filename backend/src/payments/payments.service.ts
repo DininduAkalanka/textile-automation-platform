@@ -7,7 +7,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
-import { PaymentStatus, PaymentMethod, PaymentPlan, Installment, Prisma } from '@prisma/client';
+import {
+  PaymentStatus,
+  PaymentMethod,
+  PaymentPlan,
+  Installment,
+  Prisma,
+} from '@prisma/client';
 import Stripe from 'stripe';
 import {
   payhereCheckoutHash,
@@ -96,10 +102,13 @@ export class PaymentsService {
     const order = await this.findOrderForPayment(orderId, userId);
 
     const totalAmount = Number(order.total);
-    const installmentAmount = Math.floor((totalAmount * 100) / installmentCount) / 100;
+    const installmentAmount =
+      Math.floor((totalAmount * 100) / installmentCount) / 100;
     // The last installment absorbs any rounding remainder
     const lastInstallmentAmount =
-      Math.round((totalAmount - installmentAmount * (installmentCount - 1)) * 100) / 100;
+      Math.round(
+        (totalAmount - installmentAmount * (installmentCount - 1)) * 100,
+      ) / 100;
 
     // Create a Stripe PaymentIntent for the FIRST installment
     let clientSecret: string;
@@ -158,7 +167,8 @@ export class PaymentsService {
         const dueDate = new Date(now);
         dueDate.setMonth(dueDate.getMonth() + (i - 1)); // Monthly intervals
 
-        const amount = i === installmentCount ? lastInstallmentAmount : installmentAmount;
+        const amount =
+          i === installmentCount ? lastInstallmentAmount : installmentAmount;
 
         const installment = await tx.installment.create({
           data: {
@@ -409,7 +419,11 @@ export class PaymentsService {
 
   // ─── Get Installment Schedule ───────────────────────────
 
-  async getInstallmentSchedule(orderId: string, userId?: string, isAdmin = false) {
+  async getInstallmentSchedule(
+    orderId: string,
+    userId?: string,
+    isAdmin = false,
+  ) {
     const payment = await this.prisma.payment.findUnique({
       where: { orderId },
       include: {
@@ -459,7 +473,9 @@ export class PaymentsService {
   // ─── Stripe Config ──────────────────────────────────────
 
   getStripeConfig() {
-    const publishableKey = this.configService.get<string>('STRIPE_PUBLISHABLE_KEY');
+    const publishableKey = this.configService.get<string>(
+      'STRIPE_PUBLISHABLE_KEY',
+    );
     return {
       publishableKey: publishableKey || null,
       isConfigured: !!this.stripe,
@@ -474,7 +490,9 @@ export class PaymentsService {
       return { received: true };
     }
 
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
     let event: Stripe.Event;
 
     try {
@@ -484,7 +502,9 @@ export class PaymentsService {
         webhookSecret!,
       );
     } catch (err) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      this.logger.error(
+        `Webhook signature verification failed: ${err.message}`,
+      );
       throw new BadRequestException('Webhook signature verification failed');
     }
 
@@ -492,7 +512,7 @@ export class PaymentsService {
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const paymentIntent = event.data.object;
         const metadata = paymentIntent.metadata;
 
         if (metadata.installmentId) {
@@ -506,7 +526,7 @@ export class PaymentsService {
       }
 
       case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const paymentIntent = event.data.object;
         this.logger.warn(`Payment failed: ${paymentIntent.id}`);
         break;
       }
@@ -522,7 +542,9 @@ export class PaymentsService {
 
   async createPayherePayment(orderId: string, userId: string) {
     const merchantId = this.configService.get<string>('PAYHERE_MERCHANT_ID');
-    const merchantSecret = this.configService.get<string>('PAYHERE_MERCHANT_SECRET');
+    const merchantSecret = this.configService.get<string>(
+      'PAYHERE_MERCHANT_SECRET',
+    );
     if (!merchantId || !merchantSecret) {
       throw new BadRequestException('PayHere is not configured');
     }
@@ -659,7 +681,11 @@ export class PaymentsService {
 
     const finish = async (error?: string) => {
       await this.prisma.paymentWebhookEvent.updateMany({
-        where: { gateway: 'payhere', transactionId: paymentId, eventStatus: statusCode },
+        where: {
+          gateway: 'payhere',
+          transactionId: paymentId,
+          eventStatus: statusCode,
+        },
         data: { processed: true, processingError: error ?? null },
       });
       return { received: true };
@@ -667,7 +693,9 @@ export class PaymentsService {
 
     // 2. Bad signature — never leak validity, no state change.
     if (!signatureValid) {
-      this.logger.warn(`PayHere notify with invalid signature (order ${orderId})`);
+      this.logger.warn(
+        `PayHere notify with invalid signature (order ${orderId})`,
+      );
       return finish('INVALID_SIGNATURE');
     }
 
@@ -767,7 +795,9 @@ export class PaymentsService {
               orderNumber: true,
               status: true,
               total: true,
-              user: { select: { firstName: true, lastName: true, email: true } },
+              user: {
+                select: { firstName: true, lastName: true, email: true },
+              },
             },
           },
         },
@@ -780,7 +810,12 @@ export class PaymentsService {
 
     return {
       payments,
-      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+      pagination: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l),
+      },
     };
   }
 
@@ -791,7 +826,9 @@ export class PaymentsService {
    * (COD) is a no-op, so it just flips the payment to COMPLETED.
    */
   async markPaymentPaid(orderId: string, adminId: string, note?: string) {
-    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId },
+    });
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
@@ -826,7 +863,9 @@ export class PaymentsService {
   /** Admin rejects a payment (e.g. an invalid bank slip). Reservation is kept;
    *  the admin cancels the order separately to release stock if needed. */
   async rejectPayment(orderId: string) {
-    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId },
+    });
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }

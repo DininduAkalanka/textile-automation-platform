@@ -40,6 +40,13 @@ services:
     restart: unless-stopped
     ports:
       - '3001:3001'
+    # Picks up PAYHERE_* (and anything else host-side dev already uses) from
+    # the same file `npm run start:dev` reads, so sandbox credentials don't
+    # need to be duplicated into a second .env. Keys also set below in
+    # `environment:` win over whatever this file has — that's what keeps
+    # DATABASE_URL/REDIS_HOST on the Docker network instead of the
+    # 127.0.0.1/host-port values backend/.env has for running outside Docker.
+    env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql://textile_admin:textile_secure_pass_2024@postgres:5432/textile_db?schema=public
       - REDIS_HOST=redis

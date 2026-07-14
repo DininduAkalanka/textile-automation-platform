@@ -11,10 +11,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import {
-  CreateFullPaymentDto,
-  CreateInstallmentPaymentDto,
-} from './dto/create-payment.dto';
+import { CreateFullPaymentDto } from './dto/create-payment.dto';
 import { MarkPaidDto } from './dto/mark-paid.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -32,17 +29,6 @@ export class PaymentsController {
     return this.paymentsService.getStripeConfig();
   }
 
-  // ─── Full Payment ───────────────────────────────────────
-
-  @Post('full')
-  @UseGuards(JwtAuthGuard)
-  createFullPayment(
-    @Request() req: any,
-    @Body() dto: CreateFullPaymentDto,
-  ) {
-    return this.paymentsService.createFullPayment(dto.orderId, req.user.sub);
-  }
-
   // ─── PayHere ─────────────────────────────────────────────
 
   @Post('payhere/create')
@@ -57,32 +43,6 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   createCod(@Request() req: any, @Body() dto: CreateFullPaymentDto) {
     return this.paymentsService.createCodPayment(dto.orderId, req.user.sub);
-  }
-
-  // ─── Installment Payment ────────────────────────────────
-
-  @Post('installment')
-  @UseGuards(JwtAuthGuard)
-  createInstallmentPayment(
-    @Request() req: any,
-    @Body() dto: CreateInstallmentPaymentDto,
-  ) {
-    return this.paymentsService.createInstallmentPayment(
-      dto.orderId,
-      req.user.sub,
-      dto.installmentCount,
-    );
-  }
-
-  // ─── Pay Individual Installment ──────────────────────────
-
-  @Post('installment/:installmentId/pay')
-  @UseGuards(JwtAuthGuard)
-  payInstallment(
-    @Request() req: any,
-    @Param('installmentId', ParseUUIDPipe) installmentId: string,
-  ) {
-    return this.paymentsService.payInstallment(installmentId, req.user.sub);
   }
 
   // ─── Admin Payment Management ───────────────────────────
@@ -107,7 +67,11 @@ export class PaymentsController {
     @Param('orderId', ParseUUIDPipe) orderId: string,
     @Body() dto: MarkPaidDto,
   ) {
-    return this.paymentsService.markPaymentPaid(orderId, req.user.sub, dto.note);
+    return this.paymentsService.markPaymentPaid(
+      orderId,
+      req.user.sub,
+      dto.note,
+    );
   }
 
   @Post('admin/:orderId/reject')
@@ -121,7 +85,10 @@ export class PaymentsController {
 
   @Get(':orderId')
   @UseGuards(JwtAuthGuard)
-  getPayment(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
+  getPayment(
+    @Request() req: any,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
     return this.paymentsService.getPaymentByOrderId(
       orderId,
       req.user.sub,
@@ -133,7 +100,10 @@ export class PaymentsController {
 
   @Get(':orderId/installments')
   @UseGuards(JwtAuthGuard)
-  getInstallmentSchedule(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
+  getInstallmentSchedule(
+    @Request() req: any,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
     return this.paymentsService.getInstallmentSchedule(
       orderId,
       req.user.sub,
@@ -141,24 +111,19 @@ export class PaymentsController {
     );
   }
 
-  // ─── Confirm Payment (mock — for when Stripe is not configured) ──
-
-  @Post('confirm/:orderId')
-  @UseGuards(JwtAuthGuard)
-  confirmPayment(@Request() req: any, @Param('orderId', ParseUUIDPipe) orderId: string) {
-    return this.paymentsService.confirmPayment(orderId, req.user.sub);
-  }
-
-  // ─── Confirm Installment (mock) ─────────────────────────
-
-  @Post('confirm-installment/:installmentId')
-  @UseGuards(JwtAuthGuard)
-  confirmInstallment(
-    @Request() req: any,
-    @Param('installmentId', ParseUUIDPipe) installmentId: string,
-  ) {
-    return this.paymentsService.confirmInstallment(installmentId, req.user.sub);
-  }
+  // Deliberately no customer-facing "confirm my own payment" route. Doc 11
+  // §10.1's whole payment security doctrine is "never trust frontend payment
+  // status" — the only paths that may ever move a payment to COMPLETED are
+  // ones with independent proof: the PayHere webhook (signature-verified),
+  // the Stripe webhook below (signature-verified, and inert without a real
+  // key), or an admin's own markPaymentPaid action (audited). A client
+  // self-reporting "I paid" was previously reachable via the checkout page's
+  // installment option and confirmPayment()/confirmInstallment() on
+  // PaymentsService — removed here because nothing verified it actually
+  // happened; any authenticated customer could mark any of their own orders
+  // paid for free. Those service methods are still called internally by the
+  // Stripe webhook handler below, which is safe specifically because it is
+  // NOT reachable without a valid Stripe signature.
 
   // ─── PayHere Notify (server-to-server, public) ──────────
 

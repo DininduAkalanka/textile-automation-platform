@@ -46,7 +46,9 @@ export class OrdersService {
     });
 
     if (products.length !== productIds.length) {
-      throw new BadRequestException('One or more products not found or inactive');
+      throw new BadRequestException(
+        'One or more products not found or inactive',
+      );
     }
 
     // Check stock availability
@@ -232,7 +234,9 @@ export class OrdersService {
         productionTasks: {
           include: {
             worker: {
-              include: { user: { select: { firstName: true, lastName: true } } },
+              include: {
+                user: { select: { firstName: true, lastName: true } },
+              },
             },
           },
         },
@@ -325,10 +329,20 @@ export class OrdersService {
       for (const item of items) {
         if (order.status === OrderStatus.PENDING) {
           // Not yet sold — free the reservation.
-          await this.inventory.release(tx, item.productId, item.quantity, orderId);
+          await this.inventory.release(
+            tx,
+            item.productId,
+            item.quantity,
+            orderId,
+          );
         } else {
           // Already sold (CONFIRMED) — return units to available.
-          await this.inventory.restock(tx, item.productId, item.quantity, orderId);
+          await this.inventory.restock(
+            tx,
+            item.productId,
+            item.quantity,
+            orderId,
+          );
         }
       }
 
@@ -422,7 +436,10 @@ export class OrdersService {
           note,
         },
       });
-      const copy = orderStatusNotification(OrderStatus.COMPLETED, order.orderNumber);
+      const copy = orderStatusNotification(
+        OrderStatus.COMPLETED,
+        order.orderNumber,
+      );
       if (copy) {
         await tx.notification.create({
           data: {
@@ -438,7 +455,9 @@ export class OrdersService {
   }
 
   async deliver(orderId: string, adminId: string, note?: string) {
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
@@ -463,7 +482,10 @@ export class OrdersService {
           note,
         },
       });
-      const copy = orderStatusNotification(OrderStatus.DELIVERED, order.orderNumber);
+      const copy = orderStatusNotification(
+        OrderStatus.DELIVERED,
+        order.orderNumber,
+      );
       if (copy) {
         await tx.notification.create({
           data: {
@@ -602,7 +624,11 @@ export class OrdersService {
                   lastName: { contains: query.search, mode: 'insensitive' },
                 },
               },
-              { user: { email: { contains: query.search, mode: 'insensitive' } } },
+              {
+                user: {
+                  email: { contains: query.search, mode: 'insensitive' },
+                },
+              },
             ],
           }
         : {}),
@@ -690,7 +716,8 @@ export class OrdersService {
         allowed: allowed.has('cancel'),
         reason: reasonFor('cancel'),
         destructive: true,
-        requiresAcknowledgeRefund: order.payment?.status === PaymentStatus.COMPLETED,
+        requiresAcknowledgeRefund:
+          order.payment?.status === PaymentStatus.COMPLETED,
       },
       {
         action: 'advance' as const,
@@ -720,9 +747,9 @@ export class OrdersService {
   /** Admin-only: resolves each history row's actor to a display name.
    *  `null` (nothing clicked a button — the order's own creation, or a
    *  production-floor-driven move) resolves to "System", never left blank. */
-  private async resolveChangedByNames<
-    T extends { changedBy: string | null },
-  >(history: T[]): Promise<Array<T & { changedByName: string }>> {
+  private async resolveChangedByNames<T extends { changedBy: string | null }>(
+    history: T[],
+  ): Promise<Array<T & { changedByName: string }>> {
     const ids = [
       ...new Set(
         history
@@ -742,7 +769,9 @@ export class OrdersService {
 
     return history.map((h) => ({
       ...h,
-      changedByName: h.changedBy ? (nameById.get(h.changedBy) ?? 'Unknown') : 'System',
+      changedByName: h.changedBy
+        ? (nameById.get(h.changedBy) ?? 'Unknown')
+        : 'System',
     }));
   }
 }
