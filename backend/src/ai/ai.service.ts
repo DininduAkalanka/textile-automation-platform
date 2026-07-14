@@ -72,7 +72,8 @@ export class AiService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.baseUrl = this.config.get<string>('AI_SERVICE_URL') ?? 'http://ai:8000';
+    this.baseUrl =
+      this.config.get<string>('AI_SERVICE_URL') ?? 'http://ai:8000';
     this.internalKey =
       this.config.get<string>('INTERNAL_API_KEY') ?? 'local-dev-internal-key';
     // Long enough for a real answer, short enough that a cold service does not
@@ -80,7 +81,10 @@ export class AiService {
     this.timeoutMs = Number(this.config.get('AI_TIMEOUT_MS') ?? 12_000);
   }
 
-  async customerChat(message: string, history: ChatTurn[] = []): Promise<ChatReply> {
+  async customerChat(
+    message: string,
+    history: ChatTurn[] = [],
+  ): Promise<ChatReply> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);

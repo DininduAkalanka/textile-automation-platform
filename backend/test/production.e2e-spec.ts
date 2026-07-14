@@ -402,7 +402,8 @@ describe('Production pipeline (Phase 6)', () => {
 
       await driveToCompletion(task.id);
 
-      const { queue, completedToday } = await production.getMyTasks(workerUserId);
+      const { queue, completedToday } =
+        await production.getMyTasks(workerUserId);
       expect(queue.map((t) => t.id)).not.toContain(task.id);
       expect(completedToday.map((t) => t.id)).toContain(task.id);
     });

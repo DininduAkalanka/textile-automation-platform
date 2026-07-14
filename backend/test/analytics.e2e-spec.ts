@@ -130,9 +130,18 @@ describe('Admin dashboard analytics (Session 8.1)', () => {
     productId = product.id;
 
     // The fixture: exactly one order represents money actually received.
-    await makeOrder(PAID_TOTAL, OrderStatus.CONFIRMED, PaymentStatus.COMPLETED, true);
+    await makeOrder(
+      PAID_TOTAL,
+      OrderStatus.CONFIRMED,
+      PaymentStatus.COMPLETED,
+      true,
+    );
     await makeOrder(UNPAID_TOTAL, OrderStatus.CONFIRMED, PaymentStatus.PENDING);
-    await makeOrder(REFUNDED_TOTAL, OrderStatus.CANCELLED, PaymentStatus.REFUNDED);
+    await makeOrder(
+      REFUNDED_TOTAL,
+      OrderStatus.CANCELLED,
+      PaymentStatus.REFUNDED,
+    );
     await makeOrder(NO_PAYMENT_TOTAL, OrderStatus.PENDING, null);
   });
 

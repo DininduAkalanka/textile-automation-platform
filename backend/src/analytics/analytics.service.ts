@@ -267,15 +267,21 @@ export class AnalyticsService {
   async getDashboard(from?: string, to?: string): Promise<DashboardPayload> {
     const range = this.resolveRange(from, to);
 
-    const [totals, deltas, salesByDay, topProducts, ordersByStatus, recentOrders] =
-      await Promise.all([
-        this.getTotals(range),
-        this.getDeltas(range),
-        this.getSalesByDay(range),
-        this.getTopProducts(range),
-        this.getOrdersByStatus(),
-        this.getRecentOrders(),
-      ]);
+    const [
+      totals,
+      deltas,
+      salesByDay,
+      topProducts,
+      ordersByStatus,
+      recentOrders,
+    ] = await Promise.all([
+      this.getTotals(range),
+      this.getDeltas(range),
+      this.getSalesByDay(range),
+      this.getTopProducts(range),
+      this.getOrdersByStatus(),
+      this.getRecentOrders(),
+    ]);
 
     return {
       range: {

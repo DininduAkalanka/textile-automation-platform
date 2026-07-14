@@ -1,4 +1,8 @@
-import { ConflictException, INestApplication, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  INestApplication,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductType, UserRole } from '@prisma/client';
 
@@ -131,7 +135,10 @@ describe('Admin catalog management (plan Session 2.2)', () => {
     it('filters by category', async () => {
       const catA = await seedCategory('filt-cat-a');
       const catB = await seedCategory('filt-cat-b');
-      const inA = await seedProduct({ label: 'filt-in-a', categoryId: catA.id });
+      const inA = await seedProduct({
+        label: 'filt-in-a',
+        categoryId: catA.id,
+      });
       await seedProduct({ label: 'filt-in-b', categoryId: catB.id });
 
       const { products: rows } = await products.findAllAdmin({
@@ -145,7 +152,10 @@ describe('Admin catalog management (plan Session 2.2)', () => {
         label: 'type-uniform',
         productType: ProductType.UNIFORM,
       });
-      await seedProduct({ label: 'type-fabric', productType: ProductType.FABRIC });
+      await seedProduct({
+        label: 'type-fabric',
+        productType: ProductType.FABRIC,
+      });
 
       const { products: rows } = await products.findAllAdmin({
         search: `${TAG}-type`,
@@ -169,7 +179,7 @@ describe('Admin catalog management (plan Session 2.2)', () => {
       expect(byDescription.products.map((r) => r.id)).toContain(p.id);
     });
 
-    it('lowStockOnly matches inventory.service.ts\'s own definition of low', async () => {
+    it("lowStockOnly matches inventory.service.ts's own definition of low", async () => {
       const low = await seedProduct({ label: 'low-yes', stock: 5 });
       await inventory.setMinimum(low.id, 10, adminId); // 5 <= 10
 

@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type PaymentMethod = 'payhere' | 'cod' | 'installment';
+type PaymentMethod = 'payhere' | 'cod';
 
 const fmt = (n: number) =>
   'Rs ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -96,7 +96,6 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Confirm
 
   const [method, setMethod] = useState<PaymentMethod>('payhere');
-  const [installmentCount, setInstallmentCount] = useState(3);
 
   const [address, setAddress] = useState({
     fullName: '',
@@ -131,13 +130,10 @@ export default function CheckoutPage() {
   }
 
   const totalValue = subtotal();
-  const installmentAmount = Math.floor((totalValue * 100) / installmentCount) / 100;
-  const lastInstallmentAmount = Math.round((totalValue - installmentAmount * (installmentCount - 1)) * 100) / 100;
 
   const methodLabel: Record<PaymentMethod, string> = {
     payhere: 'Card / Online Payment',
     cod: 'Cash on Delivery',
-    installment: `${installmentCount}× Installment Plan`,
   };
 
   const handlePlaceOrder = async () => {
@@ -166,19 +162,10 @@ export default function CheckoutPage() {
         return;
       }
 
-      if (method === 'payhere') {
-        // Redirect to PayHere; the notify webhook confirms the order.
-        const { checkoutUrl, params } = await api.createPayherePayment(order.id);
-        clearCart();
-        postToPayHere(checkoutUrl, params);
-        return; // navigating away
-      }
-
-      // Installment plan (first installment paid up front).
-      await api.createInstallmentPayment(order.id, installmentCount);
-      await api.confirmPayment(order.id);
+      // Redirect to PayHere; the notify webhook confirms the order.
+      const { checkoutUrl, params } = await api.createPayherePayment(order.id);
       clearCart();
-      router.push(`/account/orders/${order.id}/installments?success=true`);
+      postToPayHere(checkoutUrl, params);
     } catch (err: any) {
       setError(err.message || 'Failed to place order');
     } finally {
@@ -201,8 +188,6 @@ export default function CheckoutPage() {
   const placeOrderLabel =
     method === 'cod'
       ? `Place Order — ${fmt(totalValue)}`
-      : method === 'installment'
-      ? `Pay First Installment — ${fmt(installmentAmount)}`
       : `Pay with PayHere — ${fmt(totalValue)}`;
 
   return (
@@ -321,59 +306,6 @@ export default function CheckoutPage() {
                 rightSub="On delivery"
               />
 
-              <MethodCard
-                selected={method === 'installment'}
-                onSelect={() => setMethod('installment')}
-                icon="📅"
-                title="Pay in Installments"
-                subtitle="Split your payment into equal monthly parts — no interest"
-                right={`${fmt(installmentAmount)}`}
-                rightSub={`${installmentCount} payments`}
-              >
-                {method === 'installment' && (
-                  <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--clr-border-2)' }}>
-                    <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--clr-text-2)', marginBottom: '0.75rem' }}>
-                      Number of installments:
-                    </p>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {[2, 3, 4].map((num) => (
-                        <button
-                          key={num}
-                          onClick={(e) => { e.stopPropagation(); setInstallmentCount(num); }}
-                          className={`btn ${installmentCount === num ? 'btn-primary' : 'btn-outline'}`}
-                          style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--r-md)' }}
-                        >
-                          {num}× payments
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ marginTop: '1rem', background: 'var(--clr-surface-2)', borderRadius: 'var(--r-md)', padding: '1rem' }}>
-                      <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--clr-text-3)', marginBottom: '0.75rem' }}>
-                        Payment Schedule
-                      </p>
-                      {Array.from({ length: installmentCount }).map((_, i) => {
-                        const date = new Date();
-                        date.setMonth(date.getMonth() + i);
-                        const amount = i === installmentCount - 1 ? lastInstallmentAmount : installmentAmount;
-                        return (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: i < installmentCount - 1 ? '1px solid var(--clr-border-2)' : 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                              <div style={{ width: '1.5rem', height: '1.5rem', borderRadius: '50%', background: i === 0 ? 'var(--clr-brand)' : 'var(--clr-border)', color: i === 0 ? '#fff' : 'var(--clr-text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700 }}>
-                                {i + 1}
-                              </div>
-                              <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--clr-text)' }}>
-                                {i === 0 ? 'Due today' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </p>
-                            </div>
-                            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--clr-text)' }}>{fmt(amount)}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </MethodCard>
-
               {/* Navigation Buttons */}
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                 <button className="btn btn-outline btn-lg" onClick={() => setStep(1)}>← Back</button>
@@ -409,13 +341,12 @@ export default function CheckoutPage() {
                   <button onClick={() => setStep(2)} className="btn btn-outline btn-sm">Change</button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>{method === 'payhere' ? '💳' : method === 'cod' ? '💵' : '📅'}</span>
+                  <span style={{ fontSize: '1.5rem' }}>{method === 'payhere' ? '💳' : '💵'}</span>
                   <div>
                     <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--clr-text)' }}>{methodLabel[method]}</p>
                     <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
                       {method === 'payhere' && <>Pay <strong>{fmt(totalValue)}</strong> securely via PayHere</>}
                       {method === 'cod' && <>Pay <strong>{fmt(totalValue)}</strong> in cash on delivery</>}
-                      {method === 'installment' && <>{fmt(installmentAmount)}/month — first payment today, no interest</>}
                     </p>
                   </div>
                 </div>
@@ -489,7 +420,6 @@ export default function CheckoutPage() {
               <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)', fontWeight: 500 }}>
                 {method === 'payhere' && <>💳 Card / Online — {fmt(totalValue)}</>}
                 {method === 'cod' && <>💵 Cash on Delivery — {fmt(totalValue)}</>}
-                {method === 'installment' && <>📅 {installmentCount}× Installments — {fmt(installmentAmount)}/mo</>}
               </p>
             </div>
           )}

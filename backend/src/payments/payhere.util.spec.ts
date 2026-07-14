@@ -19,7 +19,9 @@ describe('PayHere hashing', () => {
   });
 
   it('secret hash is upper(md5(secret))', () => {
-    expect(payhereSecretHash(merchantSecret)).toBe(md5(merchantSecret).toUpperCase());
+    expect(payhereSecretHash(merchantSecret)).toBe(
+      md5(merchantSecret).toUpperCase(),
+    );
     expect(payhereSecretHash(merchantSecret)).toMatch(/^[0-9A-F]{32}$/);
   });
 
@@ -28,10 +30,20 @@ describe('PayHere hashing', () => {
     const currency = 'LKR';
     const orderId = 'TXL-1';
     const expected = md5(
-      merchantId + orderId + amount + currency + md5(merchantSecret).toUpperCase(),
+      merchantId +
+        orderId +
+        amount +
+        currency +
+        md5(merchantSecret).toUpperCase(),
     ).toUpperCase();
     expect(
-      payhereCheckoutHash({ merchantId, orderId, amount, currency, merchantSecret }),
+      payhereCheckoutHash({
+        merchantId,
+        orderId,
+        amount,
+        currency,
+        merchantSecret,
+      }),
     ).toBe(expected);
   });
 
@@ -49,7 +61,9 @@ describe('PayHere hashing', () => {
     // deterministic
     expect(payhereNotifySig(sigArgs)).toBe(sig);
     // sensitive to a tampered amount
-    expect(payhereNotifySig({ ...sigArgs, payhereAmount: '9999.00' })).not.toBe(sig);
+    expect(payhereNotifySig({ ...sigArgs, payhereAmount: '9999.00' })).not.toBe(
+      sig,
+    );
     // sensitive to a tampered status
     expect(payhereNotifySig({ ...sigArgs, statusCode: '-1' })).not.toBe(sig);
   });

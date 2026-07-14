@@ -1,4 +1,4 @@
-import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, PaymentIntentResponse, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse } from '@/types';
+import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -204,20 +204,6 @@ class ApiClient {
     return this.request('/payments/config');
   }
 
-  async createFullPayment(orderId: string): Promise<PaymentIntentResponse> {
-    return this.request<PaymentIntentResponse>('/payments/full', {
-      method: 'POST',
-      body: JSON.stringify({ orderId }),
-    });
-  }
-
-  async createInstallmentPayment(orderId: string, installmentCount: number): Promise<PaymentIntentResponse> {
-    return this.request<PaymentIntentResponse>('/payments/installment', {
-      method: 'POST',
-      body: JSON.stringify({ orderId, installmentCount }),
-    });
-  }
-
   async createPayherePayment(orderId: string): Promise<PayhereCheckoutResponse> {
     return this.request<PayhereCheckoutResponse>('/payments/payhere/create', {
       method: 'POST',
@@ -249,30 +235,12 @@ class ApiClient {
     return this.request(`/payments/admin/${orderId}/reject`, { method: 'POST' });
   }
 
-  async payInstallment(installmentId: string): Promise<{ installmentId: string; installmentNo: number; amount: number; clientSecret: string }> {
-    return this.request(`/payments/installment/${installmentId}/pay`, {
-      method: 'POST',
-    });
-  }
-
-  async getPayment(orderId: string) {
-    return this.request(`/payments/${orderId}`);
+  async getPayment(orderId: string): Promise<Payment> {
+    return this.request<Payment>(`/payments/${orderId}`);
   }
 
   async getInstallmentSchedule(orderId: string): Promise<InstallmentSchedule> {
     return this.request<InstallmentSchedule>(`/payments/${orderId}/installments`);
-  }
-
-  async confirmPayment(orderId: string) {
-    return this.request(`/payments/confirm/${orderId}`, {
-      method: 'POST',
-    });
-  }
-
-  async confirmInstallment(installmentId: string) {
-    return this.request(`/payments/confirm-installment/${installmentId}`, {
-      method: 'POST',
-    });
   }
 }
 

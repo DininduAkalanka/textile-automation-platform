@@ -41,7 +41,7 @@ export class AdjustStockDto {
    * RESERVE / RELEASE / SALE / INITIAL are refused here. Those belong to the
    * order lifecycle — an admin who could hand-write a SALE could invent revenue.
    */
-  @IsIn(ADMIN_MOVEMENT_TYPES as unknown as string[])
+  @IsIn(ADMIN_MOVEMENT_TYPES)
   type!: AdminMovementType;
 
   /**

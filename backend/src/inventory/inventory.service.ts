@@ -364,7 +364,7 @@ export class InventoryService {
           wouldBe < 0
             ? `That would leave ${wouldBe} in stock. Stock cannot go below zero (BR4).`
             : `That would leave ${wouldBe} available, but ${before.reserved} ` +
-              `are reserved for orders already placed. Cancel those orders first.`,
+                `are reserved for orders already placed. Cancel those orders first.`,
         );
       }
 
@@ -430,9 +430,7 @@ export class InventoryService {
     return this.prisma.$transaction(async (tx) => {
       // Locked for the same reason as adjust(): the audit log below claims what the
       // threshold WAS, and a claim read outside a lock is a guess.
-      const locked = await tx.$queryRaw<
-        Array<{ id: string; minimum: number }>
-      >`
+      const locked = await tx.$queryRaw<Array<{ id: string; minimum: number }>>`
         SELECT id, minimum_stock_level AS minimum
           FROM inventory
          WHERE product_id = ${productId}::uuid
@@ -503,7 +501,12 @@ export class InventoryService {
         where,
         include: {
           product: {
-            select: { id: true, name: true, sku: true, category: { select: { name: true } } },
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              category: { select: { name: true } },
+            },
           },
         },
         orderBy: { product: { name: 'asc' } },
@@ -542,12 +545,20 @@ export class InventoryService {
       where: { productId: { in: rows.map((r) => r.product_id) } },
       include: {
         product: {
-          select: { id: true, name: true, sku: true, category: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            category: { select: { name: true } },
+          },
         },
       },
     });
 
-    return { count: items.length, items: items.map((item) => this.shape(item)) };
+    return {
+      count: items.length,
+      items: items.map((item) => this.shape(item)),
+    };
   }
 
   /**
@@ -603,7 +614,9 @@ export class InventoryService {
         createdAt: row.createdAt,
         // Exactly one of these is set. A movement with neither is a bug.
         orderNumber: row.order?.orderNumber ?? null,
-        adminName: row.userId ? (nameOf.get(row.userId) ?? 'Unknown admin') : null,
+        adminName: row.userId
+          ? (nameOf.get(row.userId) ?? 'Unknown admin')
+          : null,
       })),
       pagination: {
         page,
@@ -619,11 +632,17 @@ export class InventoryService {
       where: { productId },
       include: {
         product: {
-          select: { id: true, name: true, sku: true, category: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            category: { select: { name: true } },
+          },
         },
       },
     });
-    if (!row) throw new NotFoundException('This product has no inventory record.');
+    if (!row)
+      throw new NotFoundException('This product has no inventory record.');
     return this.shape(row);
   }
 

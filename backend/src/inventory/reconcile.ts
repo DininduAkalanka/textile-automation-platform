@@ -263,7 +263,10 @@ export async function movementWindow(db: Db, sku: string, limit = 15) {
  * would destroy the only evidence of the bug while making the symptom disappear.
  * That is not a repair; it is a cover-up.
  */
-export async function repairCache(db: Db, skuPrefix?: string): Promise<string[]> {
+export async function repairCache(
+  db: Db,
+  skuPrefix?: string,
+): Promise<string[]> {
   const like = skuPrefix ? `${skuPrefix}%` : '%';
 
   const stale = await db.$queryRaw<
@@ -285,5 +288,7 @@ export async function repairCache(db: Db, skuPrefix?: string): Promise<string[]>
     });
   }
 
-  return stale.map((r) => `${r.sku}: stock_quantity ${r.cache} -> ${r.sellable}`);
+  return stale.map(
+    (r) => `${r.sku}: stock_quantity ${r.cache} -> ${r.sellable}`,
+  );
 }

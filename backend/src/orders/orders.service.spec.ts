@@ -19,7 +19,12 @@ describe('OrdersService — reserve on create (D3)', () => {
     product: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
-  let inventory: { reserve: jest.Mock; sale: jest.Mock; release: jest.Mock; restock: jest.Mock };
+  let inventory: {
+    reserve: jest.Mock;
+    sale: jest.Mock;
+    release: jest.Mock;
+    restock: jest.Mock;
+  };
   let production: { createTasksForOrder: jest.Mock };
   let tx: {
     order: { create: jest.Mock };
@@ -80,18 +85,32 @@ describe('OrdersService — reserve on create (D3)', () => {
     const result = await service.create('u1', dto);
 
     expect(result).toEqual({ id: 'o1', orderNumber: 'TXL-1' });
-    expect(inventory.reserve).toHaveBeenCalledWith(tx, 'p1', 2, 'o1', 'Cotton Shirt');
+    expect(inventory.reserve).toHaveBeenCalledWith(
+      tx,
+      'p1',
+      2,
+      'o1',
+      'Cotton Shirt',
+    );
     expect(tx.orderStatusHistory.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ orderId: 'o1', fromStatus: null, toStatus: 'PENDING' }),
+        data: expect.objectContaining({
+          orderId: 'o1',
+          fromStatus: null,
+          toStatus: 'PENDING',
+        }),
       }),
     );
   });
 
   it('rejects before opening a transaction when sellable stock is short (fast pre-check)', async () => {
-    prisma.product.findMany.mockResolvedValue([makeProduct({ stockQuantity: 1 })]);
+    prisma.product.findMany.mockResolvedValue([
+      makeProduct({ stockQuantity: 1 }),
+    ]);
 
-    await expect(service.create('u1', dto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(inventory.reserve).not.toHaveBeenCalled();
   });
@@ -99,10 +118,16 @@ describe('OrdersService — reserve on create (D3)', () => {
   it('propagates the reservation failure when the guarded UPDATE matches 0 rows (race lost)', async () => {
     // Passes the JS pre-check (looks like 5) but a concurrent order took the
     // stock first, so reserve() throws — the whole order creation must abort.
-    prisma.product.findMany.mockResolvedValue([makeProduct({ stockQuantity: 5 })]);
+    prisma.product.findMany.mockResolvedValue([
+      makeProduct({ stockQuantity: 5 }),
+    ]);
     tx.order.create.mockResolvedValue({ id: 'o1' });
-    inventory.reserve.mockRejectedValue(new BadRequestException('Insufficient stock'));
+    inventory.reserve.mockRejectedValue(
+      new BadRequestException('Insufficient stock'),
+    );
 
-    await expect(service.create('u1', dto)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

@@ -86,9 +86,8 @@ describe('BR3 measurements at checkout', () => {
   }
 
   const reservedFor = async (productId: string) =>
-    (
-      await prisma.inventory.findUniqueOrThrow({ where: { productId } })
-    ).quantityReserved;
+    (await prisma.inventory.findUniqueOrThrow({ where: { productId } }))
+      .quantityReserved;
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({

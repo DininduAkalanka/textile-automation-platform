@@ -134,11 +134,21 @@ export class ProductsService {
 
     // Subcategory & Virtual Collection filters
     if (query.subCategory) {
-      if (query.subCategory === 'special-offers' || query.offers === '1' || query.offers === 'true') {
+      if (
+        query.subCategory === 'special-offers' ||
+        query.offers === '1' ||
+        query.offers === 'true'
+      ) {
         where.compareAtPrice = { not: null };
-      } else if (query.subCategory === 'premium-collection' || query.tier === 'premium') {
+      } else if (
+        query.subCategory === 'premium-collection' ||
+        query.tier === 'premium'
+      ) {
         where.price = { gte: 5000 };
-      } else if (query.subCategory === 'latest-this-week' || query.subCategory === 'trending-now') {
+      } else if (
+        query.subCategory === 'latest-this-week' ||
+        query.subCategory === 'trending-now'
+      ) {
         // Handled via custom sorting below
       } else {
         where.subCategory = query.subCategory;
@@ -461,7 +471,8 @@ export class ProductsService {
     if (products > 0 || children > 0) {
       const parts: string[] = [];
       if (products > 0) parts.push(`${products} product(s)`);
-      if (children > 0) parts.push(`${children} sub-categor${children === 1 ? 'y' : 'ies'}`);
+      if (children > 0)
+        parts.push(`${children} sub-categor${children === 1 ? 'y' : 'ies'}`);
       throw new ConflictException(
         `Cannot delete "${category.name}" — it still has ${parts.join(' and ')}. Move or remove them first.`,
       );
