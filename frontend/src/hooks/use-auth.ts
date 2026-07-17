@@ -46,11 +46,42 @@ export function useRegister() {
     mutationFn: (input: RegisterInput) => authService.register(input),
     onSuccess: (response: AuthResponse) => {
       setAuth(response.user, response.accessToken);
-      toast.success('Account created');
-      router.push(landingFor(response.user.role));
+      // The first code was already auto-sent server-side during registration;
+      // land on /verify in code-entry mode for whichever channel it went to,
+      // so the user types the code instead of re-sending into the cooldown.
+      toast.success('Account created! Enter the code we sent to verify.');
+      router.push(`/verify?sent=${response.user.email ? 'EMAIL' : 'SMS'}`);
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Could not create the account');
+    },
+  });
+}
+
+/** Send an OTP to the logged-in user's email or phone. */
+export function useSendCode() {
+  return useMutation({
+    mutationFn: (channel: 'EMAIL' | 'SMS') => authService.sendCode(channel),
+    onSuccess: () => toast.success('Verification code sent.'),
+    onError: (error: Error) => {
+      toast.error(error.message || 'Could not send the code');
+    },
+  });
+}
+
+/** Verify an OTP, then refresh the profile so verified flags update in-store. */
+export function useVerifyCode() {
+  const loadUser = useAuthStore((s) => s.loadUser);
+
+  return useMutation({
+    mutationFn: (input: { channel: 'EMAIL' | 'SMS'; code: string }) =>
+      authService.verifyCode(input.channel, input.code),
+    onSuccess: async () => {
+      await loadUser();
+      toast.success('Verified — you’re all set.');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Could not verify that code');
     },
   });
 }

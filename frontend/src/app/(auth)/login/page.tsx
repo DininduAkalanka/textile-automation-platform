@@ -24,7 +24,7 @@ function LoginForm() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
   return (
@@ -34,12 +34,12 @@ function LoginForm() {
       noValidate
     >
       <FormField
-        label="Email address"
-        type="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        error={errors.email?.message}
-        {...register('email')}
+        label="Email or phone"
+        type="text"
+        autoComplete="username"
+        placeholder="you@example.com or 0771234567"
+        error={errors.identifier?.message}
+        {...register('identifier')}
       />
 
       <FormField

@@ -13,7 +13,10 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { SendCodeDto } from './dto/send-code.dto';
+import { VerifyCodeDto } from './dto/verify-code.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { VerificationService } from '../verification/verification.service';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -23,7 +26,10 @@ const AUTH_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly verificationService: VerificationService,
+  ) {}
 
   private setRefreshCookie(res: Response, token: string) {
     res.cookie(REFRESH_COOKIE, token, {
@@ -81,6 +87,29 @@ export class AuthController {
     await this.authService.logout(req.cookies?.[REFRESH_COOKIE]);
     res.clearCookie(REFRESH_COOKIE, { path: '/' });
     return { success: true };
+  }
+
+  // ─── Contact verification (OTP) ─────────────────────────
+  // Authenticated: a logged-in user verifies their OWN contact. Same tight
+  // throttle as the credential endpoints; the service adds its own per-user
+  // cooldown and hourly cap on top of this IP-based limit.
+
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @Post('send-code')
+  async sendCode(@Request() req: any, @Body() dto: SendCodeDto) {
+    return this.verificationService.sendCode(req.user.sub, dto.channel);
+  }
+
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-code')
+  async verifyCode(@Request() req: any, @Body() dto: VerifyCodeDto) {
+    return this.verificationService.verifyCode(
+      req.user.sub,
+      dto.channel,
+      dto.code,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

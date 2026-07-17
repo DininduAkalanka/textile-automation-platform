@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
+import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 import {
   PaymentStatus,
   PaymentMethod,
@@ -30,6 +31,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private ordersService: OrdersService,
+    private dispatch: NotificationDispatchService,
   ) {
     const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (stripeKey && stripeKey !== 'sk_test_mock') {
@@ -612,7 +614,7 @@ export class PaymentsService {
         amount,
         first_name: order.user.firstName,
         last_name: order.user.lastName,
-        email: order.user.email,
+        email: order.user.email ?? '', // phone-only customers have no email
         phone: order.user.phone ?? '',
         address: '',
         city: '',
@@ -712,6 +714,15 @@ export class PaymentsService {
       this.logger.error(
         `PayHere amount mismatch for ${orderId}: got ${payhereAmount}, expected ${order.total.toFixed(2)}`,
       );
+      // A correctly-SIGNED notify with the wrong amount is tampering or a
+      // misconfiguration — a human must look at it, not just a log file.
+      await this.dispatch.sendAdminAmountMismatch({
+        orderNumber: orderId,
+        expectedAmount: order.total.toFixed(2),
+        receivedAmount: formatPayhereAmount(payhereAmount),
+        currency: payhereCurrency,
+        transactionId: paymentId ?? 'unknown',
+      });
       return finish('AMOUNT_MISMATCH');
     }
 
@@ -732,6 +743,9 @@ export class PaymentsService {
         where: { orderId: order.id },
         data: { status: PaymentStatus.FAILED, gatewayResponse: body },
       });
+      // Tell the customer their payment failed and they can retry — before
+      // this, a failed online payment was completely silent.
+      await this.dispatch.sendPaymentFailed(order.id);
     }
 
     return finish();
@@ -873,10 +887,17 @@ export class PaymentsService {
       throw new BadRequestException('Cannot reject a completed payment');
     }
 
-    return this.prisma.payment.update({
+    const updated = await this.prisma.payment.update({
       where: { orderId },
       data: { status: PaymentStatus.FAILED },
     });
+
+    // Previously a silent rejection — the customer found out only by checking
+    // their order page. (The missing AuditLog write here is a separate,
+    // pre-existing gap, tracked but not fixed in this pass.)
+    await this.dispatch.sendPaymentRejected(orderId);
+
+    return updated;
   }
 
   // ─── Helpers ────────────────────────────────────────────

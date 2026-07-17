@@ -55,6 +55,7 @@ describe('Admin catalog management (plan Session 2.2)', () => {
       data: {
         email: `${TAG}-admin@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'Cat',
         lastName: 'Admin',
         role: UserRole.ADMIN,

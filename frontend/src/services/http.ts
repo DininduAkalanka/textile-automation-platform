@@ -144,12 +144,19 @@ export async function unwrap<T>(promise: Promise<{ data: unknown }>): Promise<T>
       ? ((body as { data: T }).data)
       : (body as T);
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string | string[] }>;
+    const axiosError = error as AxiosError<{
+      message?: string | string[];
+      error?: { code?: string };
+    }>;
     const message = axiosError.response?.data?.message;
-    throw new Error(
+    const err = new Error(
       Array.isArray(message)
         ? message[0]
         : (message ?? axiosError.message ?? 'Request failed'),
-    );
+    ) as Error & { code?: string };
+    // Surface the envelope's machine-readable code (e.g. EMAIL_NOT_VERIFIED,
+    // OTP_LOCKED) so callers can branch without parsing prose.
+    err.code = axiosError.response?.data?.error?.code;
+    throw err;
   }
 }

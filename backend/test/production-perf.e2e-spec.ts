@@ -52,6 +52,7 @@ describe('Production pipeline performance (plan 6.1 AC)', () => {
         data: {
           email: `${TAG}@example.test`,
           passwordHash: 'not-a-real-hash',
+          emailVerified: true,
           firstName: 'Perf',
           lastName: 'Tester',
           role: UserRole.CUSTOMER,

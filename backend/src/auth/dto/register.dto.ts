@@ -5,10 +5,18 @@ import {
   MaxLength,
   IsOptional,
 } from 'class-validator';
+import { IsLkPhone } from '../../common/phone.util';
 
+/**
+ * Both email and phone are optional at the DTO layer (an account may be
+ * email-only OR phone-only). The "at least one contact" rule is enforced in
+ * AuthService.register, co-located with the duplicate-contact check — the DTO
+ * only validates FORMAT.
+ */
 export class RegisterDto {
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @IsString()
   @MinLength(8)
@@ -26,6 +34,6 @@ export class RegisterDto {
   lastName: string;
 
   @IsOptional()
-  @IsString()
+  @IsLkPhone()
   phone?: string;
 }

@@ -87,28 +87,42 @@ enum TaskStatus {
   DONE
 }
 
+/// Which channel a one-time verification code was delivered over. Maps 1:1 to
+/// the User contact field it verifies (EMAIL -> emailVerified, SMS -> phone).
+enum VerificationChannel {
+  EMAIL
+  SMS
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
   id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  phone        String?
-  role         UserRole @default(CUSTOMER)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  // Dual identity (email OR phone): either may be null, but the app requires
+  // at least one at registration. Both are unique — Postgres allows multiple
+  // NULLs, so an email-only account and a phone-only account coexist.
+  email         String?  @unique
+  passwordHash  String   @map("password_hash")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  phone         String?  @unique // canonical +947XXXXXXXX (see phone.util.ts)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  phoneVerified Boolean  @default(false) @map("phone_verified")
+  role          UserRole @default(CUSTOMER)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  orders        Order[]
-  refreshTokens RefreshToken[]
-  worker        Worker?
-  measurements  CustomerMeasurement[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  orders            Order[]
+  refreshTokens     RefreshToken[]
+  verificationCodes VerificationCode[]
+  worker            Worker?
+  measurements      CustomerMeasurement[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
 
   @@index([email])
+  @@index([phone])
   @@index([role])
   @@map("users")
 }
@@ -126,6 +140,27 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// One-time 6-digit codes for verifying a contact (email or phone). Like
+/// RefreshToken, only the SHA-256 hash of the code is stored — the plaintext
+/// lives only in the email/SMS that was sent. A low-entropy 6-digit code is
+/// safe ONLY because the service enforces short expiry, a per-code attempt
+/// cap, and per-user send rate limits (all queried off the index below).
+model VerificationCode {
+  id         String              @id @default(uuid()) @db.Uuid
+  userId     String              @map("user_id") @db.Uuid
+  channel    VerificationChannel
+  codeHash   String              @map("code_hash") // SHA-256 hex; NOT unique — codes repeat
+  expiresAt  DateTime            @map("expires_at")
+  attempts   Int                 @default(0)
+  consumedAt DateTime?           @map("consumed_at")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, channel, createdAt])
+  @@map("verification_codes")
 }
 
 model Category {

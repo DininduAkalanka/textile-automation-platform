@@ -82,6 +82,7 @@ describe('Stock reservation race (D3 / BR4)', () => {
       data: {
         email: `${TAG}@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'Race',
         lastName: 'Tester',
         role: UserRole.CUSTOMER,

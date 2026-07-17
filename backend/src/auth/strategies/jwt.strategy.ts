@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 interface JwtPayload {
   sub: string;
-  email: string;
+  email: string | null; // phone-only accounts have no email
   role: string;
 }
 

@@ -1,5 +1,6 @@
 import { Type, plainToInstance } from 'class-transformer';
 import {
+  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -107,6 +108,38 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   STRIPE_WEBHOOK_SECRET?: string;
+
+  // ─── Transactional email + SMS (OTP verification, notifications) ─────────
+  // All optional: with none set the app boots and every send becomes a logged
+  // no-op, exactly like the Stripe/AI integrations above.
+  @IsOptional()
+  @IsString()
+  RESEND_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  EMAIL_FROM?: string;
+
+  @IsOptional()
+  @IsEmail()
+  ADMIN_ALERT_EMAIL?: string;
+
+  @IsOptional()
+  @IsEnum(['notifylk', 'textlk'])
+  SMS_PROVIDER?: string;
+
+  @IsOptional()
+  @IsString()
+  SMS_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  SMS_SENDER_ID?: string;
+
+  /** Notify.lk requires a user_id alongside the API key. */
+  @IsOptional()
+  @IsString()
+  SMS_USER_ID?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

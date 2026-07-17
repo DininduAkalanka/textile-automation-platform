@@ -87,6 +87,7 @@ describe('Order management (Phase 7)', () => {
         data: {
           email: `${TAG}-admin@example.test`,
           passwordHash: 'x',
+          emailVerified: true,
           firstName: 'Ada',
           lastName: 'Admin',
           role: UserRole.ADMIN,
@@ -99,6 +100,7 @@ describe('Order management (Phase 7)', () => {
         data: {
           email: `${TAG}-cust@example.test`,
           passwordHash: 'x',
+          emailVerified: true,
           firstName: 'Cara',
           lastName: 'Customer',
           role: UserRole.CUSTOMER,
@@ -111,6 +113,7 @@ describe('Order management (Phase 7)', () => {
         data: {
           email: `${TAG}-other@example.test`,
           passwordHash: 'x',
+          emailVerified: true,
           firstName: 'Otis',
           lastName: 'Other',
           role: UserRole.CUSTOMER,
@@ -266,6 +269,7 @@ describe('Order management (Phase 7)', () => {
               data: {
                 email: `${TAG}-w-${task.id}@example.test`,
                 passwordHash: 'x',
+                emailVerified: true,
                 firstName: 'W',
                 lastName: 'W',
                 role: UserRole.WORKER,
@@ -611,6 +615,7 @@ describe('Order management (Phase 7)', () => {
         data: {
           email: `${TAG}-demo-worker@example.test`,
           passwordHash: 'x',
+          emailVerified: true,
           firstName: 'Demo',
           lastName: 'Worker',
           role: UserRole.WORKER,

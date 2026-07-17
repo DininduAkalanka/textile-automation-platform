@@ -2,11 +2,15 @@
 
 export interface User {
   id: string;
-  email: string;
+  // Dual identity: a customer may have registered with only a phone, so email
+  // is optional. At least one of email/phone is always present.
+  email?: string;
   firstName: string;
   lastName: string;
   phone?: string;
   role: 'ADMIN' | 'MANAGER' | 'CUSTOMER';
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   createdAt?: string;
 }
 
