@@ -12,4 +12,16 @@ export const authService = {
   me: () => unwrap<User>(http.get('/auth/me')),
 
   logout: () => unwrap<void>(http.post('/auth/logout')),
+
+  /** Send a fresh OTP to the logged-in user's email or phone. */
+  sendCode: (channel: 'EMAIL' | 'SMS') =>
+    unwrap<{ channel: string; expiresAt: string }>(
+      http.post('/auth/send-code', { channel }),
+    ),
+
+  /** Verify an OTP; returns the updated verified flags. */
+  verifyCode: (channel: 'EMAIL' | 'SMS', code: string) =>
+    unwrap<{ emailVerified: boolean; phoneVerified: boolean }>(
+      http.post('/auth/verify-code', { channel, code }),
+    ),
 };

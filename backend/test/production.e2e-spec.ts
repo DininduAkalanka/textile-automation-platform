@@ -113,6 +113,7 @@ describe('Production pipeline (Phase 6)', () => {
       data: {
         email: `${TAG}-${suffix}@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: suffix,
         lastName: 'Tester',
         role,

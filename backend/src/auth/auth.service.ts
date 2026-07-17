@@ -1,59 +1,99 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { VerificationChannel } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { normalizeLkPhone } from '../common/phone.util';
+import { VerificationService } from '../verification/verification.service';
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 type SessionUser = {
   id: string;
-  email: string;
+  email: string | null;
   role: string;
   firstName: string;
   lastName: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
 };
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private verificationService: VerificationService,
   ) {}
 
   async register(dto: RegisterDto, userAgent?: string) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const email = dto.email?.trim().toLowerCase() || null;
+    // DTO @IsLkPhone already validated format; normalize to the canonical
+    // +947XXXXXXXX so the unique constraint treats "0771…"/"+9477…" as one.
+    const phone = dto.phone ? normalizeLkPhone(dto.phone) : null;
+
+    if (!email && !phone) {
+      throw new BadRequestException({
+        code: 'CONTACT_REQUIRED',
+        message: 'Provide an email or a phone number to register.',
+      });
+    }
+
+    // "email OR phone already taken" — findUnique can't express an OR, so
+    // build the OR from only the contacts actually provided.
+    const orConditions: { email?: string; phone?: string }[] = [];
+    if (email) orConditions.push({ email });
+    if (phone) orConditions.push({ phone });
+    const existing = await this.prisma.user.findFirst({
+      where: { OR: orConditions },
     });
-    if (existingUser) {
-      throw new ConflictException('Email already registered');
+    if (existing) {
+      throw new ConflictException(
+        'An account with that email or phone number already exists',
+      );
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        phone: dto.phone,
+        phone,
       },
     });
+
+    // Auto-send the first verification code (email preferred, else SMS).
+    // Best-effort: a delivery/rate-limit hiccup must never fail registration.
+    const channel = email ? VerificationChannel.EMAIL : VerificationChannel.SMS;
+    try {
+      await this.verificationService.sendCode(user.id, channel);
+    } catch (err) {
+      this.logger.warn(
+        `Initial verification code not sent for ${user.id}: ${
+          err instanceof Error ? err.message : 'unknown error'
+        }`,
+      );
+    }
 
     return this.issueSession(user, userAgent);
   }
 
   async login(dto: LoginDto, userAgent?: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const user = await this.findByIdentifier(dto.identifier);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -69,7 +109,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Note: NO verification gate here (unlike an email-only design). Contact
+    // verification is enforced at checkout, so login stays low-friction.
     return this.issueSession(user, userAgent);
+  }
+
+  /** Resolve a login identifier that may be an email or an LK phone number. */
+  private async findByIdentifier(identifier: string) {
+    const trimmed = identifier.trim();
+    if (trimmed.includes('@')) {
+      return this.prisma.user.findUnique({
+        where: { email: trimmed.toLowerCase() },
+      });
+    }
+    const phone = normalizeLkPhone(trimmed);
+    if (!phone) return null; // neither a valid email nor a valid LK mobile
+    return this.prisma.user.findUnique({ where: { phone } });
   }
 
   /**
@@ -130,6 +185,8 @@ export class AuthService {
         lastName: true,
         phone: true,
         role: true,
+        emailVerified: true,
+        phoneVerified: true,
         createdAt: true,
       },
     });
@@ -166,6 +223,8 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
       },
       accessToken,
       refreshToken,

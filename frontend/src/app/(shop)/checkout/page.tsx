@@ -90,7 +90,7 @@ function MethodCard({
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, clearCart } = useCartStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Confirm
@@ -125,6 +125,22 @@ export default function CheckoutPage() {
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Please sign in to checkout</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>You need an account to place an order</p>
         <Link href="/login" className="btn btn-primary btn-lg">Sign In</Link>
+      </div>
+    );
+  }
+
+  // Verification gate (mirrors the backend guard in orders.service.create):
+  // a customer must have a verified email or phone before ordering, so order
+  // updates can reach them. Absent flags read as unverified.
+  if (user && !user.emailVerified && !user.phoneVerified) {
+    return (
+      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+        <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>📱</p>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Verify your contact to check out</h2>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+          Confirm your email or phone number so we can send you order updates.
+        </p>
+        <Link href="/verify?returnTo=/checkout" className="btn btn-primary btn-lg">Verify now</Link>
       </div>
     );
   }
@@ -167,6 +183,12 @@ export default function CheckoutPage() {
       clearCart();
       postToPayHere(checkoutUrl, params);
     } catch (err: any) {
+      // The backend guard fires if verification lapsed between page load and
+      // submit — send them to verify rather than showing a raw error.
+      if (err.code === 'VERIFICATION_REQUIRED') {
+        router.push('/verify?returnTo=/checkout');
+        return;
+      }
       setError(err.message || 'Failed to place order');
     } finally {
       setLoading(false);

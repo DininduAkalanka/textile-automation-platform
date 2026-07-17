@@ -45,7 +45,13 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const err = new Error(error.message || `HTTP ${response.status}`) as Error & {
+        code?: string;
+      };
+      // Surface the machine-readable code (e.g. VERIFICATION_REQUIRED) so the
+      // checkout flow can route to the verify page instead of showing prose.
+      err.code = error.error?.code;
+      throw err;
     }
 
     const data = await response.json();

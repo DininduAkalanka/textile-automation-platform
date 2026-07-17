@@ -52,12 +52,14 @@ export default function RegisterPage() {
         <form
           onSubmit={handleSubmit((values) =>
             // confirmPassword is a form-only field; the API never sees it.
+            // Empty contact fields are sent as undefined, not '', so the
+            // backend's optional email/phone validation treats them as absent.
             registerMutation.mutate({
               firstName: values.firstName,
               lastName: values.lastName,
-              email: values.email,
+              email: values.email || undefined,
               password: values.password,
-              phone: values.phone,
+              phone: values.phone || undefined,
             }),
           )}
           className="flex flex-col gap-4"
@@ -78,8 +80,13 @@ export default function RegisterPage() {
             />
           </div>
 
+          <p className="-mb-1 text-xs text-neutral-500">
+            Provide an email, a phone number, or both — you&apos;ll verify one
+            of them.
+          </p>
+
           <FormField
-            label="Email address"
+            label="Email (optional if phone given)"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
@@ -88,7 +95,7 @@ export default function RegisterPage() {
           />
 
           <FormField
-            label="Phone (optional)"
+            label="Phone (optional if email given)"
             type="tel"
             autoComplete="tel"
             placeholder="07XXXXXXXX"

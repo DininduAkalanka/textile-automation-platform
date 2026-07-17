@@ -111,6 +111,7 @@ describe('Admin dashboard analytics (Session 8.1)', () => {
       data: {
         email: `${TAG}@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'Analytics',
         lastName: 'Fixture',
         role: UserRole.CUSTOMER,

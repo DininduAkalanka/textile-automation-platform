@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductionService } from '../production/production.service';
+import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { validateMeasurements } from './measurements.config';
 import {
@@ -30,6 +31,7 @@ export class OrdersService {
     private prisma: PrismaService,
     private inventory: InventoryService,
     private production: ProductionService,
+    private dispatch: NotificationDispatchService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -39,6 +41,21 @@ export class OrdersService {
   }
 
   async create(userId: string, dto: CreateOrderDto) {
+    // Checkout gate: a customer must have at least one VERIFIED contact
+    // (email or phone) before they can place an order, so order/payment
+    // updates can actually reach them. Verification happens via OTP; this is
+    // the server-side enforcement behind the frontend's pre-checkout prompt.
+    const contact = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { emailVerified: true, phoneVerified: true },
+    });
+    if (!contact || (!contact.emailVerified && !contact.phoneVerified)) {
+      throw new BadRequestException({
+        code: 'VERIFICATION_REQUIRED',
+        message: 'Verify your email or phone number before placing an order.',
+      });
+    }
+
     // Validate all products exist and have sufficient stock
     const productIds = dto.items.map((item) => item.productId);
     const products = await this.prisma.product.findMany({
@@ -517,7 +534,10 @@ export class OrdersService {
     changedBy?: string,
     note?: string,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    // The transaction reports whether a REAL transition happened, so the
+    // post-commit email below fires exactly once per order — never on the
+    // idempotent no-op path (e.g. a duplicate webhook delivery).
+    const didConfirm = await this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<
         Array<{ status: OrderStatus; order_number: string; user_id: string }>
       >`
@@ -527,7 +547,7 @@ export class OrdersService {
         throw new NotFoundException('Order not found');
       }
       if (locked[0].status !== OrderStatus.PENDING) {
-        return; // already confirmed/cancelled — idempotent no-op
+        return false; // already confirmed/cancelled — idempotent no-op
       }
 
       const items = await tx.orderItem.findMany({ where: { orderId } });
@@ -575,7 +595,15 @@ export class OrdersService {
           },
         });
       }
+
+      return true;
     });
+
+    // AFTER the commit: an email cannot be rolled back, so it must never be
+    // sent from inside the transaction. The dispatcher itself never throws.
+    if (didConfirm) {
+      await this.dispatch.sendOrderConfirmation(orderId);
+    }
   }
 
   async findAllOrders(query: {

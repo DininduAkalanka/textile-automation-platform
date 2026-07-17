@@ -69,6 +69,7 @@ describe('Inventory admin operations (FR-018 / BR4 / plan 5.1)', () => {
       data: {
         email: `${TAG}-admin@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'Ivy',
         lastName: 'Admin',
         role: UserRole.ADMIN,
@@ -80,6 +81,7 @@ describe('Inventory admin operations (FR-018 / BR4 / plan 5.1)', () => {
       data: {
         email: `${TAG}-customer@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'Cass',
         lastName: 'Customer',
         role: UserRole.CUSTOMER,

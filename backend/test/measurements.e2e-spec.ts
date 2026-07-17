@@ -104,6 +104,7 @@ describe('BR3 measurements at checkout', () => {
       data: {
         email: `${TAG}@example.test`,
         passwordHash: 'not-a-real-hash',
+        emailVerified: true,
         firstName: 'BR3',
         lastName: 'Tester',
         role: UserRole.CUSTOMER,

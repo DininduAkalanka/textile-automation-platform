@@ -231,7 +231,7 @@ export class ProductionService {
     return workers.map((worker) => ({
       id: worker.id,
       name: `${worker.user.firstName} ${worker.user.lastName}`.trim(),
-      email: worker.user.email,
+      email: worker.user.email ?? '', // email is now nullable on User
       specialization: worker.specialization,
     }));
   }

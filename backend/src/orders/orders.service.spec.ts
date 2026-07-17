@@ -5,6 +5,7 @@ import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductionService } from '../production/production.service';
+import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 
 /**
  * Unit tests for order creation after the inventory-ledger rewire (D3).
@@ -17,6 +18,7 @@ describe('OrdersService — reserve on create (D3)', () => {
   let service: OrdersService;
   let prisma: {
     product: { findMany: jest.Mock };
+    user: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
   let inventory: {
@@ -58,6 +60,13 @@ describe('OrdersService — reserve on create (D3)', () => {
     };
     prisma = {
       product: { findMany: jest.fn() },
+      // Checkout gate: default to a verified customer so the create() tests
+      // below exercise the reservation path, not the gate.
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ emailVerified: true, phoneVerified: false }),
+      },
       $transaction: jest.fn().mockImplementation((cb: any) => cb(tx)),
     };
 
@@ -72,6 +81,11 @@ describe('OrdersService — reserve on create (D3)', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: InventoryService, useValue: inventory },
         { provide: ProductionService, useValue: production },
+        // confirmOrder's post-commit email dispatch; create() never calls it.
+        {
+          provide: NotificationDispatchService,
+          useValue: { sendOrderConfirmation: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -101,6 +115,34 @@ describe('OrdersService — reserve on create (D3)', () => {
         }),
       }),
     );
+  });
+
+  it('blocks checkout when the customer has no verified contact (email or phone)', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: false,
+      phoneVerified: false,
+    });
+
+    await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    // Fails at the gate, before touching products or stock.
+    expect(prisma.product.findMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('allows checkout when only the phone is verified', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: false,
+      phoneVerified: true,
+    });
+    prisma.product.findMany.mockResolvedValue([makeProduct()]);
+    tx.order.create.mockResolvedValue({ id: 'o1', orderNumber: 'TXL-1' });
+
+    await expect(service.create('u1', dto)).resolves.toEqual({
+      id: 'o1',
+      orderNumber: 'TXL-1',
+    });
   });
 
   it('rejects before opening a transaction when sellable stock is short (fast pre-check)', async () => {

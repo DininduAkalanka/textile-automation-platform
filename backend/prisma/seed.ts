@@ -41,7 +41,10 @@ async function main() {
   const adminPassword = await bcrypt.hash('Admin@123456', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@textileshop.com' },
-    update: {},
+    // In `update` too, not just `create`: the verified-flag columns default to
+    // false, so re-seeding an already-migrated DB must flip demo accounts back
+    // to verified or they'd be blocked at checkout.
+    update: { emailVerified: true, phoneVerified: true },
     create: {
       email: 'admin@textileshop.com',
       passwordHash: adminPassword,
@@ -49,6 +52,8 @@ async function main() {
       lastName: 'User',
       phone: '+94771234567',
       role: UserRole.ADMIN,
+      emailVerified: true,
+      phoneVerified: true,
     },
   });
   console.log(`✅ Admin user created: ${admin.email}`);
@@ -57,7 +62,7 @@ async function main() {
   const customerPassword = await bcrypt.hash('Customer@123456', 12);
   const customer = await prisma.user.upsert({
     where: { email: 'customer@example.com' },
-    update: {},
+    update: { emailVerified: true, phoneVerified: true },
     create: {
       email: 'customer@example.com',
       passwordHash: customerPassword,
@@ -65,6 +70,8 @@ async function main() {
       lastName: 'Doe',
       phone: '+94779876543',
       role: UserRole.CUSTOMER,
+      emailVerified: true,
+      phoneVerified: true,
     },
   });
   console.log(`✅ Customer user created: ${customer.email}`);
@@ -95,7 +102,7 @@ async function main() {
   for (const w of workerSeeds) {
     const user = await prisma.user.upsert({
       where: { email: w.email },
-      update: {},
+      update: { emailVerified: true, phoneVerified: true },
       create: {
         email: w.email,
         passwordHash: workerPassword,
@@ -103,6 +110,8 @@ async function main() {
         lastName: w.lastName,
         phone: w.phone,
         role: UserRole.WORKER,
+        emailVerified: true,
+        phoneVerified: true,
       },
     });
 
