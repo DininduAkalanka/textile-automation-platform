@@ -21,7 +21,15 @@ BEGIN
   END IF;
 END $$;
 
-GRANT CONNECT ON DATABASE textile_db TO textile_ai_readonly;
+-- Grant CONNECT on whatever database this migration is running in — never a
+-- hardcoded name. The DB is `textile_db` in dev, `textile_ci` in CI, and
+-- something else again in production; `GRANT ON DATABASE textile_db` fails
+-- everywhere that name doesn't exist (it silently broke CI). `current_database()`
+-- makes the migration portable across all three.
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO textile_ai_readonly', current_database());
+END $$;
 GRANT USAGE ON SCHEMA public TO textile_ai_readonly;
 
 -- Explicit allow-list. NOT "GRANT SELECT ON ALL TABLES" — that would silently
