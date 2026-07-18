@@ -71,4 +71,23 @@ export const productsService = {
    *  other edit uses, just flipping isActive back on. */
   restore: (id: string) =>
     unwrap<Product>(http.patch(`/products/${id}`, { isActive: true })),
+
+  /**
+   * "Can this be permanently deleted?" — order count + a boolean, so the delete
+   * dialog can tell the owner up front rather than only refusing after a click.
+   */
+  deletionCheck: (id: string) =>
+    unwrap<{ orderCount: number; deletable: boolean }>(
+      http.get(`/products/${id}/deletion-check`),
+    ),
+
+  /**
+   * Permanent delete. Only succeeds for a product with no order history; the
+   * API replies 409 (surfaced as the toast message) for anything ever ordered,
+   * telling the owner to archive instead. Use archive() for the safe default.
+   */
+  destroy: (id: string) =>
+    unwrap<{ id: string; deleted: boolean }>(
+      http.delete(`/products/${id}/permanent`),
+    ),
 };

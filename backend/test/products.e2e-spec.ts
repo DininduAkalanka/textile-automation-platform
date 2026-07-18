@@ -66,6 +66,12 @@ describe('Admin catalog management (plan Session 2.2)', () => {
 
   afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { userId: adminId } });
+    // Orders (and their cascaded items) before products — an order_item's FK to
+    // product is RESTRICT, and Order->user is RESTRICT too, so both must clear
+    // before the product/user rows they point at.
+    await prisma.order.deleteMany({
+      where: { orderNumber: { startsWith: TAG } },
+    });
     await prisma.inventoryMovement.deleteMany({
       where: { inventory: { product: { sku: { startsWith: TAG } } } },
     });
@@ -406,6 +412,90 @@ describe('Admin catalog management (plan Session 2.2)', () => {
         where: { categoryId: cat.id },
       });
       expect(product.categoryId).toBe(cat.id);
+    });
+  });
+
+  // ═══ Permanent delete — allowed only when nothing was ever ordered ════════
+
+  describe('hardDelete — the true delete, guarded by order history', () => {
+    // A minimal real order that references the product, so the guard has
+    // something to find. Goes straight through Prisma (not the checkout flow)
+    // because all we need is the order_items FK to exist.
+    async function orderProduct(productId: string) {
+      const order = await prisma.order.create({
+        data: {
+          orderNumber: `${TAG}-order-${Date.now()}`,
+          userId: adminId,
+          subtotal: 1000,
+          total: 1000,
+          items: {
+            create: {
+              productId,
+              quantity: 1,
+              unitPrice: 1000,
+              totalPrice: 1000,
+            },
+          },
+        },
+      });
+      return order;
+    }
+
+    it('permanently deletes a product that has never been ordered, and cascades its inventory', async () => {
+      const p = await seedProduct({ label: 'hard-del-clean' });
+
+      const result = await products.hardDelete(p.id);
+      expect(result).toEqual({ id: p.id, deleted: true });
+
+      await expect(
+        prisma.product.findUnique({ where: { id: p.id } }),
+      ).resolves.toBeNull();
+      // seedProduct() always creates an inventory row; it must go with the
+      // product (onDelete: Cascade), not linger as an orphan.
+      await expect(
+        prisma.inventory.findUnique({ where: { productId: p.id } }),
+      ).resolves.toBeNull();
+    });
+
+    it('refuses to delete a product with order history (409), leaving it fully intact', async () => {
+      const p = await seedProduct({ label: 'hard-del-sold' });
+      await orderProduct(p.id);
+
+      await expect(products.hardDelete(p.id)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(products.hardDelete(p.id)).rejects.toThrow(/past order/i);
+
+      // Still there — the sold product was neither deleted nor archived.
+      const reloaded = await prisma.product.findUniqueOrThrow({
+        where: { id: p.id },
+      });
+      expect(reloaded.isActive).toBe(true);
+    });
+
+    it('404s when the product does not exist', async () => {
+      await expect(
+        products.hardDelete('00000000-0000-0000-0000-000000000000'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('deletionCheck reports deletable + a zero count for a never-ordered product', async () => {
+      const p = await seedProduct({ label: 'check-clean' });
+      await expect(products.deletionCheck(p.id)).resolves.toEqual({
+        orderCount: 0,
+        deletable: true,
+      });
+    });
+
+    it('deletionCheck reports the real order count and blocks a sold product', async () => {
+      const p = await seedProduct({ label: 'check-sold' });
+      await orderProduct(p.id);
+      await orderProduct(p.id);
+
+      await expect(products.deletionCheck(p.id)).resolves.toEqual({
+        orderCount: 2,
+        deletable: false,
+      });
     });
   });
 });

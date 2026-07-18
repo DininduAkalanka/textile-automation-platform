@@ -24,6 +24,15 @@ from typing import Any, Literal
 import asyncpg
 from pydantic import BaseModel, Field
 
+from app import analytics
+from app.analytics import (
+    BasketArgs,
+    DeadStockArgs,
+    ForecastArgs,
+    ReorderArgs,
+    TrendingArgs,
+)
+
 logger = logging.getLogger(__name__)
 
 # Bounded periods, not free-form dates. "Last 30 days" is a choice from a list,
@@ -276,6 +285,32 @@ class AnalyticsTools:
             ]
         }
 
+    # ─── Predictive tools (delegate to app.analytics) ───────────────────────
+    # Additive: the six aggregates above are unchanged. These let the SAME chat
+    # answer "what should I stock next month?" by calling get_demand_forecast.
+
+    async def get_demand_forecast(self, args: ForecastArgs) -> dict[str, Any]:
+        """Weekly demand forecast for the top products, with confidence flags."""
+        return await analytics.demand_forecast(self._pool, args)
+
+    async def get_trending(self, args: TrendingArgs) -> dict[str, Any]:
+        """Fastest-growing products this period vs the previous one."""
+        return await analytics.trending(self._pool, args)
+
+    async def get_dead_stock(self, args: DeadStockArgs) -> dict[str, Any]:
+        """In stock but unsold in the window — capital to clear."""
+        return await analytics.dead_stock(self._pool, args)
+
+    async def get_frequently_bought_together(
+        self, args: BasketArgs
+    ) -> dict[str, Any]:
+        """Product pairs commonly ordered together."""
+        return await analytics.frequently_bought_together(self._pool, args)
+
+    async def get_reorder_suggestions(self, args: ReorderArgs) -> dict[str, Any]:
+        """Products about to run out — forecast demand vs current stock."""
+        return await analytics.reorder_suggestions(self._pool, args)
+
     # ─── plumbing ───────────────────────────────────────────────────────────
 
     async def _fetch(self, sql: str, *params) -> list[asyncpg.Record]:
@@ -322,6 +357,31 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "name": "get_order_status_breakdown",
         "description": "How many orders are in each status (pending, in production, completed...).",
         "args": NoArgs,
+    },
+    {
+        "name": "get_demand_forecast",
+        "description": "Predict next weeks' demand for the top products. Use this when asked what to stock, reorder, or expect next week/month.",
+        "args": ForecastArgs,
+    },
+    {
+        "name": "get_trending",
+        "description": "Fastest-growing products (this period vs last). Use this when asked what is trending, hot, or picking up.",
+        "args": TrendingArgs,
+    },
+    {
+        "name": "get_dead_stock",
+        "description": "Products still in stock but with no recent sales. Use this when asked about dead stock, slow movers, or what to clear.",
+        "args": DeadStockArgs,
+    },
+    {
+        "name": "get_frequently_bought_together",
+        "description": "Products commonly ordered together. Use this for bundle or cross-sell recommendations.",
+        "args": BasketArgs,
+    },
+    {
+        "name": "get_reorder_suggestions",
+        "description": "Products about to run out: forecast demand vs current stock, with a suggested reorder quantity. Use this when asked what to reorder or restock for the coming weeks.",
+        "args": ReorderArgs,
     },
 ]
 

@@ -72,7 +72,8 @@ class TestGroundingChecker:
 
 
 class TestToolWhitelist:
-    def test_the_whitelist_is_exactly_the_six_tools(self):
+    def test_the_whitelist_is_exactly_these_tools(self):
+        # Six original aggregates + five predictive tools (all additive).
         assert TOOL_NAMES == {
             "get_sales_summary",
             "get_top_products",
@@ -80,6 +81,11 @@ class TestToolWhitelist:
             "get_low_stock",
             "get_profit_by_product",
             "get_order_status_breakdown",
+            "get_demand_forecast",
+            "get_trending",
+            "get_dead_stock",
+            "get_frequently_bought_together",
+            "get_reorder_suggestions",
         }
 
     @pytest.mark.asyncio

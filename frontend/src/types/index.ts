@@ -384,3 +384,104 @@ export interface NotificationsResponse {
     totalPages: number;
   };
 }
+
+// ─── Predictive analytics (/admin/analytics) ──────────────────────────────
+// The AI-service proxy returns { unavailable: true } when the ML service is
+// cold/down, so every response type carries that optional flag.
+
+export type Confidence = 'high' | 'medium' | 'low';
+
+export interface ForecastPoint {
+  week: string;
+  qty: number;
+}
+
+export interface ProductForecast {
+  product: string;
+  history: ForecastPoint[];
+  forecast: {
+    predicted: number[];
+    lower: number[];
+    upper: number[];
+    model: string;
+    confidence: Confidence;
+    note: string | null;
+  };
+  predicted_next_period: number;
+}
+
+export interface ForecastResponse {
+  weeks: number;
+  products: ProductForecast[];
+  unavailable?: boolean;
+}
+
+export interface TrendingItem {
+  name: string;
+  current: number;
+  previous: number;
+  growth_percent: number | null;
+  is_new: boolean;
+}
+
+export interface TrendingResponse {
+  period: string;
+  risers: TrendingItem[];
+  decliners: TrendingItem[];
+  unavailable?: boolean;
+}
+
+export interface ReorderItem {
+  product: string;
+  predicted: number;
+  in_stock: number;
+  suggested_reorder: number;
+  weeks_of_cover: number;
+  confidence: Confidence;
+}
+
+export interface ReorderResponse {
+  weeks: number;
+  count: number;
+  items: ReorderItem[];
+  unavailable?: boolean;
+}
+
+export interface StarProduct {
+  name: string;
+  type: string;
+  quantity: number;
+  revenue: number;
+}
+
+export interface TopProductsResponse {
+  period: string;
+  ranked_by: string;
+  products: StarProduct[];
+  unavailable?: boolean;
+}
+
+export interface DeadStockItem {
+  name: string;
+  type: string;
+  available: number;
+  sellable: number;
+}
+
+export interface DeadStockResponse {
+  days: number;
+  count: number;
+  items: DeadStockItem[];
+  unavailable?: boolean;
+}
+
+export interface BasketPair {
+  product_a: string;
+  product_b: string;
+  together_count: number;
+}
+
+export interface RecommendationsResponse {
+  pairs: BasketPair[];
+  unavailable?: boolean;
+}

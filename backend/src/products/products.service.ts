@@ -338,6 +338,51 @@ export class ProductsService {
     });
   }
 
+  /**
+   * "Can this be permanently deleted?" — the same order-history rule hardDelete
+   * enforces, exposed as a read so the UI can tell the owner *before* they
+   * commit, rather than only refusing after the click. Returns the count so the
+   * dialog can say "appears in 52 orders" without a second call.
+   */
+  async deletionCheck(id: string) {
+    await this.findById(id);
+    const orderCount = await this.prisma.orderItem.count({
+      where: { productId: id },
+    });
+    return { orderCount, deletable: orderCount === 0 };
+  }
+
+  /**
+   * Permanent delete — the escape hatch for products created by mistake or for
+   * testing, which archive alone can never truly clear away.
+   *
+   * The one hard rule: a product that appears in ANY past order must never be
+   * hard-deleted. Its order_items carry a real FK (onDelete defaults to
+   * Restrict), and even if it didn't, erasing a sold product would silently
+   * rewrite order history, invoices, and the analytics facts. So we refuse
+   * loudly and point the owner at archive instead — that is the honest answer,
+   * not a limitation. Only a product with zero order history is deletable; its
+   * inventory row (and any manual stock movements) cascade away with it.
+   */
+  async hardDelete(id: string) {
+    const product = await this.findById(id);
+
+    const orderCount = await this.prisma.orderItem.count({
+      where: { productId: id },
+    });
+    if (orderCount > 0) {
+      throw new ConflictException(
+        `"${product.name}" appears in ${orderCount} past order${
+          orderCount === 1 ? '' : 's'
+        } and can't be permanently deleted — archive it instead to remove it ` +
+          `from the shop while keeping order history intact.`,
+      );
+    }
+
+    await this.prisma.product.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
   // ─── Category Methods ─────────────────────────────────
 
   /**

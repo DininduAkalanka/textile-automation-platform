@@ -10,5 +10,8 @@ import { AiService } from './ai.service';
   imports: [PrismaModule],
   controllers: [AiController],
   providers: [AiService],
+  // Exported so AnalyticsModule can proxy the predictive endpoints through the
+  // same gateway (internal key + forwarded admin role).
+  exports: [AiService],
 })
 export class AiModule {}
