@@ -108,6 +108,25 @@ export class ProductsController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
+
+  // Read side of the same rule: lets the UI show up front whether a product
+  // can be deleted or only archived, before the owner commits.
+  @Get(':id/deletion-check')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  deletionCheck(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.deletionCheck(id);
+  }
+
+  // Two path segments, so it can never collide with the ':id' archive route
+  // above. This is the true delete — allowed only for a product with no order
+  // history (the service enforces it), otherwise it 409s and asks for archive.
+  @Delete(':id/permanent')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  hardDelete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.hardDelete(id);
+  }
 }
 
 // ─── Categories Controller ─────────────────────────────

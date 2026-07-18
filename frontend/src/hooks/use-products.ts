@@ -13,7 +13,21 @@ export const productKeys = {
   all: ['products'] as const,
   adminList: (filters: AdminProductsFilters) =>
     ['products', 'admin', filters] as const,
+  deletionCheck: (id: string) => ['products', 'deletion-check', id] as const,
 };
+
+/**
+ * Whether a product can be permanently deleted (no order history) — fetched
+ * lazily, only while the delete dialog is open for a given product.
+ */
+export function useProductDeletionCheck(id: string | null) {
+  return useQuery({
+    queryKey: productKeys.deletionCheck(id ?? ''),
+    queryFn: () => productsService.deletionCheck(id as string),
+    enabled: Boolean(id),
+    staleTime: 30 * 1000,
+  });
+}
 
 export function useAdminProducts(filters: AdminProductsFilters) {
   return useQuery({
@@ -89,6 +103,26 @@ export function useRestoreProduct() {
     mutationFn: (id: string) => productsService.restore(id),
     onSuccess: (product) => {
       toast.success(`${product.name} restored`);
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+}
+
+/**
+ * Permanent delete. The success toast carries the name the caller passes in
+ * (the API returns only an id), and the error toast surfaces the server's 409
+ * reason verbatim — "…appears in N past orders… archive it instead" — so the
+ * owner learns *why* a sold product can't be erased.
+ */
+export function useDeleteProduct() {
+  const invalidate = useInvalidateCatalog();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; name: string }) =>
+      productsService.destroy(id),
+    onSuccess: (_result, { name }) => {
+      toast.success(`${name} deleted`);
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),

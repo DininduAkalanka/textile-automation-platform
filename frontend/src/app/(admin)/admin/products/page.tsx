@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, Loader2, Pencil, Plus, RotateCcw, Search, TriangleAlert, X } from 'lucide-react';
+import { Archive, Loader2, MoreVertical, Pencil, Plus, RotateCcw, Search, Trash2, TriangleAlert, X } from 'lucide-react';
 
 import { ProductFormDialog } from '@/components/admin/products/product-form-dialog';
 import { useCategories } from '@/hooks/use-categories';
-import { useAdminProducts, useArchiveProduct, useRestoreProduct } from '@/hooks/use-products';
+import {
+  useAdminProducts,
+  useArchiveProduct,
+  useDeleteProduct,
+  useProductDeletionCheck,
+  useRestoreProduct,
+} from '@/hooks/use-products';
 import { categorySelectOptions } from '@/lib/category-tree';
 import { formatLKR } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -43,6 +49,8 @@ export default function AdminProductsPage() {
 
   // undefined = closed, null = create mode, a Product = edit mode.
   const [formTarget, setFormTarget] = useState<Product | null | undefined>(undefined);
+  // The product queued for permanent deletion (drives the confirm modal).
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   const { data: categories } = useCategories();
   const { data, isLoading, isError } = useAdminProducts({
@@ -55,6 +63,7 @@ export default function AdminProductsPage() {
   });
   const archiveProduct = useArchiveProduct();
   const restoreProduct = useRestoreProduct();
+  const deleteProduct = useDeleteProduct();
 
   if (!isAuthenticated || user?.role !== 'ADMIN') {
     return (
@@ -274,25 +283,13 @@ export default function AdminProductsPage() {
                         >
                           <Pencil size={13} aria-hidden />
                         </button>
-                        {product.isActive ? (
-                          <button
-                            onClick={() => archiveProduct.mutate(product.id)}
-                            disabled={archiveProduct.isPending}
-                            aria-label="Archive"
-                            className="rounded-lg border border-[#EAE8E1] bg-white p-1.5 text-[#6E6A5E] transition-colors hover:border-[#CC0000]/40 hover:text-[#CC0000] disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <Archive size={13} aria-hidden />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => restoreProduct.mutate(product.id)}
-                            disabled={restoreProduct.isPending}
-                            aria-label="Restore"
-                            className="rounded-lg border border-[#EAE8E1] bg-white p-1.5 text-[#6E6A5E] transition-colors hover:border-[#0F0F0F] hover:text-[#0F0F0F] disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <RotateCcw size={13} aria-hidden />
-                          </button>
-                        )}
+                        <RowActionsMenu
+                          isActive={product.isActive}
+                          busy={archiveProduct.isPending || restoreProduct.isPending}
+                          onArchive={() => archiveProduct.mutate(product.id)}
+                          onRestore={() => restoreProduct.mutate(product.id)}
+                          onDelete={() => setDeleteTarget(product)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -333,6 +330,313 @@ export default function AdminProductsPage() {
         open={formTarget !== undefined}
         onClose={() => setFormTarget(undefined)}
       />
+
+      {deleteTarget && (
+        <DeleteProductDialog
+          product={deleteTarget}
+          deleting={deleteProduct.isPending}
+          archiving={archiveProduct.isPending}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() =>
+            deleteProduct.mutate(
+              { id: deleteTarget.id, name: deleteTarget.name },
+              { onSuccess: () => setDeleteTarget(null) },
+            )
+          }
+          onArchiveInstead={() =>
+            archiveProduct.mutate(deleteTarget.id, {
+              onSuccess: () => setDeleteTarget(null),
+            })
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Row overflow menu (the "⋮"). Edit stays inline in the row; the two lifecycle
+ * actions — Archive/Restore and the destructive Delete — live one deliberate
+ * tap in here, so a permanent delete is never adjacent to a routine click.
+ *
+ * The panel is positioned `fixed` from the trigger's own rect rather than
+ * absolutely inside the cell: the table scrolls under `overflow`, which would
+ * otherwise clip a dropdown. A full-screen transparent backdrop handles
+ * click-outside and closes on the next scroll/resize so it can't drift.
+ */
+function RowActionsMenu({
+  isActive,
+  busy,
+  onArchive,
+  onRestore,
+  onDelete,
+}: {
+  isActive: boolean;
+  busy: boolean;
+  onArchive: () => void;
+  onRestore: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(
+    null,
+  );
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    // Capture-phase scroll catches the table's own scroll container too.
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [open]);
+
+  function toggle() {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) {
+      // Flip up when the row sits low enough that a downward menu would spill
+      // off the viewport (the last-row bug). ~112px covers the two items +
+      // divider + padding with a little slack.
+      const MENU_H = 112;
+      const right = window.innerWidth - rect.right;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setPos(
+        spaceBelow < MENU_H + 12
+          ? { bottom: window.innerHeight - rect.top + 6, right }
+          : { top: rect.bottom + 6, right },
+      );
+    }
+    setOpen((v) => !v);
+  }
+
+  const run = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={toggle}
+        disabled={busy}
+        aria-label="More actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="rounded-lg border border-[#EAE8E1] bg-white p-1.5 text-[#6E6A5E] transition-colors hover:border-[#0F0F0F] hover:text-[#0F0F0F] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? (
+          <Loader2 size={13} className="animate-spin" aria-hidden />
+        ) : (
+          <MoreVertical size={13} aria-hidden />
+        )}
+      </button>
+
+      {open && pos && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            role="menu"
+            style={{ top: pos.top, bottom: pos.bottom, right: pos.right }}
+            className="fixed z-50 w-44 overflow-hidden rounded-xl border border-[#EAE8E1] bg-white py-1 shadow-lg"
+          >
+            {isActive ? (
+              <MenuItem icon={<Archive size={14} aria-hidden />} onClick={run(onArchive)}>
+                Archive
+              </MenuItem>
+            ) : (
+              <MenuItem icon={<RotateCcw size={14} aria-hidden />} onClick={run(onRestore)}>
+                Restore
+              </MenuItem>
+            )}
+            <div className="my-1 h-px bg-[#F4F3EF]" />
+            <MenuItem
+              icon={<Trash2 size={14} aria-hidden />}
+              onClick={run(onDelete)}
+              destructive
+            >
+              Delete permanently
+            </MenuItem>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function MenuItem({
+  icon,
+  children,
+  onClick,
+  destructive,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors',
+        destructive
+          ? 'text-[#CC0000] hover:bg-[#FFF0F0]'
+          : 'text-[#4A4740] hover:bg-[#FAFAF8]',
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Delete/retire confirmation. It first asks the server whether this product can
+ * even be deleted (no order history), and reshapes itself around the answer:
+ *
+ *  • checking … → a quiet loading line, both actions held back.
+ *  • deletable  → the real "erase for good" warning + a red Delete button.
+ *  • sold       → NOT a dead end: it explains the product is in N orders, drops
+ *                 the delete affordance entirely, and makes Archive the primary
+ *                 action right here — so the owner completes the retire in one
+ *                 place instead of bouncing off a red error toast.
+ *
+ * The server still enforces the rule (this is the friendly front of the same
+ * guard, not a replacement for it).
+ */
+function DeleteProductDialog({
+  product,
+  deleting,
+  archiving,
+  onCancel,
+  onConfirm,
+  onArchiveInstead,
+}: {
+  product: Product;
+  deleting: boolean;
+  archiving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onArchiveInstead: () => void;
+}) {
+  const { data, isLoading, isError } = useProductDeletionCheck(product.id);
+  const busy = deleting || archiving;
+  // Until we know otherwise, assume the safe answer (only archive) so a slow
+  // check never briefly offers a delete it will then retract.
+  const deletable = data?.deletable === true;
+  const orderCount = data?.orderCount ?? 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={busy ? undefined : onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-[#EAE8E1] bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-2.5">
+          <span
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-full',
+              deletable ? 'bg-[#FFF0F0] text-[#CC0000]' : 'bg-[#FBF3E4] text-[#8F711D]',
+            )}
+          >
+            {deletable ? <Trash2 size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
+          </span>
+          <h2 className="font-display text-lg font-bold tracking-tight text-[#0F0F0F]">
+            {isLoading || isError
+              ? 'Delete product?'
+              : deletable
+                ? 'Delete permanently?'
+                : 'This product can only be archived'}
+          </h2>
+        </div>
+
+        {isLoading ? (
+          <p className="flex items-center gap-2 py-3 text-[13px] text-[#928E82]">
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+            Checking whether this product can be deleted…
+          </p>
+        ) : isError ? (
+          <p className="rounded-lg bg-[#FFF0F0] px-3 py-2 text-[13px] leading-relaxed text-[#A80000]">
+            Couldn&apos;t check this product just now. Please close this and try
+            again.
+          </p>
+        ) : deletable ? (
+          <>
+            <p className="text-[13px] leading-relaxed text-[#6E6A5E]">
+              <span className="font-semibold text-[#0F0F0F]">{product.name}</span>{' '}
+              has never been ordered, so it can be erased for good — this
+              can&apos;t be undone.
+            </p>
+            <p className="mt-2 rounded-lg bg-[#FAF9F6] px-3 py-2 text-[12px] leading-relaxed text-[#6E6A5E]">
+              Its product record and stock row will be removed. Nothing in any
+              order or report references it.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] leading-relaxed text-[#6E6A5E]">
+              <span className="font-semibold text-[#0F0F0F]">{product.name}</span>{' '}
+              appears in{' '}
+              <span className="font-semibold text-[#0F0F0F]">
+                {orderCount} past order{orderCount === 1 ? '' : 's'}
+              </span>
+              , so it can&apos;t be permanently deleted — deleting it would break
+              that order history, its invoices and your reports.
+            </p>
+            <p className="mt-2 rounded-lg bg-[#F1F7F3] px-3 py-2 text-[12px] leading-relaxed text-[#2F6B49]">
+              <span className="font-semibold">Archive</span> instead: it
+              disappears from the shop, all {orderCount} order
+              {orderCount === 1 ? '' : 's'} stay intact, and you can restore it
+              anytime.
+            </p>
+          </>
+        )}
+
+        {!isLoading && (
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              onClick={onCancel}
+              disabled={busy}
+              className="rounded-lg border border-[#EAE8E1] bg-white px-3.5 py-2 text-[13px] font-medium text-[#6E6A5E] transition-colors hover:border-[#D5D2C8] hover:text-[#0F0F0F] disabled:opacity-40"
+            >
+              Cancel
+            </button>
+
+            {isError ? null : deletable ? (
+              <button
+                onClick={onConfirm}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#CC0000] px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#B00000] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting && <Loader2 size={13} className="animate-spin" aria-hidden />}
+                Delete permanently
+              </button>
+            ) : (
+              <button
+                onClick={onArchiveInstead}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F0F0F] px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {archiving ? (
+                  <Loader2 size={13} className="animate-spin" aria-hidden />
+                ) : (
+                  <Archive size={13} aria-hidden />
+                )}
+                Archive instead
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
