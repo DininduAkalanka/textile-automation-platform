@@ -58,8 +58,8 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Business',
     items: [
-      { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, soon: true },
-      { href: '/admin/reports', label: 'Reports', icon: FileText, soon: true },
+      { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+      { href: '/admin/reports', label: 'Reports', icon: FileText },
     ],
   },
 ];

@@ -264,6 +264,81 @@ export class AnalyticsService {
     }));
   }
 
+  // ─── CSV reports (plan Session 8.1 task 2) ───────────────────────────────
+  // Downloads for the /admin/reports section. Money stays a decimal string;
+  // every export is audited. Reuses the same COMPLETED-payments rule as above.
+
+  async salesReport({
+    from,
+    to,
+  }: DateRange): Promise<
+    { name: string; type: string; quantity: number; revenue: string }[]
+  > {
+    return this.prisma.$queryRaw`
+      SELECT pr.name                    AS "name",
+             pr.product_type::text      AS "type",
+             SUM(oi.quantity)::int      AS "quantity",
+             SUM(oi.total_price)::text  AS "revenue"
+        FROM order_items oi
+        JOIN orders o    ON o.id = oi.order_id
+        JOIN payments p  ON p.order_id = o.id AND p.status = 'COMPLETED'
+        JOIN products pr ON pr.id = oi.product_id
+       WHERE COALESCE(p.paid_at, p.created_at) BETWEEN ${from} AND ${to}
+       GROUP BY pr.name, pr.product_type
+       ORDER BY SUM(oi.total_price) DESC
+    `;
+  }
+
+  async inventoryReport(): Promise<
+    {
+      name: string;
+      type: string;
+      available: number;
+      reserved: number;
+      sellable: number;
+      minimum: number;
+      low: boolean;
+    }[]
+  > {
+    return this.prisma.$queryRaw`
+      SELECT pr.name                                       AS "name",
+             pr.product_type::text                         AS "type",
+             i.quantity_available::int                     AS "available",
+             i.quantity_reserved::int                      AS "reserved",
+             (i.quantity_available - i.quantity_reserved)::int AS "sellable",
+             i.minimum_stock_level::int                    AS "minimum",
+             (i.quantity_available <= i.minimum_stock_level) AS "low"
+        FROM products pr
+        JOIN inventory i ON i.product_id = pr.id
+       ORDER BY pr.name
+    `;
+  }
+
+  /** RFC-4180 CSV: quote any field containing a comma, quote or newline. */
+  toCsv(headers: string[], rows: (string | number | boolean | null)[][]): string {
+    const cell = (v: string | number | boolean | null): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    return [headers, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
+  }
+
+  async recordExport(
+    userId: string,
+    kind: string,
+    meta: Record<string, unknown>,
+  ): Promise<void> {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'report.export',
+        entityType: 'report',
+        entityId: kind,
+        after: meta as object,
+      },
+    });
+  }
+
   async getDashboard(from?: string, to?: string): Promise<DashboardPayload> {
     const range = this.resolveRange(from, to);
 

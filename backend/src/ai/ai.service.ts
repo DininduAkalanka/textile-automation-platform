@@ -200,6 +200,92 @@ export class AiService {
     }
   }
 
+  // ─── Predictive analytics (admin dashboard) ──────────────────────────────
+  // Structured JSON for /admin/analytics. Same gateway contract as businessChat
+  // (internal key proves we are the gateway; admin role is forwarded). On ANY
+  // failure these return { unavailable: true } instead of throwing, so the
+  // dashboard shows an honest "analytics is waking up" state, never a 500.
+
+  async getForecast(
+    role: string,
+    weeks = 4,
+    products = 5,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('forecast', role, { weeks, products });
+  }
+
+  async getTrending(
+    role: string,
+    period = '30d',
+    limit = 5,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('trending', role, { period, limit });
+  }
+
+  async getDeadStock(
+    role: string,
+    days = 60,
+    limit = 10,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('dead-stock', role, { days, limit });
+  }
+
+  async getRecommendations(
+    role: string,
+    limit = 5,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('recommendations', role, { limit });
+  }
+
+  async getReorder(
+    role: string,
+    weeks = 4,
+    products = 8,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('reorder', role, { weeks, products });
+  }
+
+  async getTopProducts(
+    role: string,
+    period = '90d',
+    by = 'revenue',
+    limit = 5,
+  ): Promise<Record<string, unknown>> {
+    return this.postAnalytics('top-products', role, { period, by, limit });
+  }
+
+  private async postAnalytics(
+    path: string,
+    role: string,
+    body: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/analytics/${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': this.internalKey,
+          'X-User-Role': role,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`ai service returned ${response.status}`);
+      }
+      return (await response.json()) as Record<string, unknown>;
+    } catch (error) {
+      this.logger.warn(
+        `Analytics '${path}' unavailable: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return { unavailable: true };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
    * The shop without the assistant: a plain ILIKE search over the catalogue.
    *

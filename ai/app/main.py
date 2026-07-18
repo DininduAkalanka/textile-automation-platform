@@ -4,6 +4,20 @@ from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
+from app.analytics import (
+    BasketArgs,
+    DeadStockArgs,
+    ForecastArgs,
+    ReorderArgs,
+    TopProductsArgs,
+    TrendingArgs,
+    dead_stock,
+    demand_forecast,
+    frequently_bought_together,
+    reorder_suggestions,
+    top_products,
+    trending,
+)
 from app.business import BusinessChatService
 from app.chat import CustomerChatService
 from app.config import Settings, get_settings
@@ -143,3 +157,41 @@ async def business_chat(request: BusinessRequest) -> BusinessResponse:
         settings=settings,
     )
     return await service.answer(request)
+
+
+# ─── Predictive analytics (structured JSON for the /admin/analytics dashboard) ─
+# Same guards as the business chat: internal key proves the caller is the gateway,
+# admin role is the forwarded, gateway-verified claim. No LLM involved — these are
+# the raw model/analytics outputs the dashboard charts render directly.
+
+_ANALYTICS_GUARDS = [Depends(require_internal_key), Depends(require_admin)]
+
+
+@app.post("/v1/analytics/forecast", dependencies=_ANALYTICS_GUARDS)
+async def analytics_forecast(args: ForecastArgs) -> dict:
+    return await demand_forecast(_state["pool"], args)
+
+
+@app.post("/v1/analytics/trending", dependencies=_ANALYTICS_GUARDS)
+async def analytics_trending(args: TrendingArgs) -> dict:
+    return await trending(_state["pool"], args)
+
+
+@app.post("/v1/analytics/dead-stock", dependencies=_ANALYTICS_GUARDS)
+async def analytics_dead_stock(args: DeadStockArgs) -> dict:
+    return await dead_stock(_state["pool"], args)
+
+
+@app.post("/v1/analytics/recommendations", dependencies=_ANALYTICS_GUARDS)
+async def analytics_recommendations(args: BasketArgs) -> dict:
+    return await frequently_bought_together(_state["pool"], args)
+
+
+@app.post("/v1/analytics/reorder", dependencies=_ANALYTICS_GUARDS)
+async def analytics_reorder(args: ReorderArgs) -> dict:
+    return await reorder_suggestions(_state["pool"], args)
+
+
+@app.post("/v1/analytics/top-products", dependencies=_ANALYTICS_GUARDS)
+async def analytics_top_products(args: TopProductsArgs) -> dict:
+    return await top_products(_state["pool"], args)
