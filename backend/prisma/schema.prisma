@@ -94,6 +94,24 @@ enum VerificationChannel {
   SMS
 }
 
+/// Where a product was auto-shared. FACEBOOK/INSTAGRAM post via the Meta Graph
+/// API; WHATSAPP is a one-tap wa.me share link (no API), recorded for the log.
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+  WHATSAPP
+}
+
+/// Outcome of a share attempt. SKIPPED means the integration isn't configured
+/// yet (no Meta token) — the never-throws path, not an error: the caption is
+/// still generated and the owner can copy/paste it.
+enum SocialPostStatus {
+  PENDING
+  POSTED
+  FAILED
+  SKIPPED
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -222,9 +240,10 @@ model Product {
   /// inventory_movements.order_id, caught the same way: by reading the FK
   /// Prisma actually generated rather than assuming the schema said what it
   /// should.
-  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  orderItems OrderItem[]
-  inventory  Inventory?
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems  OrderItem[]
+  inventory   Inventory?
+  socialPosts SocialPost[]
 
   @@index([slug])
   @@index([categoryId])
@@ -518,4 +537,27 @@ model Notification {
 
   @@index([userId, readAt]) // unread badge count
   @@map("notifications")
+}
+
+// ─── Social auto-posting (Phase: marketing automation) ───────────────────────
+// One row per share attempt, so the admin sees "already posted to Facebook ✓"
+// and failures can be retried — the same append-only, explain-everything style
+// as inventory_movements. Cascades with the product: a social post is marketing
+// ephemera, not a financial record, so erasing a (never-ordered) product may
+// take its posts with it.
+
+model SocialPost {
+  id             String           @id @default(uuid()) @db.Uuid
+  productId      String           @map("product_id") @db.Uuid
+  platform       SocialPlatform
+  status         SocialPostStatus @default(PENDING)
+  caption        String           @db.Text
+  externalPostId String?          @map("external_post_id") // the FB/IG post id
+  error          String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@map("social_posts")
 }

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, Loader2, MoreVertical, Pencil, Plus, RotateCcw, Search, Trash2, TriangleAlert, X } from 'lucide-react';
+import { Archive, Loader2, MoreVertical, Pencil, Plus, RotateCcw, Search, Share2, Trash2, TriangleAlert, X } from 'lucide-react';
 
 import { ProductFormDialog } from '@/components/admin/products/product-form-dialog';
+import { ShareProductDialog } from '@/components/admin/products/share-product-dialog';
 import { useCategories } from '@/hooks/use-categories';
 import {
   useAdminProducts,
@@ -51,6 +52,8 @@ export default function AdminProductsPage() {
   const [formTarget, setFormTarget] = useState<Product | null | undefined>(undefined);
   // The product queued for permanent deletion (drives the confirm modal).
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  // A freshly-created product to offer social sharing for.
+  const [shareTarget, setShareTarget] = useState<Product | null>(null);
 
   const { data: categories } = useCategories();
   const { data, isLoading, isError } = useAdminProducts({
@@ -286,6 +289,7 @@ export default function AdminProductsPage() {
                         <RowActionsMenu
                           isActive={product.isActive}
                           busy={archiveProduct.isPending || restoreProduct.isPending}
+                          onShare={() => setShareTarget(product)}
                           onArchive={() => archiveProduct.mutate(product.id)}
                           onRestore={() => restoreProduct.mutate(product.id)}
                           onDelete={() => setDeleteTarget(product)}
@@ -329,6 +333,13 @@ export default function AdminProductsPage() {
         product={formTarget ?? null}
         open={formTarget !== undefined}
         onClose={() => setFormTarget(undefined)}
+        onCreated={(created) => setShareTarget(created)}
+      />
+
+      <ShareProductDialog
+        product={shareTarget}
+        open={shareTarget !== null}
+        onClose={() => setShareTarget(null)}
       />
 
       {deleteTarget && (
@@ -367,12 +378,14 @@ export default function AdminProductsPage() {
 function RowActionsMenu({
   isActive,
   busy,
+  onShare,
   onArchive,
   onRestore,
   onDelete,
 }: {
   isActive: boolean;
   busy: boolean;
+  onShare: () => void;
   onArchive: () => void;
   onRestore: () => void;
   onDelete: () => void;
@@ -399,9 +412,9 @@ function RowActionsMenu({
     const rect = btnRef.current?.getBoundingClientRect();
     if (rect) {
       // Flip up when the row sits low enough that a downward menu would spill
-      // off the viewport (the last-row bug). ~112px covers the two items +
-      // divider + padding with a little slack.
-      const MENU_H = 112;
+      // off the viewport (the last-row bug). ~150px covers the three items +
+      // two dividers + padding with a little slack.
+      const MENU_H = 150;
       const right = window.innerWidth - rect.right;
       const spaceBelow = window.innerHeight - rect.bottom;
       setPos(
@@ -444,6 +457,10 @@ function RowActionsMenu({
             style={{ top: pos.top, bottom: pos.bottom, right: pos.right }}
             className="fixed z-50 w-44 overflow-hidden rounded-xl border border-[#EAE8E1] bg-white py-1 shadow-lg"
           >
+            <MenuItem icon={<Share2 size={14} aria-hidden />} onClick={run(onShare)}>
+              Share to social
+            </MenuItem>
+            <div className="my-1 h-px bg-[#F4F3EF]" />
             {isActive ? (
               <MenuItem icon={<Archive size={14} aria-hidden />} onClick={run(onArchive)}>
                 Archive

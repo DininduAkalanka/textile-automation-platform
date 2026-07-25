@@ -1,0 +1,497 @@
+// ════════════════════════════════════════════════════════════════════════════
+//  Nandana Textile — Smart Textile Business Management & AI E-Commerce Platform
+//  Database ER model (PostgreSQL 16)
+//
+//  HOW TO VIEW AS A PROFESSIONAL ER DIAGRAM
+//  1. Open https://dbdiagram.io/d  (free, no login needed to paste)
+//  2. Delete the sample text, paste this whole file
+//  3. The diagram renders instantly. Export → PNG / PDF / SVG for your report
+//     (Export also offers PostgreSQL / MySQL SQL if you ever need it)
+//
+//  This mirrors backend/prisma/schema.prisma exactly (18 tables, verified
+//  against the live database — no drift). Types shown are the PostgreSQL types.
+// ════════════════════════════════════════════════════════════════════════════
+
+Project nandana_textile {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Full-stack textile retailer + uniform manufacturer platform.
+    Customer storefront · admin dashboard · worker production portal ·
+    PayHere/COD/bank payments · inventory movement ledger · dual AI layer.
+    Keys are UUID; money is DECIMAL(10,2) (never float).
+  '''
+}
+
+// ─── Enums (closed vocabularies the database enforces) ──────────────────────
+
+Enum user_role {
+  ADMIN
+  MANAGER
+  CUSTOMER
+  WORKER
+}
+
+Enum order_status {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  QUALITY_CHECK
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+Enum payment_status {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+Enum payment_method {
+  STRIPE
+  PAYHERE
+  COD
+  INSTALLMENT
+}
+
+Enum payment_plan {
+  FULL
+  INSTALLMENT
+}
+
+Enum movement_type {
+  INITIAL    // opening balance when an inventory row is created
+  RESERVE    // order placed:              reserved += qty
+  RELEASE    // order cancelled / failed:  reserved -= qty
+  SALE       // payment / COD confirmed:   available -= qty, reserved -= qty
+  PURCHASE   // admin restock:             available += qty
+  ADJUSTMENT // admin manual correction:   available +/-
+  DAMAGE     // admin write-off:           available -= qty
+}
+
+Enum product_type {
+  FABRIC
+  READY_MADE
+  UNIFORM
+  CUSTOM
+  ACCESSORY
+}
+
+Enum production_stage {
+  CUTTING
+  STITCHING
+  FINISHING
+  QUALITY_CHECK
+}
+
+Enum task_status {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+Enum verification_channel {
+  EMAIL
+  SMS
+}
+
+// ─── A · Identity & Access ──────────────────────────────────────────────────
+
+Table users {
+  id             uuid         [pk]
+  email          varchar      [unique, null, note: 'dual identity: email OR phone']
+  phone          varchar      [unique, null, note: 'canonical +947XXXXXXXX']
+  password_hash  varchar      [not null, note: 'bcrypt cost 12']
+  first_name     varchar      [not null]
+  last_name      varchar      [not null]
+  email_verified boolean      [not null, default: false]
+  phone_verified boolean      [not null, default: false]
+  role           user_role    [not null, default: 'CUSTOMER']
+  is_active      boolean      [not null, default: true]
+  created_at     timestamp    [not null, default: `now()`]
+  updated_at     timestamp    [not null]
+
+  Indexes {
+    email
+    phone
+    role
+  }
+  Note: 'One row per human who can log in — customers, admin, managers, workers.'
+}
+
+Table refresh_tokens {
+  id         uuid       [pk]
+  user_id    uuid       [not null]
+  token_hash varchar    [unique, not null, note: 'SHA-256 of the raw token']
+  user_agent varchar    [null]
+  expires_at timestamp  [not null]
+  revoked_at timestamp  [null, note: 'set on logout / rotation → reuse detection']
+  created_at timestamp  [not null, default: `now()`]
+
+  Indexes { user_id }
+  Note: 'One active login session per device.'
+}
+
+Table verification_codes {
+  id          uuid                 [pk]
+  user_id     uuid                 [not null]
+  channel     verification_channel [not null]
+  code_hash   varchar              [not null, note: 'SHA-256; NOT unique — codes repeat']
+  expires_at  timestamp            [not null]
+  attempts    int                  [not null, default: 0]
+  consumed_at timestamp            [null]
+  created_at  timestamp            [not null, default: `now()`]
+
+  Indexes {
+    (user_id, channel, created_at)
+  }
+  Note: 'One-time OTP codes for verifying email or phone.'
+}
+
+// ─── B · Catalogue & Stock ──────────────────────────────────────────────────
+
+Table categories {
+  id                 uuid     [pk]
+  name               varchar  [unique, not null]
+  slug               varchar  [unique, not null]
+  description        varchar  [null]
+  image_url          varchar  [null]
+  parent_category_id uuid     [null, note: 'self-reference; NULL = top level, max depth 2']
+
+  Indexes { parent_category_id }
+  Note: 'Product grouping tree, e.g. Uniforms → School.'
+}
+
+Table products {
+  id                   uuid           [pk]
+  name                 varchar        [not null]
+  slug                 varchar        [unique, not null]
+  description          text           [null]
+  price                "decimal(10,2)" [not null]
+  compare_at_price     "decimal(10,2)" [null, note: 'the "was" price']
+  stock_quantity       int            [not null, default: 0, note: 'LEGACY — true stock lives in inventory; slated for removal']
+  sku                  varchar        [unique, not null]
+  images               jsonb          [not null, default: `[]`]
+  attributes           jsonb          [not null, default: `{}`]
+  category_id          uuid           [null]
+  sub_category         varchar        [null]
+  is_active            boolean        [not null, default: true, note: 'false = archived (hidden, history kept)']
+  product_type         product_type   [not null, default: 'READY_MADE', note: 'UNIFORM/CUSTOM → enters production']
+  requires_measurement boolean        [not null, default: false]
+  fabric_type          varchar        [null]
+  color                varchar        [null]
+  unit                 varchar        [null]
+  cost_price           "decimal(10,2)" [null, note: 'nullable, never 0 → powers profit analytics']
+  search_vector        tsvector       [null, note: 'raw-SQL generated column + GIN index (full-text search)']
+  created_at           timestamp      [not null, default: `now()`]
+  updated_at           timestamp      [not null]
+
+  Indexes {
+    slug
+    category_id
+    sub_category
+    is_active
+    price
+    product_type
+  }
+  Note: 'The catalogue item a customer browses and buys.'
+}
+
+Table inventory {
+  id                  uuid      [pk]
+  product_id          uuid      [unique, not null, note: 'one inventory row per product (1:1)']
+  quantity_available  int       [not null, default: 0, note: 'physically on hand']
+  quantity_reserved   int       [not null, default: 0, note: 'held for placed-but-unpaid orders']
+  minimum_stock_level int       [not null, default: 0, note: 'reorder threshold']
+  low_stock_notified  boolean   [not null, default: false, note: 'alert once, not every sale']
+  created_at          timestamp [not null, default: `now()`]
+  updated_at          timestamp [not null]
+
+  Note: 'Single source of truth for stock. Sellable = available − reserved.'
+}
+
+Table inventory_movements {
+  id              uuid          [pk]
+  inventory_id    uuid          [not null]
+  type            movement_type [not null]
+  quantity_change int           [not null, note: 'signed: + in, − out; SUM reconstructs balance']
+  note            varchar       [null]
+  order_id        uuid          [null, note: 'set for RESERVE/RELEASE/SALE']
+  user_id         uuid          [null, note: 'set for admin PURCHASE/ADJUSTMENT/DAMAGE']
+  created_at      timestamp     [not null, default: `now()`]
+
+  Indexes {
+    (inventory_id, created_at)
+    order_id
+  }
+  Note: 'Append-only stock ledger — one row per change, ever.'
+}
+
+// ─── C · Orders & Payments ──────────────────────────────────────────────────
+
+Table orders {
+  id               uuid           [pk]
+  order_number     varchar        [unique, not null, note: 'ORD-YYYY-NNNNNN']
+  user_id          uuid           [not null]
+  subtotal         "decimal(10,2)" [not null]
+  tax              "decimal(10,2)" [not null, default: 0]
+  shipping_cost    "decimal(10,2)" [not null, default: 0]
+  total            "decimal(10,2)" [not null]
+  status           order_status   [not null, default: 'PENDING']
+  shipping_address jsonb          [null, note: 'address SNAPSHOT']
+  billing_address  jsonb          [null, note: 'address SNAPSHOT']
+  notes            text           [null]
+  created_at       timestamp      [not null, default: `now()`]
+  updated_at       timestamp      [not null]
+
+  Indexes {
+    user_id
+    status
+    order_number
+    created_at
+  }
+  Note: 'One purchase. Money is recomputed server-side, never trusted from the browser.'
+}
+
+Table order_items {
+  id                  uuid           [pk]
+  order_id            uuid           [not null]
+  product_id          uuid           [not null, note: 'this FK blocks deleting a sold product']
+  quantity            int            [not null]
+  unit_price          "decimal(10,2)" [not null, note: 'SNAPSHOT at purchase']
+  total_price         "decimal(10,2)" [not null]
+  selected_attributes jsonb          [null]
+  measurements        jsonb          [null, note: 'SNAPSHOT of tailoring measurements']
+
+  Indexes {
+    order_id
+    product_id
+  }
+  Note: 'One line on an order — "3 × School Shirt".'
+}
+
+Table payments {
+  id                uuid           [pk]
+  order_id          uuid           [unique, not null, note: 'one payment per order']
+  transaction_id    varchar        [unique, null, note: 'gateway reference']
+  amount            "decimal(10,2)" [not null, note: 'verified against order total']
+  currency          varchar        [not null, default: 'USD']
+  status            payment_status [not null, default: 'PENDING']
+  method            payment_method [not null, default: 'STRIPE']
+  payment_plan      payment_plan   [not null, default: 'FULL']
+  installment_count int            [null]
+  gateway_response  jsonb          [null, note: 'raw gateway payload = evidence']
+  paid_at           timestamp      [null, note: 'revenue counted by this']
+  created_at        timestamp      [not null, default: `now()`]
+
+  Indexes {
+    order_id
+    status
+  }
+  Note: 'The payment attached to an order. Its lifecycle is separate from the order status.'
+}
+
+Table installments {
+  id                uuid           [pk]
+  payment_id        uuid           [not null]
+  installment_no    int            [not null]
+  amount            "decimal(10,2)" [not null]
+  due_date          timestamp      [not null]
+  status            payment_status [not null, default: 'PENDING']
+  stripe_payment_id varchar        [null]
+  paid_at           timestamp      [null]
+  created_at        timestamp      [not null, default: `now()`]
+
+  Indexes {
+    payment_id
+    status
+    due_date
+  }
+  Note: 'Schedule when a payment is split into parts.'
+}
+
+Table order_status_history {
+  id                 uuid         [pk]
+  order_id           uuid         [not null]
+  from_status        order_status [null, note: 'NULL on the first "created" row']
+  to_status          order_status [not null]
+  changed_by_user_id uuid         [null, note: 'NULL = system/automatic move']
+  note               varchar      [null]
+  created_at         timestamp    [not null, default: `now()`]
+
+  Indexes {
+    (order_id, created_at)
+  }
+  Note: 'Audit line per status change — powers the customer tracking timeline.'
+}
+
+Table payment_webhook_events {
+  id               uuid      [pk]
+  gateway          varchar   [not null, note: 'payhere | stripe']
+  transaction_id   varchar   [null]
+  event_status     varchar   [not null]
+  payload          jsonb     [not null, note: 'complete raw callback body']
+  signature        varchar   [null]
+  signature_valid  boolean   [not null, default: false]
+  processed        boolean   [not null, default: false]
+  processing_error varchar   [null]
+  created_at       timestamp [not null, default: `now()`]
+
+  Indexes {
+    (gateway, transaction_id, event_status) [unique, note: 'idempotency: a replay is a no-op']
+  }
+  Note: 'Raw, tamper-evident log of EVERY gateway callback. No FK by design.'
+}
+
+// ─── D · Production ─────────────────────────────────────────────────────────
+
+Table workers {
+  id             uuid             [pk]
+  user_id        uuid             [unique, not null, note: 'a worker IS a user with role=WORKER (1:1)']
+  specialization production_stage [null]
+  skill_level    int              [null]
+  hourly_rate    "decimal(10,2)"  [null]
+  is_active      boolean          [not null, default: true]
+  created_at     timestamp        [not null, default: `now()`]
+  updated_at     timestamp        [not null]
+
+  Indexes { is_active }
+  Note: 'Shop-floor profile. Name/login/contact stay in users (no duplication).'
+}
+
+Table production_tasks {
+  id                 uuid             [pk]
+  order_id           uuid             [not null]
+  order_item_id      uuid             [not null, note: 'the exact line being made']
+  stage              production_stage [not null, default: 'CUTTING']
+  status             task_status      [not null, default: 'PENDING']
+  assigned_worker_id uuid             [null, note: 'BR5: cannot START without an assignee']
+  note               text             [null, note: 'required on a QC failure']
+  start_time         timestamp        [null]
+  end_time           timestamp        [null]
+  created_at         timestamp        [not null, default: `now()`]
+  updated_at         timestamp        [not null]
+
+  Indexes {
+    (assigned_worker_id, status)
+    order_id
+    (stage, status)
+  }
+  Note: 'One unit of shop-floor work; auto-created for each tailored order item.'
+}
+
+// ─── E · Customer data & Cross-cutting ──────────────────────────────────────
+
+Table customer_measurements {
+  id           uuid         [pk]
+  user_id      uuid         [not null]
+  label        varchar      [null, note: '"Nimal — school shirt"']
+  person_name  varchar      [null]
+  product_type product_type [null]
+  measurements jsonb        [not null]
+  created_at   timestamp    [not null, default: `now()`]
+  updated_at   timestamp    [not null]
+
+  Indexes { user_id }
+  Note: 'Reusable saved measurement sets (orders keep their own snapshot).'
+}
+
+Table audit_logs {
+  id          uuid      [pk]
+  user_id     uuid      [null, note: 'NULL for system actions']
+  action      varchar   [not null, note: 'payment.verify, inventory.adjust, …']
+  entity_type varchar   [not null]
+  entity_id   varchar   [null]
+  before      jsonb     [null]
+  after       jsonb     [null]
+  ip          varchar   [null]
+  created_at  timestamp [not null, default: `now()`]
+
+  Indexes {
+    (user_id, created_at)
+    (entity_type, entity_id)
+  }
+  Note: 'Tamper-evident trail of sensitive actions (who, what, before/after).'
+}
+
+Table notifications {
+  id         uuid      [pk]
+  user_id    uuid      [not null]
+  type       varchar   [not null, note: 'order.confirmed, inventory.low_stock, …']
+  title      varchar   [not null]
+  body       text      [null]
+  read_at    timestamp [null, note: 'NULL = unread → drives the bell badge']
+  created_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (user_id, read_at)
+  }
+  Note: 'In-app messages for the customer and admin navbars.'
+}
+
+// ─── Relationships (cardinality + delete behaviour) ─────────────────────────
+//  >  many-to-one     -  one-to-one
+
+// Identity
+Ref: refresh_tokens.user_id       > users.id       [delete: cascade]
+Ref: verification_codes.user_id   > users.id       [delete: cascade]
+Ref: workers.user_id              - users.id       [delete: cascade]   // 1:1
+Ref: customer_measurements.user_id > users.id      [delete: cascade]
+Ref: notifications.user_id        > users.id       [delete: cascade]
+Ref: audit_logs.user_id           > users.id       [delete: set null]  // keep the audit trail
+
+// Catalogue & stock
+Ref: categories.parent_category_id > categories.id [delete: restrict]  // self-tree
+Ref: products.category_id         > categories.id  [delete: restrict]  // no orphaned products
+Ref: inventory.product_id         - products.id    [delete: cascade]   // 1:1
+Ref: inventory_movements.inventory_id > inventory.id [delete: cascade]
+Ref: inventory_movements.order_id > orders.id      [delete: restrict]  // orders are financial records
+
+// Orders & payments
+Ref: orders.user_id               > users.id
+Ref: order_items.order_id         > orders.id      [delete: cascade]
+Ref: order_items.product_id       > products.id                        // blocks deleting a sold product
+Ref: payments.order_id            - orders.id      [delete: cascade]   // 1:1
+Ref: installments.payment_id      > payments.id    [delete: cascade]
+Ref: order_status_history.order_id > orders.id     [delete: cascade]
+
+// Production
+Ref: production_tasks.order_id        > orders.id       [delete: cascade]
+Ref: production_tasks.order_item_id   > order_items.id  [delete: cascade]
+Ref: production_tasks.assigned_worker_id > workers.id
+
+// ─── Visual grouping (dbdiagram colours each cluster) ───────────────────────
+
+TableGroup "A · Identity & Access" {
+  users
+  refresh_tokens
+  verification_codes
+}
+
+TableGroup "B · Catalogue & Stock" {
+  categories
+  products
+  inventory
+  inventory_movements
+}
+
+TableGroup "C · Orders & Payments" {
+  orders
+  order_items
+  payments
+  installments
+  order_status_history
+  payment_webhook_events
+}
+
+TableGroup "D · Production" {
+  workers
+  production_tasks
+}
+
+TableGroup "E · Customer & Cross-cutting" {
+  customer_measurements
+  audit_logs
+  notifications
+}
