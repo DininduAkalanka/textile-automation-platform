@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Plus, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Loader2, Plus, UploadCloud, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   Dialog,
@@ -14,6 +15,11 @@ import { useCreateProduct, useUpdateProduct } from '@/hooks/use-products';
 import { categorySelectOptions } from '@/lib/category-tree';
 import { cn } from '@/lib/utils';
 import { ProductInput } from '@/services/products.service';
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  uploadsService,
+} from '@/services/uploads.service';
 import { Product, ProductType } from '@/types';
 
 const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
@@ -106,10 +112,14 @@ export function ProductFormDialog({
   product,
   open,
   onClose,
+  onCreated,
 }: {
   product: Product | null;
   open: boolean;
   onClose: () => void;
+  /** Called with the new product after a successful CREATE (not edit) — the
+   *  products page uses it to open the "share to social" prompt. */
+  onCreated?: (product: Product) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -119,6 +129,7 @@ export function ProductFormDialog({
             key={product?.id ?? 'create'}
             product={product}
             onClose={onClose}
+            onCreated={onCreated}
           />
         )}
       </DialogContent>
@@ -129,15 +140,20 @@ export function ProductFormDialog({
 function ProductFormInner({
   product,
   onClose,
+  onCreated,
 }: {
   product: Product | null;
   onClose: () => void;
+  onCreated?: (product: Product) => void;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<FormState>(() =>
     product ? formFromProduct(product) : emptyForm(),
   );
   const [newImageUrl, setNewImageUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
@@ -170,6 +186,48 @@ function ProductFormInner({
     if (!url) return;
     set('images', [...form.images, url]);
     setNewImageUrl('');
+  }
+
+  /**
+   * Upload picked/dropped files and append their URLs. Validated client-side
+   * first so an oversized file fails instantly with a clear message rather than
+   * after a slow round-trip; the API enforces the same limits regardless.
+   */
+  async function uploadFiles(files: FileList | null) {
+    const chosen = Array.from(files ?? []);
+    if (!chosen.length) return;
+
+    const valid: File[] = [];
+    for (const file of chosen) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        toast.error(`${file.name}: only JPG, PNG or WebP images are allowed.`);
+        continue;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error(`${file.name} is larger than 2 MB.`);
+        continue;
+      }
+      valid.push(file);
+    }
+    if (!valid.length) return;
+
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(
+        valid.map((file) => uploadsService.uploadImage(file)),
+      );
+      setForm((f) => ({
+        ...f,
+        images: [...f.images, ...uploaded.map((u) => u.url)],
+      }));
+      toast.success(
+        uploaded.length === 1 ? 'Image uploaded' : `${uploaded.length} images uploaded`,
+      );
+    } catch (error) {
+      toast.error((error as Error).message || 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
   }
 
   function removeImage(index: number) {
@@ -211,7 +269,12 @@ function ProductFormInner({
       updateProduct.mutate({ id: product.id, data: payload }, { onSuccess: onClose });
     } else {
       // step1Valid already guarantees name/sku/price/stockQuantity are set.
-      createProduct.mutate(payload as ProductInput, { onSuccess: onClose });
+      createProduct.mutate(payload as ProductInput, {
+        onSuccess: (created) => {
+          onClose();
+          onCreated?.(created);
+        },
+      });
     }
   }
 
@@ -414,28 +477,90 @@ function ProductFormInner({
           ) : (
             <div>
               <label className={labelClass}>Images</label>
-              <div className="mb-2 flex gap-2">
-                <input
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addImage();
-                    }
-                  }}
-                  placeholder="https://…"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={addImage}
-                  className="flex shrink-0 items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-[12px] font-medium text-[#0F0F0F] transition-colors hover:border-[#0F0F0F]"
-                >
-                  <Plus size={13} aria-hidden />
-                  Add
-                </button>
-              </div>
+
+              {/* Click-or-drag upload — the primary path. */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  void uploadFiles(e.dataTransfer.files);
+                }}
+                disabled={uploading}
+                className={cn(
+                  'mb-2 flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-7 text-center transition-colors',
+                  dragging
+                    ? 'border-[#0F0F0F] bg-[#F4F3EF]'
+                    : 'border-[#D5D2C8] bg-[#FAFAF8] hover:border-[#0F0F0F] hover:bg-[#F4F3EF]',
+                  uploading && 'cursor-wait opacity-70',
+                )}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin text-[#6E6A5E]" aria-hidden />
+                    <span className="text-[13px] font-medium text-[#0F0F0F]">
+                      Uploading…
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={20} className="text-[#6E6A5E]" aria-hidden />
+                    <span className="text-[13px] font-medium text-[#0F0F0F]">
+                      Click to choose images
+                    </span>
+                    <span className="text-[11px] text-[#928E82]">
+                      or drag &amp; drop · JPG, PNG or WebP · up to 2 MB
+                    </span>
+                  </>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  void uploadFiles(e.target.files);
+                  e.target.value = ''; // allow re-picking the same file
+                }}
+              />
+
+              {/* Secondary: paste a URL (e.g. an image already hosted). */}
+              <details className="mb-2">
+                <summary className="cursor-pointer list-none text-[11px] text-[#928E82] hover:text-[#0F0F0F]">
+                  or paste an image URL
+                </summary>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addImage();
+                      }
+                    }}
+                    placeholder="https://…"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={addImage}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-[12px] font-medium text-[#0F0F0F] transition-colors hover:border-[#0F0F0F]"
+                  >
+                    <Plus size={13} aria-hidden />
+                    Add
+                  </button>
+                </div>
+              </details>
 
               {form.images.length === 0 ? (
                 <p className="rounded-lg bg-[#FAFAF8] px-3 py-6 text-center text-[12px] text-[#928E82]">
@@ -498,11 +623,19 @@ function ProductFormInner({
             <button
               type="button"
               onClick={submit}
-              disabled={busy || !step1Valid}
+              // Blocked while images are still uploading: saving mid-upload
+              // would create the product WITHOUT the pictures being added.
+              disabled={busy || uploading || !step1Valid}
               className="inline-flex items-center gap-2 rounded-lg bg-[#0F0F0F] px-4 py-2 text-[13px] font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:bg-[#D5D2C8]"
             >
-              {busy && <Loader2 size={13} className="animate-spin" aria-hidden />}
-              {isEdit ? 'Save changes' : 'Create product'}
+              {(busy || uploading) && (
+                <Loader2 size={13} className="animate-spin" aria-hidden />
+              )}
+              {uploading
+                ? 'Uploading images…'
+                : isEdit
+                  ? 'Save changes'
+                  : 'Create product'}
             </button>
           )}
         </div>

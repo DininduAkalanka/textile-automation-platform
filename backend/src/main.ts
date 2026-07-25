@@ -1,5 +1,8 @@
+import { join } from 'path';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -7,7 +10,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
 
@@ -26,6 +29,16 @@ async function bootstrap() {
 
   // Global prefix (versioned API — doc 07 §2/§16)
   app.setGlobalPrefix('api/v1');
+
+  // Uploaded product images. Served OUTSIDE the API prefix (static assets
+  // ignore setGlobalPrefix) at /uploads/<file>, so the admin UI — and later
+  // Instagram, which demands a public URL — can fetch them directly.
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+    // Uploaded files are immutable (random filenames), so cache hard.
+    maxAge: '30d',
+    index: false,
+  });
 
   // CORS. FRONTEND_URL is validated at boot, so there is no fallback origin.
   app.enableCors({

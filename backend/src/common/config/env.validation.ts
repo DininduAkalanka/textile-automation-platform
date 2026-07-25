@@ -140,6 +140,42 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   SMS_USER_ID?: string;
+
+  // ─── Social auto-posting (marketing automation) ─────────────────────────
+  // All optional: with no META_PAGE_TOKEN, posting is SKIPPED and the caption
+  // is still generated for copy/paste + WhatsApp — the app never requires this.
+  @IsOptional()
+  @IsString()
+  META_PAGE_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  META_PAGE_TOKEN?: string;
+
+  @IsOptional()
+  @IsString()
+  META_IG_USER_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  META_GRAPH_VERSION?: string;
+
+  // Shop details used to write the caption (safe, non-secret).
+  @IsOptional()
+  @IsString()
+  SHOP_BRAND?: string;
+
+  @IsOptional()
+  @IsString()
+  SHOP_BASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  SHOP_WHATSAPP?: string;
+
+  @IsOptional()
+  @IsString()
+  SHOP_PAYMENTS?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

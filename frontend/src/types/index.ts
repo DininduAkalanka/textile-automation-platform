@@ -485,3 +485,39 @@ export interface RecommendationsResponse {
   pairs: BasketPair[];
   unavailable?: boolean;
 }
+
+// ─── Social auto-posting (/admin/products/:id/social) ─────────────────────────
+
+export type SocialPlatform = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP';
+export type SocialPostStatus = 'PENDING' | 'POSTED' | 'FAILED' | 'SKIPPED';
+
+export interface SocialPreview {
+  productId: string;
+  caption: string;
+  whatsappUrl: string;
+  image: string | null;
+  platforms: {
+    facebook: { configured: boolean };
+    instagram: { configured: boolean; needsImage: boolean };
+    whatsapp: { available: boolean };
+  };
+  recent: Array<{
+    platform: SocialPlatform;
+    status: SocialPostStatus;
+    externalPostId: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface SocialPostResult {
+  platform: SocialPlatform;
+  status: SocialPostStatus;
+  message: string;
+  externalPostId?: string | null;
+}
+
+export interface SocialShareResponse {
+  caption: string;
+  whatsappUrl: string;
+  results: SocialPostResult[];
+}
