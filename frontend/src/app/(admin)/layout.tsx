@@ -47,9 +47,12 @@ export default function AdminLayout({
             className="fixed inset-0 z-40 bg-black/50 lg:hidden"
             onClick={() => setMobileNavOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-60 lg:hidden">
+          <div
+            className="fixed inset-y-0 left-0 z-50 w-60 lg:hidden"
+            onClick={() => setMobileNavOpen(false)}
+          >
             <div className="relative h-full">
-              <AdminSidebar />
+              <AdminSidebar mobile />
               <button
                 onClick={() => setMobileNavOpen(false)}
                 aria-label="Close menu"

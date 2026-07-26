@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
+import { BrandMark } from '@/components/brand/brand-mark';
 import {
   BarChart3,
   Boxes,
@@ -76,7 +78,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
  * looking at this should be able to see the shape of the whole system, not just
  * the parts that happen to exist today.
  */
-export function AdminSidebar() {
+export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -89,7 +91,17 @@ export function AdminSidebar() {
   const lowCount = lowStock?.count ?? 0;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#0A0A0A] lg:flex">
+    // Desktop: a fixed rail, hidden below lg. Inside the mobile slide-over
+    // (`mobile`): a plain full-height flex column that fills the drawer — the
+    // `hidden lg:flex` that hides the desktop rail must NOT apply there, or the
+    // drawer opens empty.
+    <aside
+      className={
+        mobile
+          ? 'flex h-full w-60 flex-col bg-[#0A0A0A]'
+          : 'fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#0A0A0A] lg:flex'
+      }
+    >
       {/* A single gold thread down the right edge. One hairline, the width of the
           sidebar — the whole luxury signal in one pixel. Crimson could not carry
           this on its own, and gold used anywhere else would cheapen it. */}
@@ -100,9 +112,8 @@ export function AdminSidebar() {
 
       {/* Brand */}
       <div className="relative flex h-16 items-center gap-2.5 border-b border-white/[0.06] px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-[#E60000] to-[#A80000] text-sm font-bold text-white shadow-[0_2px_8px_-2px_rgba(204,0,0,0.6)]">
-          N
-        </div>
+        <BrandMark size={32} variant="onDark" />
+
         <div className="leading-tight">
           <p className="font-display text-sm font-semibold tracking-wide text-white">
             Nandana
