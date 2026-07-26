@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { BrandMark } from '@/components/brand/brand-mark';
+
 /* ── Social icon paths ──────────────────────────────────────── */
 const SOCIAL = [
   {
@@ -183,28 +185,7 @@ export default function Footer() {
                 href="/"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', textDecoration: 'none' }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'var(--clr-brand)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-serif)',
-                      fontSize: '1.2rem',
-                      fontWeight: 700,
-                      color: '#fff',
-                      lineHeight: 1,
-                    }}
-                  >
-                    N
-                  </span>
-                </div>
+                <BrandMark size={38} variant="onDark" style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 600, color: '#fff', lineHeight: 1.1 }}>
                     Nandana
