@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { BrandMark } from '@/components/brand/brand-mark';
 
 /* ── SVG Icon Components ──────────────────────────────────── */
 const IconSearch = ({ size = 18 }: { size?: number }) => (
@@ -369,31 +370,8 @@ export default function Header() {
             href="/"
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, textDecoration: 'none' }}
           >
-            {/* Wordmark mark */}
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                background: 'var(--clr-brand)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  color: '#fff',
-                  lineHeight: 1,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                N
-              </span>
-            </div>
+            {/* Woven NT monogram */}
+            <BrandMark size={38} style={{ flexShrink: 0 }} />
             {/* Logotype */}
             <div className="hide-mobile" style={{ lineHeight: 1 }}>
               <div
@@ -875,9 +853,7 @@ export default function Header() {
           }}
         >
           <Link href="/" onClick={closeMobile} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <div style={{ width: '30px', height: '30px', background: 'var(--clr-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 700, color: '#fff' }}>N</span>
-            </div>
+            <BrandMark size={32} style={{ flexShrink: 0 }} />
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--clr-text)' }}>Nandana Textile</span>
           </Link>
           <button onClick={closeMobile} className="btn-icon" aria-label="Close menu">

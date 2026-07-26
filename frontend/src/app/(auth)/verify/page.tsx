@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { BrandMark } from '@/components/brand/brand-mark';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -13,13 +14,11 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-200 p-8">
       <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl">
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2 no-underline">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-indigo-600 text-lg font-bold text-white">
-              T
-            </div>
+        <div className="mb-8 flex justify-center">
+          <Link href="/" className="inline-flex items-center gap-2.5 no-underline">
+            <BrandMark size={40} />
             <span className="font-display text-2xl font-bold text-neutral-900">
-              TextileShop
+              Nandana Textile
             </span>
           </Link>
         </div>

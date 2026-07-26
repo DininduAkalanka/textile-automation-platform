@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+import { BrandMark } from '@/components/brand/brand-mark';
+
 /**
  * Two-panel auth layout (split-screen — the pattern Clerk, Linear and modern
  * e-commerce use): a full-bleed photographic brand panel on the left, the form
@@ -115,7 +117,7 @@ function BrandPanel() {
       {/* Content over the photo */}
       <div className="relative z-10 flex h-full flex-col justify-between p-12 xl:p-16">
         <Link href="/" className="inline-flex items-center gap-2.5 no-underline">
-          <LogoMark onDark />
+          <LogoMark />
           <span className="font-display text-xl font-bold text-white">
             {BRAND}
           </span>
@@ -175,16 +177,8 @@ function ContactInfo({ variant }: { variant: 'dark' | 'light' }) {
   );
 }
 
-function LogoMark({ onDark = false }: { onDark?: boolean }) {
-  return (
-    <span
-      className={`flex h-10 w-10 items-center justify-center rounded-[11px] text-lg font-bold ${
-        onDark
-          ? 'bg-white/10 text-white ring-1 ring-white/25 backdrop-blur'
-          : 'bg-[#CC0000] text-white'
-      }`}
-    >
-      N
-    </span>
-  );
+function LogoMark() {
+  // Both auth grounds are dark (the photo panel and the charcoal form column),
+  // so the mark always uses its on-dark treatment.
+  return <BrandMark size={40} variant="onDark" />;
 }
