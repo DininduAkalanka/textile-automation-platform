@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AiModule } from './ai/ai.module';
 import { SocialModule } from './social/social.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { AppController } from './app.controller';
 import { validateEnv } from './common/config/env.validation';
 
@@ -41,6 +42,7 @@ import { validateEnv } from './common/config/env.validation';
     AiModule,
     SocialModule,
     UploadsModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

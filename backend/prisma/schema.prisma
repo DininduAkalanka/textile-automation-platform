@@ -131,13 +131,16 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  orders            Order[]
-  refreshTokens     RefreshToken[]
-  verificationCodes VerificationCode[]
-  worker            Worker?
-  measurements      CustomerMeasurement[]
-  notifications     Notification[]
-  auditLogs         AuditLog[]
+  orders             Order[]
+  refreshTokens      RefreshToken[]
+  verificationCodes  VerificationCode[]
+  worker             Worker?
+  measurements       CustomerMeasurement[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  reviews            Review[]
+  reviewHelpfulVotes ReviewHelpfulVote[]
+  reviewReports      ReviewReport[]
 
   @@index([email])
   @@index([phone])
@@ -244,6 +247,7 @@ model Product {
   orderItems  OrderItem[]
   inventory   Inventory?
   socialPosts SocialPost[]
+  reviews     Review[]
 
   @@index([slug])
   @@index([categoryId])
@@ -275,6 +279,7 @@ model Order {
   statusHistory      OrderStatusHistory[]
   inventoryMovements InventoryMovement[]
   productionTasks    ProductionTask[]
+  reviews            Review[]
 
   @@index([userId])
   @@index([status])
@@ -560,4 +565,90 @@ model SocialPost {
 
   @@index([productId, createdAt])
   @@map("social_posts")
+}
+
+// ─── Reviews (verified purchase, post-delivery only) ─────────────────────────
+// A review is always tied to the specific DELIVERED order it was earned from
+// (@@unique below), not just "this customer bought this product ever" — a
+// repurchase of the same product in a separate order unlocks a fresh review,
+// matching the "Verified Purchase" model leading storefronts use. Eligibility
+// is re-checked server-side on every create (ReviewsService.create), never
+// trusted from the client.
+
+enum ReviewSizeFeedback {
+  RUNS_SMALL
+  TRUE_TO_SIZE
+  RUNS_LARGE
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+model Review {
+  id                  String             @id @default(uuid()) @db.Uuid
+  productId           String             @map("product_id") @db.Uuid
+  orderId             String             @map("order_id") @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  rating              Int // overall, 1-5
+  title               String
+  comment              String            @db.Text
+  fabricRating        Int                @map("fabric_rating") // 1-5
+  colorAccuracyRating Int                @map("color_accuracy_rating") // 1-5
+  comfortRating       Int                @map("comfort_rating") // 1-5
+  sizeFeedback        ReviewSizeFeedback @map("size_feedback")
+  wouldRecommend      Boolean            @map("would_recommend")
+  images              Json               @default("[]") // string[] of uploaded photo URLs
+  // Denormalized so "Reviews with Photos" can filter with a plain boolean
+  // column instead of a JSON-array-length query (which isn't index-friendly
+  // and varies in syntax across Prisma's query engines).
+  hasImages          Boolean      @default(false) @map("has_images")
+  isVerifiedPurchase Boolean      @default(true) @map("is_verified_purchase")
+  helpfulCount       Int          @default(0) @map("helpful_count")
+  status             ReviewStatus @default(PUBLISHED)
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  product      Product             @relation(fields: [productId], references: [id])
+  order        Order               @relation(fields: [orderId], references: [id])
+  user         User                @relation(fields: [userId], references: [id])
+  helpfulVotes ReviewHelpfulVote[]
+  reports      ReviewReport[]
+
+  // The eligibility contract itself: one review per (order, product,
+  // customer). Also the second line of defense against a duplicate-submit
+  // race, since ReviewsService.create checks eligibility before insert but a
+  // unique constraint is what actually guarantees it under concurrency.
+  @@unique([orderId, productId, userId])
+  @@index([productId, status])
+  @@index([userId])
+  @@map("product_reviews")
+}
+
+model ReviewHelpfulVote {
+  id        String   @id @default(uuid()) @db.Uuid
+  reviewId  String   @map("review_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@map("review_helpful_votes")
+}
+
+model ReviewReport {
+  id        String   @id @default(uuid()) @db.Uuid
+  reviewId  String   @map("review_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@map("review_reports")
 }
