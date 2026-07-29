@@ -521,3 +521,58 @@ export interface SocialShareResponse {
   whatsappUrl: string;
   results: SocialPostResult[];
 }
+
+// ─── Reviews ──────────────────────────────────────────────
+
+export type ReviewSizeFeedback = 'RUNS_SMALL' | 'TRUE_TO_SIZE' | 'RUNS_LARGE';
+export type ReviewStatus = 'PUBLISHED' | 'HIDDEN';
+export type ReviewSortBy = 'recent' | 'highest' | 'lowest' | 'helpful';
+
+export interface Review {
+  id: string;
+  productId: string;
+  orderId: string;
+  userId: string;
+  rating: number;
+  title: string;
+  comment: string;
+  fabricRating: number;
+  colorAccuracyRating: number;
+  comfortRating: number;
+  sizeFeedback: ReviewSizeFeedback;
+  wouldRecommend: boolean;
+  images: string[];
+  hasImages: boolean;
+  isVerifiedPurchase: boolean;
+  helpfulCount: number;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; firstName: string; lastName: string };
+  product?: { id: string; name: string; slug: string; images: string[] };
+  _count?: { reports: number };
+  reports?: { id: string; reason: string; createdAt: string }[];
+}
+
+export interface ReviewStats {
+  average: number;
+  total: number;
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+}
+
+export interface ProductReviewsResponse {
+  reviews: Review[];
+  stats: ReviewStats;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export type ReviewEligibility =
+  | { eligible: true; orderId: string }
+  | { eligible: false; reason: 'NOT_PURCHASED' }
+  | { eligible: false; reason: 'NOT_DELIVERED' }
+  | { eligible: false; reason: 'ALREADY_REVIEWED'; reviewId: string };
+
+export interface AdminReviewsResponse {
+  reviews: Review[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}

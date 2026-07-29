@@ -28,10 +28,24 @@ export default function AdminLayout({
   const loadUser = useAuthStore((s) => s.loadUser);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // null on both the server render and the client's first render (they must
+  // match); filled in a tick later, client-only, to avoid a hydration
+  // mismatch if the two renders land on opposite sides of midnight.
+  const [today, setToday] = useState<string | null>(null);
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }),
+    );
+  }, []);
 
   return (
     // Warm canvas (#FAFAF8), not a cool grey. A cool background under a warm
@@ -79,13 +93,9 @@ export default function AdminLayout({
           </Link>
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs text-neutral-400 sm:inline">
-              {new Date().toLocaleDateString('en-GB', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-              })}
-            </span>
+            {today && (
+              <span className="hidden text-xs text-neutral-400 sm:inline">{today}</span>
+            )}
             <NotificationBell signedIn={isAuthenticated} />
           </div>
         </header>

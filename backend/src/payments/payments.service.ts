@@ -562,6 +562,29 @@ export class PaymentsService {
       throw new BadRequestException('Order is already fully paid');
     }
 
+    // PayHere's checkout requires a well-formed email and non-empty
+    // address/city — this platform allows phone-only accounts (dual
+    // identity), so a customer can reach here with no email on file.
+    // Sending a blank email/address gets rejected by PayHere's checkout
+    // guard as "Unauthorized payment request" rather than a clear,
+    // field-specific error, so fail fast here with an actionable message.
+    if (!order.user.email) {
+      throw new BadRequestException(
+        'PayHere card payments require an email address on your account. Add one in your profile, or choose Cash on Delivery.',
+      );
+    }
+
+    const shippingAddress = order.shippingAddress as {
+      addressLine1?: string;
+      city?: string;
+      country?: string;
+    } | null;
+    if (!shippingAddress?.addressLine1 || !shippingAddress?.city) {
+      throw new BadRequestException(
+        'A shipping address with address line and city is required for card payment',
+      );
+    }
+
     const amount = order.total.toFixed(2);
     const currency = 'LKR';
     const orderRef = order.orderNumber;
@@ -614,10 +637,10 @@ export class PaymentsService {
         amount,
         first_name: order.user.firstName,
         last_name: order.user.lastName,
-        email: order.user.email ?? '', // phone-only customers have no email
+        email: order.user.email,
         phone: order.user.phone ?? '',
-        address: '',
-        city: '',
+        address: shippingAddress.addressLine1,
+        city: shippingAddress.city,
         country: 'Sri Lanka',
         hash,
       },

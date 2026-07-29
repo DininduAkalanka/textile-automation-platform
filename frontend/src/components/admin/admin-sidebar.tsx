@@ -14,10 +14,12 @@ import {
   Scissors,
   ShoppingCart,
   Sparkles,
+  Star,
   Store,
 } from 'lucide-react';
 
 import { useLowStock } from '@/hooks/use-inventory';
+import { useReportedReviews } from '@/hooks/use-reviews';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -29,6 +31,8 @@ interface NavItem {
   soon?: boolean;
   /** Renders the live low-stock count. Only Inventory carries one today. */
   alertCount?: boolean;
+  /** Renders the live reported-reviews count. Only Reviews carries one. */
+  reportedCount?: boolean;
 }
 
 const NAV: { section: string; items: NavItem[] }[] = [
@@ -53,6 +57,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
       { href: '/admin/products', label: 'Products', icon: Package },
       { href: '/admin/categories', label: 'Categories', icon: FolderTree },
       { href: '/admin/inventory', label: 'Inventory', icon: Boxes, alertCount: true },
+      { href: '/admin/reviews', label: 'Reviews', icon: Star, reportedCount: true },
     ],
   },
   {
@@ -87,6 +92,11 @@ export function AdminSidebar() {
   // invalidates this key, so an admin's own adjustment updates it instantly.
   const { data: lowStock } = useLowStock();
   const lowCount = lowStock?.count ?? 0;
+
+  // Same "the number sits on the thing you'd click to act on it" pattern as
+  // Inventory's low-stock badge, just for reported reviews instead.
+  const { data: reportedReviews } = useReportedReviews({ limit: 1 });
+  const reportedCount = reportedReviews?.pagination.total ?? 0;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#0A0A0A] lg:flex">
@@ -183,6 +193,14 @@ export function AdminSidebar() {
                           aria-label={`${lowCount} products need reordering`}
                         >
                           {lowCount}
+                        </span>
+                      )}
+                      {item.reportedCount && reportedCount > 0 && (
+                        <span
+                          className="ml-auto rounded-full bg-[#CC0000] px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-[0_0_10px_-1px_rgba(204,0,0,0.8)]"
+                          aria-label={`${reportedCount} reviews reported`}
+                        >
+                          {reportedCount}
                         </span>
                       )}
                     </Link>

@@ -7,6 +7,9 @@ import { api } from '@/lib/api';
 import { Product } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { ReviewsSection } from '@/components/reviews/ReviewsSection';
+import { StarRating } from '@/components/reviews/StarRating';
+import { useProductReviews } from '@/hooks/use-reviews';
 
 // ── Size chart data for tailored items ──────────────────────────
 const SIZE_CHART = [
@@ -27,13 +30,15 @@ export default function ProductDetailPage() {
   const isSaved = product ? isWishlisted(product.id) : false;
 
   // Tabs state
-  const [activeTab, setActiveTab] = useState<'description' | 'fit' | 'shipping'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'fit' | 'shipping' | 'reviews'>('description');
 
   useEffect(() => {
     if (slug) {
       api.getProductBySlug(slug).then(setProduct).catch(console.error).finally(() => setLoading(false));
     }
   }, [slug]);
+
+  const { data: reviewsData } = useProductReviews(product?.id ?? '');
 
   const handleAddToCart = () => {
     if (product) {
@@ -140,9 +145,26 @@ export default function ProductDetailPage() {
             </Link>
           )}
 
-          <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem', lineHeight: 1.3 }}>
+          <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem', lineHeight: 1.3 }}>
             {product.name}
           </h1>
+
+          {reviewsData && reviewsData.stats.total > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('reviews')}
+              className="mb-4 flex items-center gap-2 text-sm"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <StarRating value={Math.round(reviewsData.stats.average)} size="sm" />
+              <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>
+                {reviewsData.stats.average.toFixed(1)}
+              </span>
+              <span style={{ color: 'var(--color-text-muted)', textDecoration: 'underline' }}>
+                {reviewsData.stats.total} review{reviewsData.stats.total === 1 ? '' : 's'}
+              </span>
+            </button>
+          )}
 
           {/* Price */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -308,7 +330,11 @@ export default function ProductDetailPage() {
           {[
             { id: 'description', label: 'Description' },
             { id: 'fit', label: 'Fit and Fabric' },
-            { id: 'shipping', label: 'Shipping & Return' }
+            { id: 'shipping', label: 'Shipping & Return' },
+            {
+              id: 'reviews',
+              label: `Reviews${reviewsData && reviewsData.stats.total > 0 ? ` (${reviewsData.stats.total})` : ''}`,
+            },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -472,6 +498,13 @@ export default function ProductDetailPage() {
                 </div>
 
               </div>
+            </div>
+          )}
+
+          {/* Reviews Content */}
+          {activeTab === 'reviews' && (
+            <div className="animate-fade-in">
+              <ReviewsSection productId={product.id} />
             </div>
           )}
 
