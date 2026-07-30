@@ -19,6 +19,19 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
   const cancel = useCancelMyOrder();
   const [retrying, setRetrying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadInvoice() {
+    if (!order) return;
+    setDownloading(true);
+    try {
+      await api.downloadInvoice(order.id, order.orderNumber);
+    } catch {
+      // best-effort — the button re-enables so the customer can retry
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   async function retryPayment() {
     if (!order) return;
@@ -295,6 +308,15 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
               {cancelling ? 'Cancelling…' : 'Cancel Order'}
             </button>
           )}
+
+          <button
+            onClick={downloadInvoice}
+            disabled={downloading}
+            className="btn btn-outline-brand"
+            style={{ width: '100%', marginTop: '1rem', textAlign: 'center' }}
+          >
+            {downloading ? 'Preparing invoice…' : '⬇ Download Invoice (PDF)'}
+          </button>
 
           <Link href="/account/orders" className="btn btn-outline" style={{ width: '100%', marginTop: '0.75rem', textAlign: 'center' }}>
             ← Back to Orders

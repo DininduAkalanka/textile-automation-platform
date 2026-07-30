@@ -8,11 +8,13 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleDollarSign,
+  Download,
   Loader2,
   Package,
   Truck,
 } from 'lucide-react';
 
+import { api } from '@/lib/api';
 import { useMarkPaid, useOrder, useOrderAction } from '@/hooks/use-orders';
 import { formatLKR } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -83,6 +85,19 @@ export default function AdminOrderDetailPage({
   const [note, setNote] = useState('');
   const [acknowledgeRefund, setAcknowledgeRefund] = useState(false);
   const [showGatewayResponse, setShowGatewayResponse] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadInvoice() {
+    if (!order) return;
+    setDownloading(true);
+    try {
+      await api.downloadInvoice(order.id, order.orderNumber);
+    } catch {
+      // best-effort — button re-enables to allow a retry
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const busy = orderAction.isPending || markPaid.isPending;
 
@@ -197,6 +212,16 @@ export default function AdminOrderDetailPage({
             </button>
           );
         })}
+
+        {/* Always available: pull the same PDF invoice the customer receives. */}
+        <button
+          disabled={downloading}
+          onClick={downloadInvoice}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-[13px] font-medium text-[#0F0F0F] transition-all hover:border-[#0F0F0F] hover:bg-[#0F0F0F] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Download size={14} aria-hidden />
+          {downloading ? 'Preparing…' : 'Invoice PDF'}
+        </button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">

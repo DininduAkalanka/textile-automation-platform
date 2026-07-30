@@ -4,12 +4,19 @@ import { OrdersService } from './orders.service';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ProductionModule } from '../production/production.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { InvoiceModule } from '../invoices/invoice.module';
 
 @Module({
   // ProductionModule provides the ProductionTrigger that confirmOrder fires on
   // CONFIRMED (decision D8). NotificationsModule provides the post-commit
-  // email/SMS dispatcher (order-confirmation invoice).
-  imports: [InventoryModule, ProductionModule, NotificationsModule],
+  // email/SMS dispatcher (order-confirmation invoice). InvoiceModule backs the
+  // GET /orders/:id/invoice.pdf download route.
+  imports: [
+    InventoryModule,
+    ProductionModule,
+    NotificationsModule,
+    InvoiceModule,
+  ],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService],
