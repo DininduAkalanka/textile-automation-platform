@@ -71,7 +71,9 @@ export class SocialService {
         facebook: { configured: this.facebookConfigured },
         instagram: {
           configured: this.instagramConfigured,
-          needsImage: !image,
+          // Instagram can only publish a PUBLICLY reachable image, so a local
+          // (localhost) upload doesn't count as having one.
+          needsImage: !this.publicImage(product.images),
         },
         whatsapp: { available: true },
       },
@@ -87,7 +89,10 @@ export class SocialService {
   async post(productId: string, platforms: SocialPlatform[]) {
     const product = await this.load(productId);
     const caption = this.captions.build(product);
-    const image = this.firstImage(product.images);
+    // Only a publicly reachable image can be posted — Facebook and Instagram
+    // FETCH the URL from their own servers, so a localhost upload is unusable.
+    // Facebook then posts text-only; Instagram (which requires an image) skips.
+    const image = this.publicImage(product.images);
 
     const results: PlatformResult[] = [];
     for (const platform of platforms) {
@@ -142,12 +147,13 @@ export class SocialService {
       });
     }
     try {
+      const token = await this.pageAccessToken();
       // A photo post when we have an image; a plain text post otherwise.
       const node = image ? 'photos' : 'feed';
       const body: Record<string, string> = image
         ? { url: image, caption }
         : { message: caption };
-      const res = await this.graph(`${this.pageId}/${node}`, body);
+      const res = await this.graph(`${this.pageId}/${node}`, body, token);
       const externalPostId = res.post_id ?? res.id ?? null;
       return this.record(productId, SocialPlatform.FACEBOOK, SocialPostStatus.POSTED, caption, {
         message: 'Posted to Facebook.',
@@ -177,17 +183,21 @@ export class SocialService {
       });
     }
     try {
+      const token = await this.pageAccessToken();
       // Two-step publish: create a media container, then publish it.
-      const container = await this.graph(`${this.igUserId}/media`, {
-        image_url: image,
-        caption,
-      });
+      const container = await this.graph(
+        `${this.igUserId}/media`,
+        { image_url: image, caption },
+        token,
+      );
       if (!container.id) {
         throw new Error('Instagram did not return a media container id.');
       }
-      const published = await this.graph(`${this.igUserId}/media_publish`, {
-        creation_id: container.id,
-      });
+      const published = await this.graph(
+        `${this.igUserId}/media_publish`,
+        { creation_id: container.id },
+        token,
+      );
       return this.record(productId, SocialPlatform.INSTAGRAM, SocialPostStatus.POSTED, caption, {
         message: 'Posted to Instagram.',
         externalPostId: published.id ?? null,
@@ -199,14 +209,41 @@ export class SocialService {
     }
   }
 
-  // ─── Meta Graph API call ──────────────────────────────────────────────────
+  // ─── Meta Graph API ───────────────────────────────────────────────────────
+
+  /**
+   * The token configured in META_PAGE_TOKEN can be a Page token, a User token,
+   * or (recommended) a never-expiring System User token. Publishing to a Page —
+   * and to the Instagram account linked to it — requires the *Page* access
+   * token, so we exchange whatever was given for it: GET /{page-id}?fields=
+   * access_token returns the Page token for any token with access to the Page.
+   * The result is cached for the process lifetime.
+   */
+  private _pageToken: string | null = null;
+  private async pageAccessToken(): Promise<string> {
+    if (this._pageToken) return this._pageToken;
+    const base = this.token ?? '';
+    if (!base || !this.pageId) return base;
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/${this.graphVersion}/${this.pageId}` +
+          `?fields=access_token&access_token=${encodeURIComponent(base)}`,
+      );
+      const json = (await res.json()) as { access_token?: string };
+      this._pageToken = json.access_token || base; // fall back to the given token
+    } catch {
+      this._pageToken = base;
+    }
+    return this._pageToken;
+  }
 
   private async graph(
     path: string,
     params: Record<string, string>,
+    token: string,
   ): Promise<{ id?: string; post_id?: string }> {
     const url = `https://graph.facebook.com/${this.graphVersion}/${path}`;
-    const body = new URLSearchParams({ ...params, access_token: this.token ?? '' });
+    const body = new URLSearchParams({ ...params, access_token: token });
 
     const res = await fetch(url, {
       method: 'POST',
@@ -275,6 +312,34 @@ export class SocialService {
       return url.startsWith('http') ? url : null;
     }
     return null;
+  }
+
+  /** The first image, but only if a public URL Meta can actually fetch. */
+  private publicImage(images: unknown): string | null {
+    const url = this.firstImage(images);
+    return url && this.isPublicUrl(url) ? url : null;
+  }
+
+  /** A URL Meta's servers can reach — not localhost / a private address. */
+  private isPublicUrl(url: string): boolean {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (
+        host === 'localhost' ||
+        host.endsWith('.local') ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host === '::1' ||
+        /^10\./.test(host) ||
+        /^192\.168\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+      ) {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private errText(err: unknown): string {
