@@ -5,6 +5,7 @@ import { NotificationDispatchService } from './notification-dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { SmsService } from '../sms/sms.service';
+import { InvoiceService } from '../invoices/invoice.service';
 
 const makeOrder = (over: Record<string, unknown> = {}) => ({
   id: 'o1',
@@ -35,12 +36,19 @@ describe('NotificationDispatchService', () => {
   let prisma: { order: { findUnique: jest.Mock } };
   let email: { send: jest.Mock };
   let sms: { send: jest.Mock };
+  let invoice: { generateForOrder: jest.Mock };
   let env: Record<string, string | undefined>;
 
   beforeEach(async () => {
     prisma = { order: { findUnique: jest.fn() } };
     email = { send: jest.fn().mockResolvedValue(undefined) };
     sms = { send: jest.fn().mockResolvedValue(undefined) };
+    invoice = {
+      generateForOrder: jest.fn().mockResolvedValue({
+        buffer: Buffer.from('%PDF-'),
+        filename: 'invoice-TXL-1.pdf',
+      }),
+    };
     env = { FRONTEND_URL: 'http://localhost:3000' };
 
     const moduleRef = await Test.createTestingModule({
@@ -49,6 +57,7 @@ describe('NotificationDispatchService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: EmailService, useValue: email },
         { provide: SmsService, useValue: sms },
+        { provide: InvoiceService, useValue: invoice },
         { provide: ConfigService, useValue: { get: (k: string) => env[k] } },
       ],
     }).compile();
@@ -56,19 +65,38 @@ describe('NotificationDispatchService', () => {
   });
 
   describe('sendOrderConfirmation', () => {
-    it('prefers a rich email when the customer has one', async () => {
+    it('emails the invoice PDF and sends an SMS alert when the customer has both', async () => {
       prisma.order.findUnique.mockResolvedValue(makeOrder());
 
       await service.sendOrderConfirmation('o1');
 
+      expect(invoice.generateForOrder).toHaveBeenCalledWith('o1');
       expect(email.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'a@b.com',
-          subject: 'Order TXL-1 confirmed',
+          subject: expect.stringContaining('TXL-1'),
           react: expect.anything(),
+          attachments: [
+            expect.objectContaining({ filename: 'invoice-TXL-1.pdf' }),
+          ],
         }),
       );
-      expect(sms.send).not.toHaveBeenCalled();
+      // Instant phone alert fires alongside the email, not instead of it.
+      expect(sms.send).toHaveBeenCalledWith(
+        '+94771234567',
+        expect.stringContaining('TXL-1'),
+      );
+    });
+
+    it('still emails when the invoice fails to render — just without the attachment', async () => {
+      prisma.order.findUnique.mockResolvedValue(makeOrder());
+      invoice.generateForOrder.mockRejectedValue(new Error('render boom'));
+
+      await service.sendOrderConfirmation('o1');
+
+      expect(email.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'a@b.com', attachments: undefined }),
+      );
     });
 
     it('falls back to a concise SMS for a phone-only customer', async () => {

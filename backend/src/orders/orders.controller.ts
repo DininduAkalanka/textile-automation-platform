@@ -7,10 +7,13 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Res,
   UseGuards,
   Request,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { OrdersService } from './orders.service';
+import { InvoiceService } from '../invoices/invoice.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderActionDto } from './dto/order-action.dto';
 import { AdminOrdersQueryDto } from './dto/admin-orders-query.dto';
@@ -22,7 +25,10 @@ import { UserRole } from '@prisma/client';
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly invoiceService: InvoiceService,
+  ) {}
 
   @Post()
   create(@Request() req: any, @Body() dto: CreateOrderDto) {
@@ -45,6 +51,35 @@ export class OrdersController {
       id,
       isAdmin ? { isAdmin: true } : { userId: req.user.sub },
     );
+  }
+
+  /** Download the order's PDF invoice — the same document emailed on
+   *  confirmation. findById() enforces ownership (throws 403/404) before we
+   *  render, so a customer can only fetch their own. Streams the raw PDF via
+   *  @Res(), bypassing the JSON response envelope. */
+  @Get(':id/invoice.pdf')
+  async invoice(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const isAdmin = req.user.role === UserRole.ADMIN;
+    await this.ordersService.findById(
+      id,
+      isAdmin ? { isAdmin: true } : { userId: req.user.sub },
+    );
+
+    const pdf = await this.invoiceService.generateForOrder(id);
+    if (!pdf) {
+      res.status(404).json({ message: 'Order not found' });
+      return;
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${pdf.filename}"`,
+    );
+    res.send(pdf.buffer);
   }
 
   /** Customer self-service: cancel their own order. The service enforces that

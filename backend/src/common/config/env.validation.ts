@@ -176,6 +176,25 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   SHOP_PAYMENTS?: string;
+
+  // Shown on the PDF invoice header/footer (safe, non-secret).
+  @IsOptional()
+  @IsString()
+  SHOP_ADDRESS?: string;
+
+  @IsOptional()
+  @IsString()
+  SHOP_LANDLINE?: string;
+
+  // Optional invoice extras — shown only when set (business registration /
+  // tax number in the footer, bank-transfer details in Payment info).
+  @IsOptional()
+  @IsString()
+  SHOP_REG_NO?: string;
+
+  @IsOptional()
+  @IsString()
+  SHOP_BANK?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

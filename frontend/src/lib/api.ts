@@ -248,6 +248,45 @@ class ApiClient {
   async getInstallmentSchedule(orderId: string): Promise<InstallmentSchedule> {
     return this.request<InstallmentSchedule>(`/payments/${orderId}/installments`);
   }
+
+  /**
+   * Fetch the order's PDF invoice as a Blob. Kept separate from request() (which
+   * always parses JSON) because this returns binary; it mirrors the same
+   * auth-header + single refresh-and-retry behaviour on a 401.
+   */
+  private async blob(endpoint: string, allowRefresh = true): Promise<Blob> {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      headers,
+      credentials: 'include',
+    });
+
+    if (response.status === 401 && allowRefresh) {
+      const newToken = await this.refreshAccessToken();
+      if (newToken) return this.blob(endpoint, false);
+    }
+    if (!response.ok) {
+      throw new Error(`Could not download file (HTTP ${response.status})`);
+    }
+    return response.blob();
+  }
+
+  /** Download the order invoice PDF and hand it to the browser as a save. */
+  async downloadInvoice(orderId: string, orderNumber: string): Promise<void> {
+    const pdf = await this.blob(`/orders/${orderId}/invoice.pdf`);
+    const url = URL.createObjectURL(pdf);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${orderNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoke on the next tick so the click has consumed the URL first.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
 
 export const api = new ApiClient();

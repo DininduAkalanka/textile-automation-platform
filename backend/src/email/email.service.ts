@@ -48,6 +48,7 @@ export class EmailService {
     subject: string;
     html?: string;
     react?: ReactElement;
+    attachments?: { filename: string; content: Buffer }[];
   }): Promise<void> {
     let html = opts.html ?? '';
     if (opts.react) {
@@ -64,8 +65,10 @@ export class EmailService {
     }
 
     if (!this.resend) {
+      const files = opts.attachments?.map((a) => a.filename).join(', ');
       this.logger.warn(
-        `Email NOT sent (no RESEND_API_KEY). To: ${opts.to} | Subject: ${opts.subject}`,
+        `Email NOT sent (no RESEND_API_KEY). To: ${opts.to} | Subject: ${opts.subject}` +
+          (files ? ` | Attachments: ${files}` : ''),
       );
       this.logger.debug(`Email body preview:\n${html}`);
       return;
@@ -76,6 +79,10 @@ export class EmailService {
         to: opts.to,
         subject: opts.subject,
         html,
+        attachments: opts.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+        })),
       });
       if (error) {
         this.logger.warn(

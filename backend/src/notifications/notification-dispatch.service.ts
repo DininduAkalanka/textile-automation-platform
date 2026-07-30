@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { SmsService } from '../sms/sms.service';
+import { InvoiceService } from '../invoices/invoice.service';
 import { OrderConfirmationEmail } from '../email/templates/order-confirmation-email';
 import { PaymentFailedEmail } from '../email/templates/payment-failed-email';
 import { PaymentRejectedEmail } from '../email/templates/payment-rejected-email';
@@ -31,6 +32,7 @@ export class NotificationDispatchService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
+    private readonly invoiceService: InvoiceService,
     private readonly config: ConfigService,
   ) {
     this.frontendUrl =
@@ -57,10 +59,27 @@ export class NotificationDispatchService {
       if (!order) return;
 
       const orderUrl = `${this.frontendUrl}/account/orders/${order.id}`;
+
+      // The PDF invoice, best-effort: a rendering failure must never block the
+      // confirmation itself, so we catch and simply send without the attachment.
+      const invoice = await this.invoiceService
+        .generateForOrder(order.id)
+        .catch((err) => {
+          this.logger.warn(
+            `Invoice render failed for ${order.orderNumber}: ${
+              err instanceof Error ? err.message : 'unknown error'
+            }`,
+          );
+          return null;
+        });
+
+      // Email (with the PDF attached) AND SMS both fire when the customer has
+      // both — an instant phone alert plus the full invoice by email. A
+      // customer with only one contact still gets that one.
       if (order.user.email) {
         await this.emailService.send({
           to: order.user.email,
-          subject: `Order ${order.orderNumber} confirmed`,
+          subject: `Invoice · order ${order.orderNumber} confirmed`,
           react: OrderConfirmationEmail({
             customerName: order.user.firstName,
             orderNumber: order.orderNumber,
@@ -77,11 +96,15 @@ export class NotificationDispatchService {
             total: order.total.toFixed(2),
             currency: 'LKR',
           }),
+          attachments: invoice
+            ? [{ filename: invoice.filename, content: invoice.buffer }]
+            : undefined,
         });
-      } else if (order.user.phone) {
+      }
+      if (order.user.phone) {
         await this.smsService.send(
           order.user.phone,
-          `TextileShop: order ${order.orderNumber} confirmed — total LKR ${order.total.toFixed(2)}. We'll update you as it progresses.`,
+          `Nandana Textile: order ${order.orderNumber} confirmed — total LKR ${order.total.toFixed(2)}. We'll update you as it progresses.`,
         );
       }
     } catch (err) {
