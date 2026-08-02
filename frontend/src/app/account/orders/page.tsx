@@ -36,7 +36,7 @@ export default function AccountOrdersPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Please sign in</h2>
         <Link href="/login" className="btn btn-primary">Sign In</Link>
@@ -45,7 +45,7 @@ export default function AccountOrdersPage() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
         My Orders
       </h1>

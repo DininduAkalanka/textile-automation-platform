@@ -312,15 +312,15 @@ export default function VisualSearchModal() {
         </div>
 
         {/* Inner Content */}
-        <div style={{ padding: '2rem' }}>
+        <div className="p-4 sm:p-6 md:p-8">
           {!selectedImage ? (
             <div>
               {/* Tab Selector */}
               <div style={{ display: 'flex', borderBottom: '1px solid var(--clr-border-2)', marginBottom: '1.5rem' }}>
                 <button
                   onClick={() => setActiveTab('upload')}
+                  className="px-3 py-2.5 sm:px-6 sm:py-3"
                   style={{
-                    padding: '0.75rem 1.5rem',
                     fontSize: '0.8rem',
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 600,
@@ -335,8 +335,8 @@ export default function VisualSearchModal() {
                 </button>
                 <button
                   onClick={() => setActiveTab('camera')}
+                  className="px-3 py-2.5 sm:px-6 sm:py-3"
                   style={{
-                    padding: '0.75rem 1.5rem',
                     fontSize: '0.8rem',
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 600,
@@ -472,7 +472,7 @@ export default function VisualSearchModal() {
                 >
                   Or click one of these presets to test instantly:
                 </h5>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                   {DEMO_PRESETS.map((preset) => (
                     <button
                       key={preset.id}
@@ -520,7 +520,7 @@ export default function VisualSearchModal() {
           ) : (
             <div>
               {/* Scan Screen */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '2rem' }}>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-[1.2fr_2fr] sm:gap-8">
                 {/* Left image display with scanning overlay */}
                 <div
                   style={{

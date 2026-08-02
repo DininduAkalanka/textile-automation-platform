@@ -116,7 +116,7 @@ export default function AdminReportsPage() {
           icon={FileSpreadsheet}
           onDownload={() => downloadCsv(salesPath(), 'sales.csv')}
         >
-          <div className="flex items-end gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1 text-[11px] font-medium text-[#6E6A5E]">
               From
               <input

@@ -48,7 +48,7 @@ export default function AdminPaymentsPage() {
 
   if (!isAuthenticated || user?.role !== 'ADMIN') {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Admin Access Required</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>Please sign in with an admin account</p>
@@ -73,8 +73,8 @@ export default function AdminPaymentsPage() {
   };
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700 }}>Payments</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Verify bank transfers, mark COD collected, or reject</p>
@@ -89,7 +89,7 @@ export default function AdminPaymentsPage() {
       )}
 
       {/* Status filter chips */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <div className="flex flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
         {STATUS_FILTERS.map((s) => (
           <button
             key={s || 'ALL'}
@@ -108,7 +108,7 @@ export default function AdminPaymentsPage() {
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No payments found</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <table className="min-w-225" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                   {['Order', 'Customer', 'Method', 'Amount', 'Payment', 'Order Status', 'Actions'].map((h) => (

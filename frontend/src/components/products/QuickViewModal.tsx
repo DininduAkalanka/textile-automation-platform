@@ -304,8 +304,8 @@ export default function QuickViewModal() {
 
         {/* Right Side: Product Details */}
         <div
+          className="p-5 sm:p-8 lg:p-10"
           style={{
-            padding: '2.5rem',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -480,9 +480,10 @@ export default function QuickViewModal() {
 
           {/* Action Footer */}
           <div style={{ borderTop: '1px solid var(--clr-border-2)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               {/* Qty Selector */}
               <div
+                className="self-start sm:self-auto"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -533,6 +534,7 @@ export default function QuickViewModal() {
               <button
                 onClick={handleAddToCart}
                 disabled={cartState === 'adding' || product.stockQuantity <= 0}
+                className="w-full sm:w-auto"
                 style={{
                   flex: 1,
                   height: '2.75rem',
@@ -587,6 +589,7 @@ export default function QuickViewModal() {
               {/* Wishlist Button */}
               <button
                 onClick={() => toggleWishlist(product)}
+                className="self-start sm:self-auto"
                 style={{
                   width: '2.75rem',
                   height: '2.75rem',

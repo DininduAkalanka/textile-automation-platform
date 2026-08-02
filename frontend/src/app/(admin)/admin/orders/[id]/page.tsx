@@ -248,7 +248,7 @@ export default function AdminOrderDetailPage({
                     <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#928E82]">
                       Measurements — {item.measurements.personName}
                     </p>
-                    <div className="grid grid-cols-3 gap-x-3 gap-y-1 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
                       {Object.entries(item.measurements.values).map(([k, v]) => (
                         <p key={k} className="text-[11px] text-[#6E6A5E]">
                           <span className="capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>:{' '}

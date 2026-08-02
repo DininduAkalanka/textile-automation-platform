@@ -294,8 +294,8 @@ function ProductFormInner({
         <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-4">
           {step === 1 ? (
             <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="col-span-1 sm:col-span-2">
                   <label className={labelClass} htmlFor="pf-name">Name</label>
                   <input
                     id="pf-name"
@@ -335,7 +335,7 @@ function ProductFormInner({
                   </select>
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <label className={labelClass} htmlFor="pf-desc">Description</label>
                   <textarea
                     id="pf-desc"
@@ -424,7 +424,7 @@ function ProductFormInner({
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-3 border-t border-[#F4F3EF] pt-4">
+              <div className="grid grid-cols-1 gap-3 border-t border-[#F4F3EF] pt-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass} htmlFor="pf-price">Price (LKR)</label>
                   <input

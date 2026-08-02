@@ -30,7 +30,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '4rem', marginBottom: '1rem' }}>🛒</p>
         <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>
           Your Cart is Empty
@@ -46,7 +46,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
         Shopping Cart ({totalItems()} items)
       </h1>
@@ -57,14 +57,10 @@ export default function CartPage() {
           {items.map((item) => (
             <div
               key={item.product.id}
-              className="card"
-              style={{
-                display: 'flex',
-                gap: '1.25rem',
-                padding: '1.25rem',
-                alignItems: 'center',
-              }}
+              className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
             >
+              {/* Image + details: grouped on mobile, becomes direct flex items at sm+ */}
+              <div className="flex gap-4 sm:contents">
               {/* Product Image */}
               <div
                 style={{
@@ -116,7 +112,9 @@ export default function CartPage() {
                   Rs. {Number(item.product.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
                 </p>
               </div>
+              </div>
 
+              <div className="flex flex-wrap items-center gap-3 sm:contents">
               {/* BR3: a measured garment cannot be ordered until it has measurements. */}
               {needsMeasurements(item.product) && (
                 <button
@@ -157,7 +155,7 @@ export default function CartPage() {
               </div>
 
               {/* Total */}
-              <p style={{ fontSize: '1.0625rem', fontWeight: 700, minWidth: '80px', textAlign: 'right' }}>
+              <p className="ml-auto sm:ml-0" style={{ fontSize: '1.0625rem', fontWeight: 700, minWidth: '80px', textAlign: 'right' }}>
                 Rs. {(Number(item.product.price) * item.quantity).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
               </p>
 
@@ -179,6 +177,7 @@ export default function CartPage() {
                   <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                 </svg>
               </button>
+              </div>
             </div>
           ))}
 

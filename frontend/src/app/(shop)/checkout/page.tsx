@@ -110,7 +110,7 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛒</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>No items in your cart</h2>
         <Link href="/products" className="btn btn-primary">Shop Now</Link>
@@ -120,7 +120,7 @@ export default function CheckoutPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Please sign in to checkout</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>You need an account to place an order</p>
@@ -134,7 +134,7 @@ export default function CheckoutPage() {
   // updates can reach them. Absent flags read as unverified.
   if (user && !user.emailVerified && !user.phoneVerified) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>📱</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Verify your contact to check out</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
@@ -213,13 +213,13 @@ export default function CheckoutPage() {
       : `Pay with PayHere — ${fmt(totalValue)}`;
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
         Checkout
       </h1>
 
       {/* Progress Steps */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2.5rem' }}>
+      <div className="mb-10 flex flex-wrap items-center gap-2">
         {stepLabels.map((s, i) => (
           <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
@@ -236,7 +236,7 @@ export default function CheckoutPage() {
             <span style={{ fontSize: '0.875rem', fontWeight: step === s.num ? 600 : 400, color: step === s.num ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
               {s.label}
             </span>
-            {i < 2 && <div style={{ width: '3rem', height: '2px', background: step > s.num ? 'var(--color-accent)' : 'var(--color-border)', margin: '0 0.5rem' }} />}
+            {i < 2 && <div className="w-6 sm:w-12" style={{ height: '2px', background: step > s.num ? 'var(--color-accent)' : 'var(--color-border)', margin: '0 0.5rem' }} />}
           </div>
         ))}
       </div>
@@ -247,7 +247,7 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2.5rem', alignItems: 'start' }}>
+      <div className="cart-layout">
         {/* Main Content */}
         <div>
           {/* STEP 1: Shipping Address */}

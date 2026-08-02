@@ -179,12 +179,12 @@ function CategoryRow({
 
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
-      <div className={indented ? 'pl-6' : ''}>
-        <p className="text-[13px] font-medium text-[#0F0F0F]">
+      <div className={`min-w-0 flex-1 ${indented ? 'pl-6' : ''}`}>
+        <p className="truncate text-[13px] font-medium text-[#0F0F0F]">
           {indented && <span className="mr-1.5 text-[#D5D2C8]">—</span>}
           {category.name}
         </p>
-        <p className="text-[11px] text-[#928E82]">
+        <p className="truncate text-[11px] text-[#928E82]">
           {productCount} product{productCount === 1 ? '' : 's'}
           {!indented && childCount > 0
             ? ` · ${childCount} sub-categor${childCount === 1 ? 'y' : 'ies'}`
