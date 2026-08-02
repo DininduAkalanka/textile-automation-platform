@@ -320,8 +320,26 @@ export default function ProductCard({ product, index = 0 }: Props) {
           </div>
         )}
 
-        {/* Price row */}
+        {/* Price row — always the bottom-most content in the card. The low
+            stock warning is stacked ABOVE it (inside the same auto-margin
+            block) rather than below, so the price sits at the same height
+            across every card in a row whether or not a neighbor has a
+            warning line. Putting it below made the price line jump up on
+            any card that had one, breaking the grid's row alignment. */}
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {product.stockQuantity <= 10 && product.stockQuantity > 0 && (
+            <p
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.6rem',
+                letterSpacing: '0.08em',
+                color: 'var(--clr-brand)',
+                fontWeight: 400,
+              }}
+            >
+              Only {product.stockQuantity} remaining
+            </p>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span
               className={`price${discount > 0 ? ' price-sale' : ''}`}
@@ -335,27 +353,11 @@ export default function ProductCard({ product, index = 0 }: Props) {
             )}
           </div>
           {/* BNPL Installment Display */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.62rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', fontSize: '0.62rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)' }}>
             <span>Or 3 x Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')} with</span>
             <span style={{ fontWeight: 700, color: 'var(--clr-text-2)', background: 'var(--clr-surface-3)', padding: '1px 4px', borderRadius: '2px', fontSize: '0.55rem', letterSpacing: '0.04em' }}>KOKO</span>
           </div>
         </div>
-
-        {/* Low stock warning */}
-        {product.stockQuantity <= 10 && product.stockQuantity > 0 && (
-          <p
-            style={{
-              marginTop: '0.5rem',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.6rem',
-              letterSpacing: '0.08em',
-              color: 'var(--clr-brand)',
-              fontWeight: 400,
-            }}
-          >
-            Only {product.stockQuantity} remaining
-          </p>
-        )}
       </div>
     </article>
   );

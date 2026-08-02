@@ -181,7 +181,7 @@ function NavLink({ item }: { item: typeof NAV[0] }) {
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.opacity = '1';
             (e.currentTarget as HTMLElement).style.visibility = 'visible';
-            (e.currentTarget as HTMLElement).style.transform = 'translateX(-50%) translateY(0)';
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
             (e.currentTarget as HTMLElement).style.pointerEvents = 'all';
           }}
           onMouseLeave={e => {

@@ -33,7 +33,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="container" style={{ padding: '4rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '4rem', paddingBottom: '4rem', textAlign: 'center' }}>
         <div className="skeleton" style={{ width: '2rem', height: '2rem', borderRadius: '50%', margin: '0 auto 1rem' }} />
         <p style={{ color: 'var(--clr-text-2)' }}>Loading installment schedule...</p>
       </div>
@@ -42,7 +42,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
 
   if (error && !schedule) {
     return (
-      <div className="container" style={{ padding: '4rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '4rem', paddingBottom: '4rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Something went wrong</h2>
         <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>{error}</p>
@@ -58,7 +58,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
   const progressPercent = (paidCount / totalCount) * 100;
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem', maxWidth: '860px', margin: '0 auto' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem', maxWidth: '860px', margin: '0 auto' }}>
       {/* Success Banner */}
       {isSuccess && (
         <div style={{
@@ -83,7 +83,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+      <div className="flex flex-wrap items-start justify-between gap-3" style={{ marginBottom: '2rem' }}>
         <div>
           <p className="label-eyebrow" style={{ marginBottom: '0.5rem' }}>Installment Plan</p>
           <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700 }}>
@@ -97,7 +97,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
 
       {/* Progress Card */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3" style={{ marginBottom: '1rem' }}>
           <div>
             <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--clr-text-2)' }}>Payment Progress</p>
             <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--clr-text)', marginTop: '0.25rem' }}>
@@ -165,10 +165,8 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
           return (
             <div
               key={inst.id}
+              className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
                 padding: '1.25rem 1.5rem',
                 borderBottom: index < schedule.installments.length - 1 ? '1px solid var(--clr-border-2)' : 'none',
                 background: isPaid ? '#f0fdf4' : isNext ? 'var(--clr-brand-tint)' : 'transparent',
@@ -225,7 +223,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div className="w-full justify-between sm:w-auto sm:justify-start" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <p style={{
                   fontSize: '1.125rem',
                   fontWeight: 700,

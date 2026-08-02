@@ -69,7 +69,7 @@ function PaymentSuccessContent() {
   }, [orderId]);
 
   return (
-    <div className="container" style={{ padding: '5rem 0', textAlign: 'center', maxWidth: '480px', margin: '0 auto' }}>
+    <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center', maxWidth: '480px', margin: '0 auto' }}>
       {state === 'missing-order' && (
         <>
           <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</p>
@@ -109,7 +109,7 @@ function PaymentSuccessContent() {
           <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
             PayHere reported this payment as unsuccessful. Your order is still saved — you can try paying again from your orders page.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg">View order</Link>
             <Link href="/cart" className="btn btn-outline btn-lg">Back to cart</Link>
           </div>
@@ -136,7 +136,7 @@ export default function PaymentSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+        <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
           <div className="skeleton" style={{ width: '3rem', height: '3rem', borderRadius: '50%', margin: '0 auto' }} />
         </div>
       }

@@ -490,9 +490,9 @@ export default function HomePage() {
       >
         <div className="container">
           <div
+            className="trust-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: '1rem',
             }}
           >
@@ -524,13 +524,7 @@ export default function HomePage() {
             <span className="section-rule" />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              gap: '0.875rem',
-            }}
-          >
+          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
             {CATEGORIES.map((cat, idx) => (
               <Link
                 key={cat.id}
@@ -810,14 +804,7 @@ export default function HomePage() {
           }}
         />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto',
-              gap: '3rem',
-              alignItems: 'center',
-            }}
-          >
+          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[1fr_auto] md:gap-12">
             <div>
               <span
                 style={{
@@ -861,16 +848,16 @@ export default function HomePage() {
               <Link
                 href="/products?category=uniforms&sub=government-school"
                 id="banner-govt-uniforms"
-                className="btn btn-white btn-lg"
-                style={{ minWidth: '230px', justifyContent: 'center' }}
+                className="btn btn-white btn-lg w-full sm:w-auto sm:min-w-57.5"
+                style={{ justifyContent: 'center' }}
               >
                 Government School Uniforms
               </Link>
               <Link
                 href="/products?category=uniforms&sub=private-school"
                 id="banner-private-uniforms"
-                className="btn btn-ghost-white btn-lg"
-                style={{ minWidth: '230px', justifyContent: 'center' }}
+                className="btn btn-ghost-white btn-lg w-full sm:w-auto sm:min-w-57.5"
+                style={{ justifyContent: 'center' }}
               >
                 Private School Uniforms
               </Link>
@@ -950,9 +937,8 @@ export default function HomePage() {
           </div>
 
           <div
+            className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
               gap: '1px',
               background: 'var(--clr-border)',
               border: '1px solid var(--clr-border)',
@@ -964,9 +950,9 @@ export default function HomePage() {
               <div
                 key={item.id}
                 id={`why-${item.id}`}
+                className="px-5 py-8 sm:px-6 lg:px-8 lg:py-10"
                 style={{
                   background: '#fff',
-                  padding: '2.5rem 2rem',
                   transition: 'background 200ms ease',
                   cursor: 'default',
                 }}
@@ -976,7 +962,7 @@ export default function HomePage() {
                 <p
                   style={{
                     fontFamily: 'var(--font-serif)',
-                    fontSize: '3rem',
+                    fontSize: 'clamp(2.1rem, 7vw, 3rem)',
                     fontWeight: 600,
                     lineHeight: 1,
                     letterSpacing: '-0.03em',

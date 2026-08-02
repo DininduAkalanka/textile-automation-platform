@@ -138,7 +138,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* ── KPI headline strip ── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
           label="Reorder soon"
           icon={ShoppingCart}
@@ -197,7 +197,7 @@ export default function AdminAnalyticsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
+            <table className="w-full min-w-150 text-[13px]">
               <thead>
                 <tr className="border-b border-[#EAE8E1] text-left text-[11px] uppercase tracking-wide text-[#928E82]">
                   <th className="pb-2 font-medium">Product</th>

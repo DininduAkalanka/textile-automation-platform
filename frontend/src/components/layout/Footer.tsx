@@ -101,14 +101,7 @@ export default function Footer() {
         }}
       >
         <div
-          className="container"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '2.5rem',
-            flexWrap: 'wrap',
-          }}
+          className="container flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10"
         >
           <div>
             <p
@@ -141,12 +134,14 @@ export default function Footer() {
           </div>
           <form
             onSubmit={e => e.preventDefault()}
-            style={{ display: 'flex', gap: '0', flexShrink: 0 }}
+            className="w-full lg:w-auto"
+            style={{ display: 'flex', gap: '0' }}
           >
             <input
               type="email"
               id="newsletter-email"
               placeholder="Your email address"
+              className="min-w-0 flex-1 lg:w-70 lg:flex-none"
               style={{
                 padding: '0.75rem 1.125rem',
                 background: 'rgba(255,255,255,0.06)',
@@ -156,7 +151,6 @@ export default function Footer() {
                 fontSize: '0.875rem',
                 fontFamily: 'var(--font-sans)',
                 outline: 'none',
-                width: '280px',
                 borderRadius: 'var(--r-xs) 0 0 var(--r-xs)',
               }}
             />

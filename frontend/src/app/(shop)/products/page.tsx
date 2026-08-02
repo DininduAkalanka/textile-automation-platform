@@ -314,7 +314,7 @@ function ProductsContent() {
           </aside>
 
           {/* Product Grid Container */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="products-content" style={{ flex: 1, minWidth: 0 }}>
             {/* Results toolbar: count, view as switcher, and active filter tags */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -370,7 +370,7 @@ function ProductsContent() {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '3.5rem' }}>
+                  <div className="mt-14 flex flex-wrap items-center justify-center gap-2">
                     <button
                       className="btn btn-outline btn-sm"
                       disabled={page <= 1}
@@ -411,10 +411,10 @@ function ProductsContent() {
 export default function ProductsPage() {
   return (
     <Suspense fallback={
-      <div className="container" style={{ padding: '5rem 0' }}>
-        <div style={{ display: 'flex', gap: '2.5rem' }}>
-          <div style={{ width: '240px' }} className="skeleton-product-card" />
-          <div style={{ flex: 1 }} className="skeleton-product-card" />
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem' }}>
+        <div className="flex flex-col gap-6 md:flex-row md:gap-10">
+          <div className="skeleton-product-card w-full md:w-60" />
+          <div className="skeleton-product-card flex-1" />
         </div>
       </div>
     }>

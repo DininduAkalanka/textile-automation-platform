@@ -63,7 +63,7 @@ export function NotificationBell({ signedIn }: { signedIn: boolean }) {
             className="fixed inset-0 z-40"
             aria-hidden
           />
-          <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-80 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl">
+          <div className="fixed inset-x-4 top-[66px] z-50 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-80">
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
               <p className="text-sm font-semibold text-neutral-900">Notifications</p>
               {unreadCount > 0 && (

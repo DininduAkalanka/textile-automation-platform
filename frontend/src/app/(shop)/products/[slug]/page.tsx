@@ -32,6 +32,21 @@ export default function ProductDetailPage() {
   // Tabs state
   const [activeTab, setActiveTab] = useState<'description' | 'fit' | 'shipping' | 'reviews'>('description');
 
+  // Below sm (640px) the tabs render as an accordion (one section open at a
+  // time, matching activeTab) instead of a tab bar + panel — defaulting to
+  // the accordion means the server-rendered and first-client-render markup
+  // match exactly, so this flips to the tab layout post-mount with no
+  // hydration warning, only a possible one-frame layout correction on desktop.
+  const [isMobileView, setIsMobileView] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const update = () => setIsMobileView(!mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   useEffect(() => {
     if (slug) {
       api.getProductBySlug(slug).then(setProduct).catch(console.error).finally(() => setLoading(false));
@@ -50,8 +65,8 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="container" style={{ padding: '3rem 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
+      <div className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
+        <div className="product-detail-grid">
           <div className="skeleton" style={{ height: '500px' }} />
           <div>
             <div className="skeleton" style={{ height: '2rem', width: '60%', marginBottom: '1rem' }} />
@@ -66,7 +81,7 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>😕</p>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Product Not Found</h2>
         <Link href="/products" className="btn btn-primary" style={{ marginTop: '1rem' }}>Back to Products</Link>
@@ -82,15 +97,134 @@ export default function ProductDetailPage() {
   const fullDescription = product.description ||
     `This ${product.name} is crafted from premium ${product.attributes?.fabricType || 'quality'} fabric, designed for both comfort and style. Each piece is tailored with precision to ensure the perfect fit, making it ideal for any occasion. The design incorporates modern aesthetics with traditional craftsmanship, resulting in a garment that is both elegant and durable.`;
 
+  // Tab content, defined once and shared by both the desktop tab panel and
+  // the mobile accordion below — so the two layouts can never drift apart.
+  const descriptionContent = (
+    <>
+      <p style={{ fontSize: '0.9375rem', lineHeight: 1.8, color: 'var(--clr-text-2)' }}>
+        {fullDescription}
+      </p>
+      <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        {[
+          { icon: '✂️', label: 'Expert tailoring' },
+          { icon: '🧵', label: 'Premium fabric' },
+          { icon: '🌿', label: 'Eco-conscious' },
+          { icon: '🔄', label: 'Lasting durability' },
+        ].map((f) => (
+          <div
+            key={f.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--clr-text)' }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>{f.icon}</span>
+            <span>{f.label}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  const fitContent = (
+    <>
+      <p style={{ fontSize: '0.9375rem', color: 'var(--clr-text-2)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+        Our tailored items are designed to fit perfectly. Please refer to the size chart below to find your perfect fit. Measurements are provided in inches.
+      </p>
+      <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9375rem', fontFamily: 'var(--font-sans)' }}>
+          <thead>
+            <tr>
+              {['Size', 'Chest', 'Length'].map((col) => (
+                <th
+                  key={col}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    textAlign: 'left',
+                    background: 'var(--clr-surface-2)',
+                    color: 'var(--clr-text)',
+                    fontWeight: 600,
+                    borderBottom: '2px solid var(--clr-border)',
+                  }}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SIZE_CHART.map((row) => (
+              <tr key={row.size} style={{ borderBottom: '1px solid var(--clr-border-2)' }}>
+                <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{row.size}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--clr-text-2)' }}>{row.chest}</td>
+                <td style={{ padding: '0.75rem 1rem', color: 'var(--clr-text-2)' }}>{row.length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-3)', fontStyle: 'italic' }}>
+        * Product image may differ to actual due to photographic lighting
+      </p>
+    </>
+  );
+
+  const shippingContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div>
+        <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--clr-text)', marginBottom: '1rem' }}>
+          Shipping Policy
+        </h4>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span><strong>Standard Delivery:</strong> 5–7 business days (Free over $100)</span>
+          </li>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span><strong>Express Delivery:</strong> 2–3 business days ($12.00)</span>
+          </li>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span><strong>Overnight Courier:</strong> Next business day ($25.00)</span>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--clr-text)', marginBottom: '1rem' }}>
+          Return Policy
+        </h4>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span>30-day hassle-free returns on all standard items.</span>
+          </li>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span>Custom/tailored orders are final sale — no returns unless defective.</span>
+          </li>
+          <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
+            <span>•</span> <span>Items must be unworn, unwashed, and in original packaging.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  const reviewsContent = <ReviewsSection productId={product.id} />;
+
+  const TABS = [
+    { id: 'description' as const, label: 'Description', content: descriptionContent },
+    { id: 'fit' as const, label: 'Fit and Fabric', content: fitContent },
+    { id: 'shipping' as const, label: 'Shipping & Return', content: shippingContent },
+    {
+      id: 'reviews' as const,
+      label: `Reviews${reviewsData && reviewsData.stats.total > 0 ? ` (${reviewsData.stats.total})` : ''}`,
+      content: reviewsContent,
+    },
+  ];
+
   return (
-    <div className="container" style={{ padding: '2rem 0 5rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
       {/* Breadcrumb */}
-      <nav style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
-        <Link href="/" style={{ textDecoration: 'none', color: 'var(--color-text-muted)' }}>Home</Link>
-        <span>/</span>
-        <Link href="/products" style={{ textDecoration: 'none', color: 'var(--color-text-muted)' }}>Products</Link>
-        <span>/</span>
-        <span style={{ color: 'var(--color-text)' }}>{product.name}</span>
+      <nav className="flex min-w-0 items-center gap-2" style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
+        <Link href="/" className="shrink-0" style={{ textDecoration: 'none', color: 'var(--color-text-muted)' }}>Home</Link>
+        <span className="shrink-0">/</span>
+        <Link href="/products" className="shrink-0" style={{ textDecoration: 'none', color: 'var(--color-text-muted)' }}>Products</Link>
+        <span className="shrink-0">/</span>
+        <span className="min-w-0 flex-1 truncate" style={{ color: 'var(--color-text)' }}>{product.name}</span>
       </nav>
 
       <div className="product-detail-grid">
@@ -192,7 +326,7 @@ export default function ProductDetailPage() {
               <h3 style={{ fontSize: '0.875rem', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '1rem', color: 'var(--color-text)' }}>
                 SPECIFICATIONS
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {Object.entries(product.attributes).map(([key, value]) => (
                   <div 
                     key={key}
@@ -319,196 +453,109 @@ export default function ProductDetailPage() {
 
       {/* ── Tabbed Content Section ─────────────────────────────── */}
       <div style={{ marginTop: '3rem' }}>
-        {/* Tab Headers */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '2.5rem',
-          borderBottom: '1px solid var(--clr-border)',
-          marginBottom: '2rem'
-        }}>
-          {[
-            { id: 'description', label: 'Description' },
-            { id: 'fit', label: 'Fit and Fabric' },
-            { id: 'shipping', label: 'Shipping & Return' },
-            {
-              id: 'reviews',
-              label: `Reviews${reviewsData && reviewsData.stats.total > 0 ? ` (${reviewsData.stats.total})` : ''}`,
-            },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0 0 0.75rem 0',
-                fontSize: '1.05rem',
-                fontWeight: 600,
-                color: activeTab === tab.id ? 'var(--clr-text)' : 'var(--clr-text-2)',
-                cursor: 'pointer',
-                borderBottom: activeTab === tab.id ? '2px solid var(--clr-text)' : '2px solid transparent',
-                transition: 'color 0.2s, border-color 0.2s',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        <div style={{ maxWidth: '800px', margin: '0 auto', minHeight: '300px' }}>
-          
-          {/* Description Content */}
-          {activeTab === 'description' && (
-            <div className="animate-fade-in">
-              <p
-                style={{
-                  fontSize: '0.9375rem',
-                  lineHeight: 1.8,
-                  color: 'var(--clr-text-2)',
-                }}
-              >
-                {fullDescription}
-              </p>
-              
-              <div
-                style={{
-                  marginTop: '1.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '1rem',
-                }}
-              >
-                {[
-                  { icon: '✂️', label: 'Expert tailoring' },
-                  { icon: '🧵', label: 'Premium fabric' },
-                  { icon: '🌿', label: 'Eco-conscious' },
-                  { icon: '🔄', label: 'Lasting durability' },
-                ].map((f) => (
-                  <div
-                    key={f.label}
+        {isMobileView ? (
+          /* Mobile (<640px): accordion — one section open at a time, the
+             pattern fashion retail sites (e.g. FashionBug) use so every
+             section is reachable without horizontal scrolling or tab
+             overflow. Shares `activeTab` with the desktop tab bar below. */
+          <div>
+            {TABS.map((tab) => {
+              const isOpen = activeTab === tab.id;
+              return (
+                <div key={tab.id} style={{ borderTop: '1px solid var(--clr-border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
                     style={{
                       display: 'flex',
+                      width: '100%',
                       alignItems: 'center',
-                      gap: '0.75rem',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      color: 'var(--clr-text)',
+                      justifyContent: 'space-between',
+                      gap: '1rem',
+                      padding: '1.125rem 0',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
                     }}
+                    aria-expanded={isOpen}
                   >
-                    <span style={{ fontSize: '1.2rem' }}>{f.icon}</span>
-                    <span>{f.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Fit and Fabric Content */}
-          {activeTab === 'fit' && (
-            <div className="animate-fade-in">
-              <p style={{ fontSize: '0.9375rem', color: 'var(--clr-text-2)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                Our tailored items are designed to fit perfectly. Please refer to the size chart below to find your perfect fit. Measurements are provided in inches.
-              </p>
-
-              <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
-                <table
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--clr-text)' }}>
+                      {tab.label}
+                    </span>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        color: 'var(--clr-text-2)',
+                        flexShrink: 0,
+                        transform: isOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.25s ease',
+                      }}
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  {isOpen && (
+                    <div className="animate-fade-in" style={{ paddingBottom: '1.5rem', fontSize: '0.9375rem' }}>
+                      {tab.content}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ borderTop: '1px solid var(--clr-border)' }} />
+          </div>
+        ) : (
+          /* Desktop (sm and up): the original horizontal tab bar + single
+             content panel below it. */
+          <>
+            <div
+              className="flex flex-wrap justify-center gap-x-6 gap-y-3 sm:gap-x-10"
+              style={{
+                borderBottom: '1px solid var(--clr-border)',
+                marginBottom: '2rem'
+              }}
+            >
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="shrink-0 whitespace-nowrap"
                   style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '0.9375rem',
-                    fontFamily: 'var(--font-sans)',
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 0 0.75rem 0',
+                    fontSize: '1.05rem',
+                    fontWeight: 600,
+                    color: activeTab === tab.id ? 'var(--clr-text)' : 'var(--clr-text-2)',
+                    cursor: 'pointer',
+                    borderBottom: activeTab === tab.id ? '2px solid var(--clr-text)' : '2px solid transparent',
+                    transition: 'color 0.2s, border-color 0.2s',
                   }}
                 >
-                  <thead>
-                    <tr>
-                      {['Size', 'Chest', 'Length'].map((col) => (
-                        <th
-                          key={col}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            textAlign: 'left',
-                            background: 'var(--clr-surface-2)',
-                            color: 'var(--clr-text)',
-                            fontWeight: 600,
-                            borderBottom: '2px solid var(--clr-border)',
-                          }}
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SIZE_CHART.map((row) => (
-                      <tr key={row.size} style={{ borderBottom: '1px solid var(--clr-border-2)' }}>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{row.size}</td>
-                        <td style={{ padding: '0.75rem 1rem', color: 'var(--clr-text-2)' }}>{row.chest}</td>
-                        <td style={{ padding: '0.75rem 1rem', color: 'var(--clr-text-2)' }}>{row.length}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-3)', fontStyle: 'italic' }}>
-                * Product image may differ to actual due to photographic lighting
-              </p>
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          )}
 
-          {/* Shipping & Return Content */}
-          {activeTab === 'shipping' && (
-            <div className="animate-fade-in">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--clr-text)', marginBottom: '1rem' }}>
-                    Shipping Policy
-                  </h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span><strong>Standard Delivery:</strong> 5–7 business days (Free over $100)</span>
-                    </li>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span><strong>Express Delivery:</strong> 2–3 business days ($12.00)</span>
-                    </li>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span><strong>Overnight Courier:</strong> Next business day ($25.00)</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--clr-text)', marginBottom: '1rem' }}>
-                    Return Policy
-                  </h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span>30-day hassle-free returns on all standard items.</span>
-                    </li>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span>Custom/tailored orders are final sale — no returns unless defective.</span>
-                    </li>
-                    <li style={{ display: 'flex', gap: '0.75rem', color: 'var(--clr-text-2)', fontSize: '0.9375rem' }}>
-                      <span>•</span> <span>Items must be unworn, unwashed, and in original packaging.</span>
-                    </li>
-                  </ul>
-                </div>
-
-              </div>
+            <div style={{ maxWidth: '800px', margin: '0 auto', minHeight: '300px' }}>
+              {TABS.map((tab) =>
+                activeTab === tab.id ? (
+                  <div key={tab.id} className="animate-fade-in">
+                    {tab.content}
+                  </div>
+                ) : null,
+              )}
             </div>
-          )}
-
-          {/* Reviews Content */}
-          {activeTab === 'reviews' && (
-            <div className="animate-fade-in">
-              <ReviewsSection productId={product.id} />
-            </div>
-          )}
-
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

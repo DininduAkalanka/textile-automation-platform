@@ -44,7 +44,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
 
   if (isLoading) {
     return (
-      <div className="container" style={{ padding: '3rem 0' }}>
+      <div className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
         <div className="skeleton" style={{ height: '400px' }} />
       </div>
     );
@@ -52,7 +52,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
 
   if (isError || !order) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
+      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Order not found</h2>
         <Link href="/account/orders" className="btn btn-primary" style={{ marginTop: '1rem' }}>
           Back to Orders
@@ -68,7 +68,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
   const canRetryPayment = order.payment?.status === 'FAILED' && order.payment.method === 'PAYHERE';
 
   return (
-    <div className="container" style={{ padding: '2rem 0 4rem' }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       {isSuccess && (
         <div
           className="animate-fade-in-up"
@@ -109,7 +109,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
+      <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[1fr_380px]">
         <div>
           {/* Tracking (task 3's centrepiece) */}
           <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
@@ -308,7 +308,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return (
-    <Suspense fallback={<div className="container" style={{ padding: '4rem 0', textAlign: 'center' }}>Loading...</div>}>
+    <Suspense fallback={<div className="container" style={{ paddingTop: '4rem', paddingBottom: '4rem', textAlign: 'center' }}>Loading...</div>}>
       <OrderDetailContent orderId={id} />
     </Suspense>
   );

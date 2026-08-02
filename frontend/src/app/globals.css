@@ -174,11 +174,18 @@
 /* ════════════════════════════════════════════════════════════════
    CONTAINER SYSTEM
 ════════════════════════════════════════════════════════════════ */
-.container    { max-width: 1360px; margin: 0 auto; padding: 0 2rem; }
-.container-sm { max-width: 960px;  margin: 0 auto; padding: 0 2rem; }
-.container-xs { max-width: 680px;  margin: 0 auto; padding: 0 2rem; }
-@media (max-width: 768px) {
-  .container, .container-sm, .container-xs { padding: 0 1.25rem; }
+/* Mobile-first horizontal gutter: 16px up to 640px, 24px from 640–1024px
+   (tablet), 32px from 1024px up (desktop) — one scale shared by every page
+   via these three classes, so no page should ever need its own horizontal
+   padding on top of this. */
+.container    { max-width: 1360px; margin: 0 auto; padding: 0 1rem; }
+.container-sm { max-width: 960px;  margin: 0 auto; padding: 0 1rem; }
+.container-xs { max-width: 680px;  margin: 0 auto; padding: 0 1rem; }
+@media (min-width: 640px) {
+  .container, .container-sm, .container-xs { padding: 0 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .container, .container-sm, .container-xs { padding: 0 2rem; }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -542,12 +549,16 @@
   aspect-ratio: 1 / 1 !important;
 }
 
-/* Responsive layout constraints */
-@media (max-width: 1024px) {
+/* Responsive layout constraints — Bootstrap-scale breakpoints:
+   ≥1200 desktop (4 cols, base rule above) · 992–1199 laptop (3) ·
+   376–991 tablet + large mobile (2) · ≤375 small mobile (1). */
+@media (max-width: 1199px) {
+  .product-grid,
   .product-grid.grid-4 { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 768px) {
+@media (max-width: 991px) {
   .product-grid { gap: 0.875rem; }
+  .product-grid,
   .product-grid.grid-4,
   .product-grid.grid-3 { grid-template-columns: repeat(2, 1fr); }
   .product-grid.list .product-card {
@@ -564,6 +575,14 @@
   .product-grid.grid-4,
   .product-grid.grid-3,
   .product-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+}
+/* iPhone SE and similar — two columns is still too narrow for the title,
+   price, and action icons to lay out without crowding, so drop to one. */
+@media (max-width: 375px) {
+  .product-grid,
+  .product-grid.grid-4,
+  .product-grid.grid-3,
+  .product-grid.grid-2 { grid-template-columns: 1fr; }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -661,7 +680,10 @@
   background: transparent;
 }
 .dropdown-panel { width: 210px; padding: 0.375rem; transform: translateY(-6px); }
-.mega-panel     { width: 580px; padding: 1.75rem; left: 50%; transform: translateX(-50%) translateY(-6px); }
+/* Anchored from the trigger's right edge (not centered) so a wide panel on a
+   nav item near the right of the bar can never push past the viewport edge —
+   it only ever grows leftward, which the header always has room for. */
+.mega-panel     { width: 580px; max-width: calc(100vw - 2rem); padding: 1.75rem; left: auto; right: 0; transform: translateY(-6px); }
 
 .nav-item:hover .dropdown-panel {
   opacity: 1;
@@ -674,7 +696,7 @@
   opacity: 1;
   visibility: visible;
   pointer-events: all;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .dropdown-item {
@@ -801,6 +823,18 @@
 /* ════════════════════════════════════════════════════════════════
    TRUST STRIP
 ════════════════════════════════════════════════════════════════ */
+/* Exactly 4 items, always — repeat(auto-fit, minmax(...)) doesn't know
+   that, and around 860–980px it fits exactly 3 per row, stranding the
+   4th alone on its own row. Fixing the count at 2 or 4 keeps every
+   row full. */
+.trust-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 992px) {
+  .trust-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 .trust-item {
   display: flex;
   align-items: center;
@@ -947,11 +981,23 @@
   flex-shrink: 0;
 }
 @media (max-width: 768px) {
+  /* Switching to a plain block stack (rather than flex-direction: column)
+     sidesteps a real bug: the content div's flex: 1 — set inline for the
+     desktop row layout, to fill the width left by the 240px sidebar —
+     resolves to flex-basis: 0% on whichever axis is the main axis, so once
+     this became a column it collapsed the box's height below what the
+     product grid actually needs. The grid then visually spilled past it,
+     into where the footer starts. Plain block stacking has no main-axis
+     sizing to collapse. */
   .products-layout {
-    flex-direction: column;
-    gap: 1.5rem;
+    display: block;
   }
   .products-sidebar {
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+  .products-content {
+    flex: none !important;
     width: 100%;
   }
 }
@@ -1012,15 +1058,25 @@
   gap: 3rem;
 }
 @media (max-width: 900px) {
+  /* The brand column (logo, blurb, social, contact) is much taller than a
+     link column — in a 2x2 auto-flow grid that stretches row 1 to match it,
+     leaving a big dead gap above row 2. Giving the brand column its own
+     full-width row above three even link columns avoids that entirely. */
   .footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem 1.75rem;
+  }
+  .footer-grid > *:first-child {
+    grid-column: 1 / -1;
   }
 }
-@media (max-width: 480px) {
+@media (max-width: 560px) {
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 1.75rem;
+  }
+  .footer-grid > *:first-child {
+    grid-column: auto;
   }
 }
 
@@ -1180,6 +1236,13 @@
   .overlay-action-btn svg {
     width: 13px;
     height: 13px;
+  }
+
+  /* The Add to Bag button only reveals on :hover, which never fires on a
+     touch screen — without this it's invisible and unreachable on mobile. */
+  .product-card-actions {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

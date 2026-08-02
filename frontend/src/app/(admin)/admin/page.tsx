@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
           <p className="py-14 text-center text-sm text-[#928E82]">No orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-190 text-sm">
               <thead>
                 <tr className="border-b border-[#F4F3EF]">
                   {['Order', 'Customer', 'Total', 'Status', 'Payment', 'Date'].map(

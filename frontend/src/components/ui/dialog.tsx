@@ -19,7 +19,11 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6 shadow-xl',
+        // twMerge treats `p-6` and a consumer's plain `p-0` override as the same
+        // slot, so this must stay a single non-responsive utility — several
+        // dialogs (product-form-dialog, adjust-dialog, etc.) rely on `p-0`
+        // fully canceling it; a `sm:` variant here would leak through unmerged.
+        'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6 shadow-xl',
         className,
       )}
       {...props}
