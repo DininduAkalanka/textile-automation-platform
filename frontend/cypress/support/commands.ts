@@ -34,8 +34,9 @@ Cypress.Commands.add(
         const { user, accessToken } = response.body.data || response.body;
         // Sync with actual auth store mechanics in the app
         window.localStorage.setItem('token', accessToken);
-        cy.setCookie('role', user.role);
-        return { user, accessToken };
+        return cy.setCookie('role', user.role).then(() => {
+          return { user, accessToken };
+        });
       });
   },
 );
