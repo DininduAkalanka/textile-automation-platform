@@ -166,13 +166,13 @@ jobs:
       DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
       NODE_ENV: test
       PORT: 3001
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://127.0.0.1:3000
       JWT_SECRET: ci-only-secret-not-used-outside-github-actions
       JWT_EXPIRATION: 7d
       PAYHERE_MERCHANT_ID: '1221149'
       PAYHERE_MERCHANT_SECRET: ci-only-sandbox-secret
       PAYHERE_MODE: sandbox
-      PAYHERE_NOTIFY_URL: http://localhost:3001/api/v1/payments/payhere/notify
+      PAYHERE_NOTIFY_URL: http://127.0.0.1:3001/api/v1/payments/payhere/notify
       STRIPE_SECRET_KEY: sk_test_mock
       STRIPE_PUBLISHABLE_KEY: pk_test_mock
       STRIPE_WEBHOOK_SECRET: whsec_mock
