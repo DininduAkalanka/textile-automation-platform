@@ -17,6 +17,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import type { RequestWithUser } from '../common/types/request-with-user';
+import type { Request as ExpressRequest } from 'express';
 
 @Controller('payments')
 export class PaymentsController {
@@ -33,7 +35,10 @@ export class PaymentsController {
 
   @Post('payhere/create')
   @UseGuards(JwtAuthGuard)
-  createPayhere(@Request() req: any, @Body() dto: CreateFullPaymentDto) {
+  createPayhere(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateFullPaymentDto,
+  ) {
     return this.paymentsService.createPayherePayment(dto.orderId, req.user.sub);
   }
 
@@ -41,7 +46,10 @@ export class PaymentsController {
 
   @Post('cod')
   @UseGuards(JwtAuthGuard)
-  createCod(@Request() req: any, @Body() dto: CreateFullPaymentDto) {
+  createCod(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateFullPaymentDto,
+  ) {
     return this.paymentsService.createCodPayment(dto.orderId, req.user.sub);
   }
 
@@ -63,7 +71,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   markPaid(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('orderId', ParseUUIDPipe) orderId: string,
     @Body() dto: MarkPaidDto,
   ) {
@@ -86,7 +94,7 @@ export class PaymentsController {
   @Get(':orderId')
   @UseGuards(JwtAuthGuard)
   getPayment(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('orderId', ParseUUIDPipe) orderId: string,
   ) {
     return this.paymentsService.getPaymentByOrderId(
@@ -101,7 +109,7 @@ export class PaymentsController {
   @Get(':orderId/installments')
   @UseGuards(JwtAuthGuard)
   getInstallmentSchedule(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('orderId', ParseUUIDPipe) orderId: string,
   ) {
     return this.paymentsService.getInstallmentSchedule(
@@ -136,11 +144,13 @@ export class PaymentsController {
 
   @Post('webhook')
   handleWebhook(
-    @Request() req: any,
-    @Body() body: any,
+    @Request() req: ExpressRequest,
+    @Body() body: Record<string, unknown>,
     @Headers('stripe-signature') signature: string,
   ) {
-    const rawBody = req.rawBody || Buffer.from(JSON.stringify(body));
+    const rawBody =
+      (req as ExpressRequest & { rawBody?: Buffer }).rawBody ??
+      Buffer.from(JSON.stringify(body));
     return this.paymentsService.handleWebhook(rawBody, signature);
   }
 }

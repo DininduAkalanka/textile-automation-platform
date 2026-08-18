@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -315,7 +316,10 @@ export class AnalyticsService {
   }
 
   /** RFC-4180 CSV: quote any field containing a comma, quote or newline. */
-  toCsv(headers: string[], rows: (string | number | boolean | null)[][]): string {
+  toCsv(
+    headers: string[],
+    rows: (string | number | boolean | null)[][],
+  ): string {
     const cell = (v: string | number | boolean | null): string => {
       const s = v === null || v === undefined ? '' : String(v);
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -334,7 +338,7 @@ export class AnalyticsService {
         action: 'report.export',
         entityType: 'report',
         entityId: kind,
-        after: meta as object,
+        after: meta as Prisma.InputJsonValue,
       },
     });
   }

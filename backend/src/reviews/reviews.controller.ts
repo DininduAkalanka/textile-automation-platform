@@ -21,6 +21,7 @@ import { ReportReviewDto } from './dto/report-review.dto';
 import { ReviewQueryDto } from './dto/review-query.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { ReviewsService } from './reviews.service';
+import type { RequestWithUser } from '../common/types/request-with-user';
 
 @Controller('reviews')
 export class ReviewsController {
@@ -41,7 +42,7 @@ export class ReviewsController {
   @Get('eligibility/:productId')
   @UseGuards(JwtAuthGuard)
   checkEligibility(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('productId', ParseUUIDPipe) productId: string,
   ) {
     return this.reviewsService.checkEligibility(req.user.sub, productId);
@@ -49,14 +50,14 @@ export class ReviewsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Request() req: any, @Body() dto: CreateReviewDto) {
+  create(@Request() req: RequestWithUser, @Body() dto: CreateReviewDto) {
     return this.reviewsService.create(req.user.sub, dto);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateReviewDto,
   ) {
@@ -65,14 +66,17 @@ export class ReviewsController {
 
   @Post(':id/helpful')
   @UseGuards(JwtAuthGuard)
-  toggleHelpful(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+  toggleHelpful(
+    @Request() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.reviewsService.toggleHelpful(id, req.user.sub);
   }
 
   @Post(':id/report')
   @UseGuards(JwtAuthGuard)
   report(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportReviewDto,
   ) {
@@ -94,14 +98,27 @@ export class ReviewsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    return this.reviewsService.adminFindAll({ status, productId, search, page, limit });
+    return this.reviewsService.adminFindAll({
+      status,
+      productId,
+      search,
+      page,
+      limit,
+    });
   }
 
   @Get('admin/reported')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  adminFindReported(@Query('page') page?: number, @Query('limit') limit?: number) {
-    return this.reviewsService.adminFindAll({ reportedOnly: true, page, limit });
+  adminFindReported(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.reviewsService.adminFindAll({
+      reportedOnly: true,
+      page,
+      limit,
+    });
   }
 
   @Patch('admin/:id/hide')

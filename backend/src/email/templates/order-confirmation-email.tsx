@@ -41,49 +41,53 @@ export function OrderConfirmationEmail(props: OrderConfirmationEmailProps) {
   } = props;
 
   return (
-    <EmailLayout preview={`Order ${orderNumber} confirmed — thank you!`}>
-      <Heading style={heading}>Order confirmed 🎉</Heading>
+    <EmailLayout preview={`Order ${orderNumber} confirmed — thank you`}>
+      <Text style={eyebrow}>ORDER CONFIRMED</Text>
+      <Heading style={heading}>Thank you for your order</Heading>
       <Text style={paragraph}>
-        Thank you, {customerName}! Your order <strong>{orderNumber}</strong> is
-        confirmed and heading into production. Here&apos;s your summary:
+        Dear {customerName}, your order{' '}
+        <span style={orderRef}>{orderNumber}</span> has been confirmed and is
+        now moving into production. Your itemised summary is below.
       </Text>
 
       <Section style={invoiceBox}>
         <Row style={tableHead}>
-          <Column style={colItem}>
+          <Column style={{ ...colItem, ...headCell }}>
             <Text style={thText}>Item</Text>
           </Column>
-          <Column style={colQty}>
+          <Column style={{ ...colQty, ...headCell }}>
             <Text style={thText}>Qty</Text>
           </Column>
-          <Column style={colAmount}>
-            <Text style={thText}>Amount</Text>
+          <Column style={{ ...colAmount, ...headCell }}>
+            <Text style={{ ...thText, textAlign: 'right' as const }}>
+              Amount
+            </Text>
           </Column>
         </Row>
         {items.map((item, i) => (
-          <Row key={i} style={tableRow}>
+          <Row key={i} style={i % 2 === 1 ? tableRowAlt : tableRow}>
             <Column style={colItem}>
               <Text style={tdText}>{item.name}</Text>
             </Column>
             <Column style={colQty}>
-              <Text style={tdText}>
+              <Text style={tdMuted}>
                 {item.quantity} × {item.unitPrice}
               </Text>
             </Column>
             <Column style={colAmount}>
-              <Text style={tdText}>
+              <Text style={tdAmount}>
                 {currency} {item.totalPrice}
               </Text>
             </Column>
           </Row>
         ))}
+
         <Hr style={invoiceHr} />
         <Row>
           <Column style={colItem}>
             <Text style={totalsLabel}>Subtotal</Text>
             <Text style={totalsLabel}>Shipping</Text>
             <Text style={totalsLabel}>Tax</Text>
-            <Text style={grandTotalLabel}>Total</Text>
           </Column>
           <Column style={colAmount}>
             <Text style={totalsValue}>
@@ -95,77 +99,139 @@ export function OrderConfirmationEmail(props: OrderConfirmationEmailProps) {
             <Text style={totalsValue}>
               {currency} {tax}
             </Text>
-            <Text style={grandTotalValue}>
-              {currency} {total}
-            </Text>
           </Column>
         </Row>
+        <Section style={grandRow}>
+          <Row>
+            <Column style={colItem}>
+              <Text style={grandLabel}>TOTAL</Text>
+            </Column>
+            <Column style={colAmount}>
+              <Text style={grandValue}>
+                {currency} {total}
+              </Text>
+            </Column>
+          </Row>
+        </Section>
       </Section>
 
-      <Section style={{ textAlign: 'center' as const, margin: '24px 0 8px' }}>
+      <Text style={attachNote}>
+        A PDF copy of this invoice is attached to this email for your records.
+      </Text>
+
+      <Section style={{ textAlign: 'center' as const, margin: '20px 0 6px' }}>
         <Button href={orderUrl} style={button}>
           View your order
         </Button>
       </Section>
       <Text style={muted}>
-        We&apos;ll notify you as your order moves through production and out for
-        delivery.
+        We&apos;ll keep you updated as your order moves through production and
+        out for delivery. Thank you for choosing Nandana Textile.
       </Text>
     </EmailLayout>
   );
 }
 
-const heading = { fontSize: '20px', color: '#111111', margin: '16px 0 8px' };
-const paragraph = { fontSize: '15px', color: '#444444', lineHeight: '22px' };
-const invoiceBox = {
-  backgroundColor: '#fafafa',
-  border: '1px solid #e4e4e7',
-  borderRadius: '12px',
-  padding: '16px 20px',
-  margin: '16px 0',
-};
-const tableHead = { borderBottom: '1px solid #e4e4e7' };
-const tableRow = {};
-const colItem = { width: '55%' };
-const colQty = { width: '20%' };
-const colAmount = { width: '25%', textAlign: 'right' as const };
-const thText = {
+const CRIMSON = '#CC0000';
+const INK = '#141414';
+
+const eyebrow = {
   fontSize: '11px',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.05em',
-  color: '#a1a1aa',
-  margin: '4px 0',
+  fontWeight: 700,
+  letterSpacing: '1.6px',
+  color: CRIMSON,
+  margin: '0 0 6px',
 };
-const tdText = { fontSize: '14px', color: '#333333', margin: '6px 0' };
-const invoiceHr = { borderColor: '#e4e4e7', margin: '12px 0' };
-const totalsLabel = { fontSize: '13px', color: '#71717a', margin: '4px 0' };
+const heading = {
+  fontSize: '22px',
+  fontWeight: 700,
+  color: INK,
+  margin: '0 0 10px',
+};
+const paragraph = {
+  fontSize: '15px',
+  color: '#444444',
+  lineHeight: '23px',
+  margin: '0 0 4px',
+};
+const orderRef = { color: CRIMSON, fontWeight: 700 };
+
+const invoiceBox = {
+  border: '1px solid #e4e1da',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  margin: '20px 0 8px',
+};
+const tableHead = { backgroundColor: INK };
+const headCell = { padding: '9px 14px' };
+const tableRow = { backgroundColor: '#ffffff' };
+const tableRowAlt = { backgroundColor: '#faf9f7' };
+const colItem = { width: '52%', padding: '0 14px' };
+const colQty = { width: '26%', padding: '0 14px' };
+const colAmount = { width: '22%', padding: '0 14px', textAlign: 'right' as const };
+const thText = {
+  fontSize: '10px',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.8px',
+  fontWeight: 700,
+  color: '#ffffff',
+  margin: 0,
+};
+const tdText = { fontSize: '14px', color: INK, margin: '9px 0', fontWeight: 500 };
+const tdMuted = { fontSize: '13px', color: '#6b6b6b', margin: '9px 0' };
+const tdAmount = {
+  fontSize: '14px',
+  color: INK,
+  margin: '9px 0',
+  fontWeight: 600,
+  textAlign: 'right' as const,
+};
+const invoiceHr = { borderColor: '#e4e1da', margin: '4px 14px 8px' };
+const totalsLabel = {
+  fontSize: '13px',
+  color: '#6b6b6b',
+  margin: '3px 0',
+};
 const totalsValue = {
   fontSize: '13px',
   color: '#333333',
-  margin: '4px 0',
+  margin: '3px 0',
   textAlign: 'right' as const,
 };
-const grandTotalLabel = {
-  fontSize: '15px',
-  fontWeight: 700,
-  color: '#111111',
-  margin: '8px 0 0',
+const grandRow = {
+  backgroundColor: CRIMSON,
+  padding: '10px 14px',
+  marginTop: '10px',
 };
-const grandTotalValue = {
+const grandLabel = {
+  fontSize: '13px',
+  fontWeight: 700,
+  letterSpacing: '0.5px',
+  color: '#ffffff',
+  margin: 0,
+};
+const grandValue = {
   fontSize: '15px',
   fontWeight: 700,
-  color: '#111111',
-  margin: '8px 0 0',
+  color: '#ffffff',
+  margin: 0,
   textAlign: 'right' as const,
+};
+const attachNote = {
+  fontSize: '13px',
+  color: '#6b6b6b',
+  lineHeight: '19px',
+  margin: '14px 0 0',
 };
 const button = {
-  backgroundColor: '#4f46e5',
+  backgroundColor: CRIMSON,
   borderRadius: '10px',
   color: '#ffffff',
   fontSize: '14px',
   fontWeight: 600,
+  letterSpacing: '0.3px',
   textDecoration: 'none',
-  padding: '12px 24px',
+  padding: '13px 30px',
   display: 'inline-block',
 };
 const muted = { fontSize: '13px', color: '#888888', lineHeight: '20px' };

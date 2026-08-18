@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import type { RequestWithUser } from '../common/types/request-with-user';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
@@ -31,13 +32,13 @@ export class OrdersController {
   ) {}
 
   @Post()
-  create(@Request() req: any, @Body() dto: CreateOrderDto) {
+  create(@Request() req: RequestWithUser, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
   }
 
   @Get()
   findUserOrders(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -45,7 +46,10 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findById(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+  findById(
+    @Request() req: RequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const isAdmin = req.user.role === UserRole.ADMIN;
     return this.ordersService.findById(
       id,
@@ -59,7 +63,7 @@ export class OrdersController {
    *  @Res(), bypassing the JSON response envelope. */
   @Get(':id/invoice.pdf')
   async invoice(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Res() res: Response,
   ): Promise<void> {
@@ -75,10 +79,7 @@ export class OrdersController {
       return;
     }
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${pdf.filename}"`,
-    );
+    res.setHeader('Content-Disposition', `inline; filename="${pdf.filename}"`);
     res.send(pdf.buffer);
   }
 
@@ -87,7 +88,7 @@ export class OrdersController {
    *  admin's judgment call, through the action route below. */
   @Put(':id/cancel')
   cancelMine(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body('note') note?: string,
   ) {
@@ -115,7 +116,7 @@ export class OrdersController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   action(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: OrderActionDto,
   ) {

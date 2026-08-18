@@ -6,14 +6,24 @@ import {
   Body,
   Container,
   Section,
+  Row,
+  Column,
   Text,
-  Hr,
 } from '@react-email/components';
 
 /**
- * Shared shell for every customer/admin email: brand header, content slot,
- * footer. Inline styles only — email clients ignore stylesheets.
+ * Shared shell for every customer/admin email: a dark branded header with the
+ * NT monogram, the content slot, and a footer carrying the real business
+ * details. Inline styles only — email clients ignore stylesheets — and a
+ * table-based header so it survives Outlook. Red & black to match the Nandana
+ * Textile identity (same as the PDF invoice).
  */
+
+const BRAND = 'Nandana Textile';
+const ADDRESS = '50 Main St, Veyangoda, Sri Lanka';
+const LANDLINE = '033 228 8445';
+const WHATSAPP = '071 708 8445';
+
 export function EmailLayout({
   preview,
   children,
@@ -27,18 +37,34 @@ export function EmailLayout({
       {preview ? <Preview>{preview}</Preview> : null}
       <Body style={body}>
         <Container style={container}>
+          {/* Dark branded header */}
           <Section style={header}>
-            <Text style={brand}>
-              <span style={brandMark}>T</span> TextileShop
+            <Row>
+              <Column style={logoCol}>
+                <div style={logoTile}>NT</div>
+              </Column>
+              <Column>
+                <Text style={brandName}>NANDANA TEXTILE</Text>
+                <Text style={brandTag}>Premium Textiles · Veyangoda</Text>
+              </Column>
+            </Row>
+          </Section>
+          <Section style={redRule} />
+
+          {/* Content */}
+          <Section style={content}>{children}</Section>
+
+          {/* Footer */}
+          <Section style={footer}>
+            <Text style={footerBrand}>{BRAND}</Text>
+            <Text style={footerLine}>{ADDRESS}</Text>
+            <Text style={footerLine}>
+              Landline {LANDLINE}  ·  WhatsApp {WHATSAPP}
+            </Text>
+            <Text style={footerNote}>
+              This is an automated message — replies are not monitored.
             </Text>
           </Section>
-          {children}
-          <Hr style={hr} />
-          <Text style={footer}>
-            TextileShop · Nandana Textile, Sri Lanka
-            <br />
-            This is an automated message — replies are not monitored.
-          </Text>
         </Container>
       </Body>
     </Html>
@@ -46,43 +72,83 @@ export function EmailLayout({
 }
 
 const body = {
-  backgroundColor: '#f4f4f5',
+  backgroundColor: '#ece9e4',
   fontFamily: "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   margin: 0,
-  padding: '24px 12px',
+  padding: '28px 12px',
 };
 
 const container = {
   backgroundColor: '#ffffff',
-  borderRadius: '12px',
-  maxWidth: '520px',
+  borderRadius: '14px',
+  maxWidth: '560px',
   margin: '0 auto',
-  padding: '32px',
+  overflow: 'hidden',
+  border: '1px solid #e4e1da',
 };
 
-const header = { marginBottom: '8px' };
+const header = {
+  backgroundColor: '#141414',
+  padding: '22px 32px',
+};
 
-const brand = {
-  fontSize: '18px',
+const logoCol = { width: '52px', verticalAlign: 'middle' as const };
+
+const logoTile = {
+  width: '38px',
+  height: '38px',
+  borderRadius: '9px',
+  backgroundColor: '#CC0000',
+  color: '#ffffff',
+  fontSize: '15px',
   fontWeight: 700,
-  color: '#111111',
+  letterSpacing: '0.5px',
+  textAlign: 'center' as const,
+  lineHeight: '38px',
+};
+
+const brandName = {
+  fontSize: '16px',
+  fontWeight: 700,
+  letterSpacing: '1.5px',
+  color: '#ffffff',
   margin: 0,
 };
 
-const brandMark = {
-  display: 'inline-block',
-  backgroundColor: '#4f46e5',
-  color: '#ffffff',
-  borderRadius: '6px',
-  padding: '2px 8px',
-  marginRight: '6px',
+const brandTag = {
+  fontSize: '11px',
+  letterSpacing: '0.4px',
+  color: '#b9b4ab',
+  margin: '2px 0 0',
 };
 
-const hr = { borderColor: '#e4e4e7', margin: '28px 0 16px' };
+const redRule = { backgroundColor: '#CC0000', height: '3px', lineHeight: '3px' };
+
+const content = { padding: '28px 32px 8px' };
 
 const footer = {
+  backgroundColor: '#faf9f7',
+  borderTop: '1px solid #ece9e4',
+  padding: '20px 32px 24px',
+};
+
+const footerBrand = {
+  fontSize: '13px',
+  fontWeight: 700,
+  color: '#141414',
+  margin: '0 0 4px',
+};
+
+const footerLine = {
   fontSize: '12px',
   lineHeight: '18px',
-  color: '#a1a1aa',
+  color: '#6b6b6b',
   margin: 0,
+};
+
+const footerNote = {
+  fontSize: '11px',
+  lineHeight: '16px',
+  color: '#a1a1aa',
+  margin: '10px 0 0',
 };

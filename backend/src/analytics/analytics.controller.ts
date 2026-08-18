@@ -128,7 +128,15 @@ export class AnalyticsController {
     });
 
     const csv = this.analytics.toCsv(
-      ['Product', 'Type', 'Available', 'Reserved', 'Sellable', 'Minimum', 'Low Stock'],
+      [
+        'Product',
+        'Type',
+        'Available',
+        'Reserved',
+        'Sellable',
+        'Minimum',
+        'Low Stock',
+      ],
       rows.map((r) => [
         r.name,
         r.type,

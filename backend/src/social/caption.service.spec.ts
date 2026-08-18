@@ -40,7 +40,9 @@ describe('CaptionService', () => {
     expect(caption).toContain('Rs 2,995.00');
     expect(caption).toContain('Sizes: M · L · XL · XXL');
     expect(caption).toContain('Cotton · White');
-    expect(caption).toContain('https://nandana.lk/products/wildflower-garden-embroidered-dress');
+    expect(caption).toContain(
+      'https://nandana.lk/products/wildflower-garden-embroidered-dress',
+    );
     expect(caption).toContain('Cash on Delivery');
     expect(caption).toContain('+94771234567');
   });
@@ -54,7 +56,7 @@ describe('CaptionService', () => {
 
   it('adds relevant hashtags including the brand tag, capped at six', () => {
     const caption = service.build(dress);
-    const tags = (caption.match(/#[A-Za-z0-9]+/g) ?? []);
+    const tags = caption.match(/#[A-Za-z0-9]+/g) ?? [];
     expect(tags).toContain('#NandanaTextile');
     expect(tags).toContain('#Cotton');
     expect(tags.length).toBeLessThanOrEqual(6);

@@ -104,7 +104,8 @@ export class InvoiceService {
   private business() {
     return {
       name: this.config.get<string>('SHOP_BRAND') ?? 'Nandana Textile',
-      address: this.config.get<string>('SHOP_ADDRESS') ?? '50 Main St, Veyangoda',
+      address:
+        this.config.get<string>('SHOP_ADDRESS') ?? '50 Main St, Veyangoda',
       landline: this.config.get<string>('SHOP_LANDLINE') ?? '033 228 8445',
       whatsapp: this.config.get<string>('SHOP_WHATSAPP') ?? '071 708 8445',
       // Optional, shown only when configured (blank by default — never faked).
@@ -136,11 +137,15 @@ export class InvoiceService {
   }
 
   private addressLines(shippingAddress: Prisma.JsonValue): string[] {
-    if (!shippingAddress || typeof shippingAddress !== 'object' || Array.isArray(shippingAddress)) {
+    if (
+      !shippingAddress ||
+      typeof shippingAddress !== 'object' ||
+      Array.isArray(shippingAddress)
+    ) {
       return ['—'];
     }
     const a = shippingAddress as Record<string, unknown>;
-    const str = (k: string) => (typeof a[k] === 'string' ? (a[k] as string).trim() : '');
+    const str = (k: string) => (typeof a[k] === 'string' ? a[k].trim() : '');
     const cityLine = [str('city'), str('postalCode')].filter(Boolean).join(' ');
     return [
       str('fullName'),

@@ -159,6 +159,18 @@ class ApiClient {
     return this.request<Product>(`/products/${id}`);
   }
 
+  /** "Customers also bought" — market-basket recommendations for a product. */
+  async getFrequentlyBoughtTogether(id: string, limit = 8): Promise<Product[]> {
+    return this.request<Product[]>(
+      `/products/${id}/frequently-bought-together?limit=${limit}`,
+    );
+  }
+
+  /** "You may also like" — content-based related products. */
+  async getRelatedProducts(id: string, limit = 8): Promise<Product[]> {
+    return this.request<Product[]>(`/products/${id}/related?limit=${limit}`);
+  }
+
   // ─── Categories ───────────────────────────────────────
   // Admin mutations (create/update/delete product or category) live in
   // services/products.service.ts + services/categories.service.ts instead —
