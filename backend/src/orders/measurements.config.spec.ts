@@ -66,7 +66,8 @@ describe('BR3 measurement validation', () => {
     });
 
     it('rejects a uniform missing a single field', () => {
-      const { trouserLength: _omitted, ...incomplete } = validUniform.values;
+      const { trouserLength: _trouserLength, ...incomplete } =
+        validUniform.values;
 
       const errors = validateMeasurements(
         'School Uniform',

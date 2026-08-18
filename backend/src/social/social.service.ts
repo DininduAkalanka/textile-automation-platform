@@ -105,9 +105,15 @@ export class SocialService {
         // UI opens. Record it so the log is complete, without pretending we
         // published anything.
         results.push(
-          await this.record(productId, platform, SocialPostStatus.SKIPPED, caption, {
-            message: 'Use the WhatsApp share button to post this.',
-          }),
+          await this.record(
+            productId,
+            platform,
+            SocialPostStatus.SKIPPED,
+            caption,
+            {
+              message: 'Use the WhatsApp share button to post this.',
+            },
+          ),
         );
       }
     }
@@ -142,9 +148,16 @@ export class SocialService {
     image: string | null,
   ): Promise<PlatformResult> {
     if (!this.facebookConfigured) {
-      return this.record(productId, SocialPlatform.FACEBOOK, SocialPostStatus.SKIPPED, caption, {
-        message: 'Facebook not connected yet — caption is ready to copy/paste.',
-      });
+      return this.record(
+        productId,
+        SocialPlatform.FACEBOOK,
+        SocialPostStatus.SKIPPED,
+        caption,
+        {
+          message:
+            'Facebook not connected yet — caption is ready to copy/paste.',
+        },
+      );
     }
     try {
       const token = await this.pageAccessToken();
@@ -155,14 +168,26 @@ export class SocialService {
         : { message: caption };
       const res = await this.graph(`${this.pageId}/${node}`, body, token);
       const externalPostId = res.post_id ?? res.id ?? null;
-      return this.record(productId, SocialPlatform.FACEBOOK, SocialPostStatus.POSTED, caption, {
-        message: 'Posted to Facebook.',
-        externalPostId,
-      });
+      return this.record(
+        productId,
+        SocialPlatform.FACEBOOK,
+        SocialPostStatus.POSTED,
+        caption,
+        {
+          message: 'Posted to Facebook.',
+          externalPostId,
+        },
+      );
     } catch (err) {
-      return this.record(productId, SocialPlatform.FACEBOOK, SocialPostStatus.FAILED, caption, {
-        message: this.errText(err),
-      });
+      return this.record(
+        productId,
+        SocialPlatform.FACEBOOK,
+        SocialPostStatus.FAILED,
+        caption,
+        {
+          message: this.errText(err),
+        },
+      );
     }
   }
 
@@ -172,15 +197,28 @@ export class SocialService {
     image: string | null,
   ): Promise<PlatformResult> {
     if (!this.instagramConfigured) {
-      return this.record(productId, SocialPlatform.INSTAGRAM, SocialPostStatus.SKIPPED, caption, {
-        message: 'Instagram not connected yet — caption is ready to copy/paste.',
-      });
+      return this.record(
+        productId,
+        SocialPlatform.INSTAGRAM,
+        SocialPostStatus.SKIPPED,
+        caption,
+        {
+          message:
+            'Instagram not connected yet — caption is ready to copy/paste.',
+        },
+      );
     }
     if (!image) {
       // Instagram's API cannot publish without an image.
-      return this.record(productId, SocialPlatform.INSTAGRAM, SocialPostStatus.SKIPPED, caption, {
-        message: 'Instagram needs at least one product image to post.',
-      });
+      return this.record(
+        productId,
+        SocialPlatform.INSTAGRAM,
+        SocialPostStatus.SKIPPED,
+        caption,
+        {
+          message: 'Instagram needs at least one product image to post.',
+        },
+      );
     }
     try {
       const token = await this.pageAccessToken();
@@ -198,14 +236,26 @@ export class SocialService {
         { creation_id: container.id },
         token,
       );
-      return this.record(productId, SocialPlatform.INSTAGRAM, SocialPostStatus.POSTED, caption, {
-        message: 'Posted to Instagram.',
-        externalPostId: published.id ?? null,
-      });
+      return this.record(
+        productId,
+        SocialPlatform.INSTAGRAM,
+        SocialPostStatus.POSTED,
+        caption,
+        {
+          message: 'Posted to Instagram.',
+          externalPostId: published.id ?? null,
+        },
+      );
     } catch (err) {
-      return this.record(productId, SocialPlatform.INSTAGRAM, SocialPostStatus.FAILED, caption, {
-        message: this.errText(err),
-      });
+      return this.record(
+        productId,
+        SocialPlatform.INSTAGRAM,
+        SocialPostStatus.FAILED,
+        caption,
+        {
+          message: this.errText(err),
+        },
+      );
     }
   }
 
@@ -256,7 +306,9 @@ export class SocialService {
       error?: { message?: string };
     };
     if (!res.ok) {
-      throw new Error(json.error?.message ?? `Graph API returned ${res.status}`);
+      throw new Error(
+        json.error?.message ?? `Graph API returned ${res.status}`,
+      );
     }
     return json;
   }
@@ -271,7 +323,9 @@ export class SocialService {
     opts: { message: string; externalPostId?: string | null },
   ): Promise<PlatformResult> {
     if (status === SocialPostStatus.FAILED) {
-      this.logger.warn(`social_post_failed platform=${platform} error=${opts.message}`);
+      this.logger.warn(
+        `social_post_failed platform=${platform} error=${opts.message}`,
+      );
     }
     await this.prisma.socialPost.create({
       data: {
@@ -283,10 +337,17 @@ export class SocialService {
         error: status === SocialPostStatus.FAILED ? opts.message : null,
       },
     });
-    return { platform, status, message: opts.message, externalPostId: opts.externalPostId };
+    return {
+      platform,
+      status,
+      message: opts.message,
+      externalPostId: opts.externalPostId,
+    };
   }
 
-  private async load(productId: string): Promise<CaptionProduct & { images: unknown }> {
+  private async load(
+    productId: string,
+  ): Promise<CaptionProduct & { images: unknown }> {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -343,6 +404,8 @@ export class SocialService {
   }
 
   private errText(err: unknown): string {
-    return err instanceof Error ? err.message : 'Unknown error posting to the platform.';
+    return err instanceof Error
+      ? err.message
+      : 'Unknown error posting to the platform.';
   }
 }

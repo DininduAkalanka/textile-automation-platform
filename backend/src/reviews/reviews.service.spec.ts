@@ -1,5 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { OrderStatus, Prisma, ReviewStatus } from '@prisma/client';
 
 import { ReviewsService } from './reviews.service';
@@ -25,7 +29,11 @@ describe('ReviewsService', () => {
       groupBy: jest.Mock;
       aggregate: jest.Mock;
     };
-    reviewHelpfulVote: { findUnique: jest.Mock; create: jest.Mock; delete: jest.Mock };
+    reviewHelpfulVote: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      delete: jest.Mock;
+    };
     reviewReport: { create: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -43,7 +51,11 @@ describe('ReviewsService', () => {
         groupBy: jest.fn(),
         aggregate: jest.fn(),
       },
-      reviewHelpfulVote: { findUnique: jest.fn(), create: jest.fn(), delete: jest.fn() },
+      reviewHelpfulVote: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        delete: jest.fn(),
+      },
       reviewReport: { create: jest.fn() },
       $transaction: jest.fn((ops) => Promise.all(ops)),
     };
@@ -130,7 +142,9 @@ describe('ReviewsService', () => {
     it('rejects when the order does not belong to the user / is not delivered / lacks the product', async () => {
       prisma.order.findFirst.mockResolvedValue(null);
 
-      await expect(service.create('u1', dto)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(prisma.review.create).not.toHaveBeenCalled();
     });
 
@@ -169,13 +183,18 @@ describe('ReviewsService', () => {
         }),
       );
 
-      await expect(service.create('u1', dto)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 
   describe('update', () => {
-    it('refuses to edit another customer\'s review', async () => {
-      prisma.review.findUnique.mockResolvedValue({ id: 'rev1', userId: 'owner' });
+    it("refuses to edit another customer's review", async () => {
+      prisma.review.findUnique.mockResolvedValue({
+        id: 'rev1',
+        userId: 'owner',
+      });
 
       await expect(
         service.update('rev1', 'attacker', { title: 'edited' }),
@@ -197,13 +216,19 @@ describe('ReviewsService', () => {
       prisma.review.findMany.mockResolvedValue([]);
       prisma.review.count.mockResolvedValue(0);
       prisma.review.groupBy.mockResolvedValue([]);
-      prisma.review.aggregate.mockResolvedValue({ _avg: { rating: null }, _count: { rating: 0 } });
+      prisma.review.aggregate.mockResolvedValue({
+        _avg: { rating: null },
+        _count: { rating: 0 },
+      });
 
       await service.findForProduct('p1', {});
 
       expect(prisma.review.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ productId: 'p1', status: ReviewStatus.PUBLISHED }),
+          where: expect.objectContaining({
+            productId: 'p1',
+            status: ReviewStatus.PUBLISHED,
+          }),
         }),
       );
       expect(prisma.review.groupBy).toHaveBeenCalledWith(
@@ -218,13 +243,16 @@ describe('ReviewsService', () => {
     it('404s when the review does not exist', async () => {
       prisma.review.findUnique.mockResolvedValue(null);
 
-      await expect(service.toggleHelpful('missing', 'u1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.toggleHelpful('missing', 'u1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('adds a vote and increments the count when none exists yet', async () => {
-      prisma.review.findUnique.mockResolvedValue({ id: 'rev1', helpfulCount: 0 });
+      prisma.review.findUnique.mockResolvedValue({
+        id: 'rev1',
+        helpfulCount: 0,
+      });
       prisma.reviewHelpfulVote.findUnique.mockResolvedValue(null);
       prisma.reviewHelpfulVote.create.mockResolvedValue({ id: 'vote1' });
       prisma.review.update.mockResolvedValue({ id: 'rev1', helpfulCount: 1 });
@@ -236,7 +264,10 @@ describe('ReviewsService', () => {
     });
 
     it('removes an existing vote and decrements the count', async () => {
-      prisma.review.findUnique.mockResolvedValue({ id: 'rev1', helpfulCount: 1 });
+      prisma.review.findUnique.mockResolvedValue({
+        id: 'rev1',
+        helpfulCount: 1,
+      });
       prisma.reviewHelpfulVote.findUnique.mockResolvedValue({ id: 'vote1' });
       prisma.reviewHelpfulVote.delete.mockResolvedValue({ id: 'vote1' });
       prisma.review.update.mockResolvedValue({ id: 'rev1', helpfulCount: 0 });

@@ -6,7 +6,7 @@ export function VerificationCodeEmail({ code }: { code: string }) {
     <EmailLayout preview={`Your verification code is ${code}`}>
       <Heading style={heading}>Verify your contact</Heading>
       <Text style={paragraph}>
-        Enter this code to finish verifying your TextileShop account:
+        Enter this code to finish verifying your Nandana Textile account:
       </Text>
       <Section style={codeBox}>
         <Text style={codeText}>{code}</Text>

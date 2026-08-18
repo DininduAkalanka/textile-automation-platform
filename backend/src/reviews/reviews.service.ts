@@ -52,7 +52,10 @@ export class ReviewsService {
         where: { userId, items: { some: { productId } } },
         select: { id: true },
       });
-      return { eligible: false, reason: everPurchased ? 'NOT_DELIVERED' : 'NOT_PURCHASED' };
+      return {
+        eligible: false,
+        reason: everPurchased ? 'NOT_DELIVERED' : 'NOT_PURCHASED',
+      };
     }
 
     const existingReviews = await this.prisma.review.findMany({
@@ -73,7 +76,11 @@ export class ReviewsService {
 
     // Every delivered order for this product already has a review — surface
     // the most recent one so the UI can offer "edit your review" instead.
-    return { eligible: false, reason: 'ALREADY_REVIEWED', reviewId: existingReviews[0].id };
+    return {
+      eligible: false,
+      reason: 'ALREADY_REVIEWED',
+      reviewId: existingReviews[0].id,
+    };
   }
 
   // ─── Create / Update ─────────────────────────────────────
@@ -121,7 +128,10 @@ export class ReviewsService {
         },
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
         throw new BadRequestException(
           'You have already reviewed this product for this order.',
         );
@@ -131,7 +141,9 @@ export class ReviewsService {
   }
 
   async update(reviewId: string, userId: string, dto: UpdateReviewDto) {
-    const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
     if (!review) {
       throw new NotFoundException('Review not found');
     }
@@ -143,7 +155,9 @@ export class ReviewsService {
       where: { id: reviewId },
       data: {
         ...dto,
-        ...(dto.images !== undefined ? { hasImages: dto.images.length > 0 } : {}),
+        ...(dto.images !== undefined
+          ? { hasImages: dto.images.length > 0 }
+          : {}),
       },
     });
   }
@@ -176,7 +190,10 @@ export class ReviewsService {
     // review for the product, independent of the list's own filters — the
     // summary block never shrinks just because the visitor filtered the list
     // below it, matching the referenced platforms' behavior.
-    const statsWhere: Prisma.ReviewWhereInput = { productId, status: ReviewStatus.PUBLISHED };
+    const statsWhere: Prisma.ReviewWhereInput = {
+      productId,
+      status: ReviewStatus.PUBLISHED,
+    };
 
     const [reviews, total, ratingGroups, avgAgg] = await Promise.all([
       this.prisma.review.findMany({
@@ -217,14 +234,21 @@ export class ReviewsService {
         total: avgAgg._count.rating,
         distribution,
       },
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
     };
   }
 
   // ─── Helpful votes ───────────────────────────────────────
 
   async toggleHelpful(reviewId: string, userId: string) {
-    const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
     if (!review) {
       throw new NotFoundException('Review not found');
     }
@@ -235,11 +259,15 @@ export class ReviewsService {
 
     const [, updated] = await this.prisma.$transaction([
       existingVote
-        ? this.prisma.reviewHelpfulVote.delete({ where: { id: existingVote.id } })
+        ? this.prisma.reviewHelpfulVote.delete({
+            where: { id: existingVote.id },
+          })
         : this.prisma.reviewHelpfulVote.create({ data: { reviewId, userId } }),
       this.prisma.review.update({
         where: { id: reviewId },
-        data: { helpfulCount: { [existingVote ? 'decrement' : 'increment']: 1 } },
+        data: {
+          helpfulCount: { [existingVote ? 'decrement' : 'increment']: 1 },
+        },
       }),
     ]);
 
@@ -249,7 +277,9 @@ export class ReviewsService {
   // ─── Reports ─────────────────────────────────────────────
 
   async report(reviewId: string, userId: string, dto: ReportReviewDto) {
-    const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
     if (!review) {
       throw new NotFoundException('Review not found');
     }
@@ -278,7 +308,9 @@ export class ReviewsService {
     if (filters.productId) where.productId = filters.productId;
     if (filters.reportedOnly) where.reports = { some: {} };
     if (filters.search) {
-      where.product = { name: { contains: filters.search, mode: 'insensitive' } };
+      where.product = {
+        name: { contains: filters.search, mode: 'insensitive' },
+      };
     }
 
     const [reviews, total] = await Promise.all([
@@ -288,7 +320,9 @@ export class ReviewsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          product: { select: { id: true, name: true, slug: true, images: true } },
+          product: {
+            select: { id: true, name: true, slug: true, images: true },
+          },
           user: REVIEW_USER_SELECT,
           _count: { select: { reports: true } },
           reports: {
@@ -301,17 +335,31 @@ export class ReviewsService {
       this.prisma.review.count({ where }),
     ]);
 
-    return { reviews, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
+    return {
+      reviews,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 
   async hide(id: string) {
     await this.assertExists(id);
-    return this.prisma.review.update({ where: { id }, data: { status: ReviewStatus.HIDDEN } });
+    return this.prisma.review.update({
+      where: { id },
+      data: { status: ReviewStatus.HIDDEN },
+    });
   }
 
   async unhide(id: string) {
     await this.assertExists(id);
-    return this.prisma.review.update({ where: { id }, data: { status: ReviewStatus.PUBLISHED } });
+    return this.prisma.review.update({
+      where: { id },
+      data: { status: ReviewStatus.PUBLISHED },
+    });
   }
 
   async remove(id: string) {

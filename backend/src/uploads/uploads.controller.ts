@@ -59,7 +59,10 @@ const imageStorageOptions = {
   limits: { fileSize: MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_MIME.includes(file.mimetype)) {
-      cb(new BadRequestException('Only JPG, PNG or WebP images are allowed.'), false);
+      cb(
+        new BadRequestException('Only JPG, PNG or WebP images are allowed.'),
+        false,
+      );
       return;
     }
     cb(null, true);
@@ -72,7 +75,8 @@ function toUploadResponse(file: Express.Multer.File, req: Request) {
   }
   // Absolute URL so it works in <img>, in captions, and (later) for the
   // Instagram Graph API, which will only accept a public URL.
-  const base = process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`;
+  const base =
+    process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`;
   return {
     url: `${base}/uploads/${file.filename}`,
     filename: file.filename,
@@ -102,7 +106,10 @@ export class UploadsController {
 export class ReviewUploadsController {
   @Post('review-image')
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
-  uploadReviewImage(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+  uploadReviewImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
     return toUploadResponse(file, req);
   }
 }

@@ -22,7 +22,7 @@ export class EmailService {
     const key = this.config.get<string>('RESEND_API_KEY');
     this.from =
       this.config.get<string>('EMAIL_FROM') ||
-      'TextileShop <onboarding@resend.dev>';
+      'Nandana Textile <onboarding@resend.dev>';
     if (key) {
       this.resend = new Resend(key);
       this.logger.log('Resend initialized — emails will be sent');

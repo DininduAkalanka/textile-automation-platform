@@ -98,7 +98,7 @@ describe('InvoiceService', () => {
     const data = makeService().buildData({
       ...order,
       payment: null,
-    } as unknown as Parameters<InvoiceService['buildData']>[0]);
+    });
 
     expect(data.paymentMethod).toBe('—');
     expect(data.paymentStatus).toBe('—');

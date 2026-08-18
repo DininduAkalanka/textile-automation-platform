@@ -135,9 +135,10 @@ export class CaptionService {
     if (!desc) return hook.benefit;
     // First sentence, capped — a caption is a hook, not the full description.
     const firstSentence = desc.split(/(?<=[.!?])\s/)[0];
-    const trimmed = firstSentence.length > 160
-      ? `${firstSentence.slice(0, 157).trimEnd()}…`
-      : firstSentence;
+    const trimmed =
+      firstSentence.length > 160
+        ? `${firstSentence.slice(0, 157).trimEnd()}…`
+        : firstSentence;
     return trimmed;
   }
 
@@ -153,7 +154,8 @@ export class CaptionService {
 
   private sizesLine(product: CaptionProduct): string | null {
     const attrs = product.attributes;
-    if (!attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return null;
+    if (!attrs || typeof attrs !== 'object' || Array.isArray(attrs))
+      return null;
     const raw = (attrs as Record<string, unknown>).sizes;
     if (Array.isArray(raw) && raw.length) {
       return `Sizes: ${raw.map((s) => String(s)).join(' · ')}`;

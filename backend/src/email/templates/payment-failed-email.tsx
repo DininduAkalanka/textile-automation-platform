@@ -35,7 +35,7 @@ export function PaymentFailedEmail({
 const heading = { fontSize: '20px', color: '#991b1b', margin: '16px 0 8px' };
 const paragraph = { fontSize: '15px', color: '#444444', lineHeight: '22px' };
 const button = {
-  backgroundColor: '#4f46e5',
+  backgroundColor: '#CC0000',
   borderRadius: '10px',
   color: '#ffffff',
   fontSize: '14px',

@@ -126,7 +126,7 @@ describe('Admin catalog management (plan Session 2.2)', () => {
     });
 
     it('archivedOnly reveals exactly the archived ones — the actual gap being closed', async () => {
-      const active = await seedProduct({ label: 'arch-active' });
+      const _active = await seedProduct({ label: 'arch-active' });
       const archived = await seedProduct({ label: 'arch-archived' });
       await products.remove(archived.id);
 

@@ -10,7 +10,13 @@ describe('AnalyticsService.toCsv', () => {
   const service = new AnalyticsService({} as unknown as PrismaService);
 
   it('joins headers and rows with CRLF line endings', () => {
-    const csv = service.toCsv(['A', 'B'], [['1', '2'], ['3', '4']]);
+    const csv = service.toCsv(
+      ['A', 'B'],
+      [
+        ['1', '2'],
+        ['3', '4'],
+      ],
+    );
     expect(csv).toBe('A,B\r\n1,2\r\n3,4');
   });
 

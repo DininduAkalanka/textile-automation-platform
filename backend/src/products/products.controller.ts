@@ -72,6 +72,29 @@ export class ProductsController {
     return this.productsService.findById(id);
   }
 
+  /** "Customers also bought" — market-basket recommendation for the product
+   *  page. Public; two path segments so it never collides with ':id'. */
+  @Get(':id/frequently-bought-together')
+  frequentlyBoughtTogether(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.productsService.frequentlyBoughtTogether(
+      id,
+      limit ? Number(limit) : 8,
+    );
+  }
+
+  /** "You may also like" — content-based (same category/fabric/colour) related
+   *  products. Public. */
+  @Get(':id/related')
+  relatedProducts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.productsService.relatedProducts(id, limit ? Number(limit) : 8);
+  }
+
   // ─── Admin Endpoints ───────────────────────────────────
   // 'admin/all' is two path segments, so it can never be shadowed by the
   // single-segment ':id' route above regardless of declaration order — but it

@@ -305,6 +305,145 @@ export class ProductsService {
     return product;
   }
 
+  /**
+   * "Customers also bought" — a market-basket (association-mining) recommender.
+   * Ranks products that appear in the SAME real orders as this one, most
+   * co-bought first, over confirmed-and-beyond orders only (PENDING/CANCELLED
+   * carts are not purchases and would poison the signal).
+   *
+   * Runs as one SQL co-occurrence query in the API — not behind the Python AI
+   * service — so this storefront strip stays fast and is never taken down by an
+   * AI outage. Cold-start items with too little purchase history are topped up
+   * with same-category products, so the strip is never empty.
+   */
+  async frequentlyBoughtTogether(productId: string, limit = 8) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, categoryId: true },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{ id: string; together: bigint }>
+    >`
+      SELECT oi_other.product_id AS id, COUNT(DISTINCT o.id) AS together
+      FROM order_items oi_self
+      JOIN orders o
+        ON o.id = oi_self.order_id
+       AND o.status NOT IN ('PENDING', 'CANCELLED')
+      JOIN order_items oi_other
+        ON oi_other.order_id = oi_self.order_id
+       AND oi_other.product_id <> oi_self.product_id
+      JOIN products p
+        ON p.id = oi_other.product_id
+       AND p.is_active = true
+      WHERE oi_self.product_id = ${productId}::uuid
+      GROUP BY oi_other.product_id
+      ORDER BY together DESC
+      LIMIT ${limit};
+    `;
+
+    const rankedIds = rows.map((r) => r.id);
+
+    // Load the ranked products, then restore the co-occurrence order (findMany
+    // does not preserve the IN() order).
+    let products = rankedIds.length
+      ? await this.prisma.product.findMany({
+          where: { id: { in: rankedIds }, isActive: true },
+          include: { category: true },
+        })
+      : [];
+    products.sort((a, b) => rankedIds.indexOf(a.id) - rankedIds.indexOf(b.id));
+
+    // Cold-start fallback: top up with newest same-category products.
+    if (products.length < limit) {
+      const excludeIds = [productId, ...products.map((p) => p.id)];
+      const fillers = await this.prisma.product.findMany({
+        where: {
+          isActive: true,
+          id: { notIn: excludeIds },
+          ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+        },
+        include: { category: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit - products.length,
+      });
+      products = [...products, ...fillers];
+    }
+
+    return products;
+  }
+
+  /**
+   * "You may also like" — a content-based similarity recommender. Unlike
+   * frequentlyBoughtTogether (which needs purchase history), this ranks by the
+   * product's OWN attributes — same category, fabric, colour, type and a close
+   * price — so it works even for a brand-new product with zero sales. No ML: a
+   * transparent similarity score. Tops up from the whole catalogue if the
+   * category is too small, so the strip is never empty.
+   */
+  async relatedProducts(productId: string, limit = 8) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        categoryId: true,
+        fabricType: true,
+        color: true,
+        productType: true,
+        price: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    // Candidate pool: same category first (bounded), scored in memory.
+    const pool = await this.prisma.product.findMany({
+      where: {
+        isActive: true,
+        id: { not: productId },
+        ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+      },
+      include: { category: true },
+      take: 60,
+    });
+
+    const basePrice = Number(product.price);
+    const scored = pool
+      .map((p) => {
+        let score = 0;
+        if (product.fabricType && p.fabricType === product.fabricType)
+          score += 3;
+        if (product.color && p.color === product.color) score += 2;
+        if (p.productType === product.productType) score += 1;
+        if (basePrice > 0) {
+          const diff = Math.abs(Number(p.price) - basePrice) / basePrice;
+          score += diff <= 0.2 ? 2 : diff <= 0.5 ? 1 : 0;
+        }
+        return { p, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    let related = scored.slice(0, limit).map((s) => s.p);
+
+    // Top up from the wider catalogue if the category was thin.
+    if (related.length < limit) {
+      const excludeIds = [productId, ...related.map((p) => p.id)];
+      const fillers = await this.prisma.product.findMany({
+        where: { isActive: true, id: { notIn: excludeIds } },
+        include: { category: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit - related.length,
+      });
+      related = [...related, ...fillers];
+    }
+
+    return related;
+  }
+
   async update(id: string, dto: UpdateProductDto) {
     await this.findById(id);
 

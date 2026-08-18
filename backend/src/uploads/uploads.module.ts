@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 
-import { ReviewUploadsController, UploadsController } from './uploads.controller';
+import {
+  ReviewUploadsController,
+  UploadsController,
+} from './uploads.controller';
 
 @Module({
   controllers: [UploadsController, ReviewUploadsController],

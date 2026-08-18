@@ -17,6 +17,8 @@ import { SendCodeDto } from './dto/send-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { VerificationService } from '../verification/verification.service';
+import type { Request as ExpressRequest } from 'express';
+import type { RequestWithUser } from '../common/types/request-with-user';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -45,7 +47,7 @@ export class AuthController {
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
-    @Req() req: any,
+    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { refreshToken, ...result } = await this.authService.register(
@@ -60,7 +62,7 @@ export class AuthController {
   @Post('login')
   async login(
     @Body() dto: LoginDto,
-    @Req() req: any,
+    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { refreshToken, ...result } = await this.authService.login(
@@ -73,9 +75,12 @@ export class AuthController {
 
   @Throttle(AUTH_THROTTLE)
   @Post('refresh')
-  async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const { refreshToken, user, accessToken } = await this.authService.refresh(
-      req.cookies?.[REFRESH_COOKIE],
+      (req.cookies as Record<string, string>)?.[REFRESH_COOKIE],
       req.headers['user-agent'],
     );
     this.setRefreshCookie(res, refreshToken);
@@ -83,8 +88,13 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    await this.authService.logout(req.cookies?.[REFRESH_COOKIE]);
+  async logout(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.logout(
+      (req.cookies as Record<string, string>)?.[REFRESH_COOKIE],
+    );
     res.clearCookie(REFRESH_COOKIE, { path: '/' });
     return { success: true };
   }
@@ -97,14 +107,17 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @UseGuards(JwtAuthGuard)
   @Post('send-code')
-  async sendCode(@Request() req: any, @Body() dto: SendCodeDto) {
+  async sendCode(@Request() req: RequestWithUser, @Body() dto: SendCodeDto) {
     return this.verificationService.sendCode(req.user.sub, dto.channel);
   }
 
   @Throttle(AUTH_THROTTLE)
   @UseGuards(JwtAuthGuard)
   @Post('verify-code')
-  async verifyCode(@Request() req: any, @Body() dto: VerifyCodeDto) {
+  async verifyCode(
+    @Request() req: RequestWithUser,
+    @Body() dto: VerifyCodeDto,
+  ) {
     return this.verificationService.verifyCode(
       req.user.sub,
       dto.channel,
@@ -114,14 +127,14 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Request() req: any) {
+  async me(@Request() req: RequestWithUser) {
     return this.authService.getProfile(req.user.sub);
   }
 
   // Retained alias for existing callers.
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: RequestWithUser) {
     return this.authService.getProfile(req.user.sub);
   }
 }

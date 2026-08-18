@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
@@ -10,6 +10,8 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { ReviewsSection } from '@/components/reviews/ReviewsSection';
 import { StarRating } from '@/components/reviews/StarRating';
 import { useProductReviews } from '@/hooks/use-reviews';
+import { ProductRail } from '@/components/products/ProductRail';
+import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 
 // ── Size chart data for tailored items ──────────────────────────
 const SIZE_CHART = [
@@ -26,7 +28,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
+  const router = useRouter();
   const { toggleItem, isWishlisted } = useWishlistStore();
+  const { items: recentlyViewed, record: recordRecentlyViewed } =
+    useRecentlyViewed();
+  const [boughtTogether, setBoughtTogether] = useState<Product[]>([]);
+  const [related, setRelated] = useState<Product[]>([]);
   const isSaved = product ? isWishlisted(product.id) : false;
 
   // Tabs state
@@ -55,11 +62,37 @@ export default function ProductDetailPage() {
 
   const { data: reviewsData } = useProductReviews(product?.id ?? '');
 
+  // Once the product is loaded: remember it (recently-viewed) and pull its
+  // "customers also bought" recommendations. Keyed on the id so it reruns when
+  // navigating between products. Best-effort — a failure just hides the strip.
+  useEffect(() => {
+    if (!product) return;
+    recordRecentlyViewed(product);
+    api
+      .getFrequentlyBoughtTogether(product.id)
+      .then(setBoughtTogether)
+      .catch(() => setBoughtTogether([]));
+    api
+      .getRelatedProducts(product.id)
+      .then(setRelated)
+      .catch(() => setRelated([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
+
   const handleAddToCart = () => {
     if (product) {
       addItem(product, quantity);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
+    }
+  };
+
+  // Express checkout: add the item and go straight to checkout, skipping the
+  // cart page — the "Buy It Now" pattern from Shopify storefronts.
+  const handleBuyNow = () => {
+    if (product) {
+      addItem(product, quantity);
+      router.push('/checkout');
     }
   };
 
@@ -448,6 +481,36 @@ export default function ProductDetailPage() {
               </button>
             </div>
           )}
+
+          {/* Express checkout — straight to checkout with this item */}
+          {product.stockQuantity > 0 && (
+            <button
+              onClick={handleBuyNow}
+              style={{
+                width: '100%',
+                marginTop: '0.75rem',
+                padding: '0.95rem 1rem',
+                borderRadius: '0.5rem',
+                border: '1.5px solid #141414',
+                background: '#141414',
+                color: '#ffffff',
+                fontSize: '0.9375rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 200ms ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = '#000000';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = '#141414';
+              }}
+            >
+              Buy It Now
+            </button>
+          )}
         </div>
       </div>
 
@@ -557,6 +620,48 @@ export default function ProductDetailPage() {
           </>
         )}
       </div>
+
+      {(() => {
+        // De-duplicate across the strips so a product never shows twice: what
+        // "Customers Also Bought" claims first is removed from "Related", and
+        // both are removed from "Recently Viewed".
+        const bought = boughtTogether.filter((p) => p.id !== product.id);
+        const boughtIds = new Set(bought.map((p) => p.id));
+        const relatedOnly = related.filter(
+          (p) => p.id !== product.id && !boughtIds.has(p.id),
+        );
+        const shownIds = new Set([
+          product.id,
+          ...boughtIds,
+          ...relatedOnly.map((p) => p.id),
+        ]);
+        const recent = recentlyViewed.filter((p) => !shownIds.has(p.id));
+
+        return (
+          <>
+            {/* Customers Also Bought — behavioral (market-basket) */}
+            <ProductRail
+              title="Customers Also Bought"
+              subtitle="FREQUENTLY BOUGHT TOGETHER"
+              products={bought}
+            />
+
+            {/* Related Products — content-based (similar items) */}
+            <ProductRail
+              title="You May Also Like"
+              subtitle="RELATED PRODUCTS"
+              products={relatedOnly}
+            />
+
+            {/* Recently Viewed — this browser's history */}
+            <ProductRail
+              title="Recently Viewed"
+              subtitle="PICK UP WHERE YOU LEFT OFF"
+              products={recent}
+            />
+          </>
+        );
+      })()}
     </div>
   );
 }
