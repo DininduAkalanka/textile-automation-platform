@@ -32,35 +32,17 @@ Cypress.Commands.add(
       })
       .then((response) => {
         const { user, accessToken } = response.body.data || response.body;
-        // Sync with zustand store in localStorage
-        window.localStorage.setItem(
-          'auth-storage',
-          JSON.stringify({
-            state: {
-              user,
-              accessToken,
-              isAuthenticated: true,
-            },
-            version: 0,
-          }),
-        );
+        // Sync with actual auth store mechanics in the app
+        window.localStorage.setItem('token', accessToken);
+        cy.setCookie('role', user.role);
         return { user, accessToken };
       });
   },
 );
 
 Cypress.Commands.add('setSessionUser', (user: any, token: string) => {
-  window.localStorage.setItem(
-    'auth-storage',
-    JSON.stringify({
-      state: {
-        user,
-        accessToken: token,
-        isAuthenticated: true,
-      },
-      version: 0,
-    }),
-  );
+  window.localStorage.setItem('token', token);
+  cy.setCookie('role', user.role);
 });
 
 export {};
