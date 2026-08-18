@@ -21,25 +21,38 @@ const methodIcon: Record<string, string> = {
   STRIPE: '💳',
 };
 
-const STATUS_FILTERS = ['', 'PENDING', 'COMPLETED', 'FAILED'];
+const STATUS_FILTERS = [
+  { label: 'All', value: '' },
+  { label: 'Pending', value: 'PENDING' },
+  { label: 'Completed', value: 'COMPLETED' },
+  { label: 'Installments', value: 'INSTALLMENT' },
+  { label: 'Failed', value: 'FAILED' },
+];
 
 export default function AdminPaymentsPage() {
   const { user, isAuthenticated } = useAuthStore();
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
+    const query: { status?: string; method?: string } = {};
+    if (activeFilter === 'INSTALLMENT') {
+      query.method = 'INSTALLMENT';
+    } else if (activeFilter) {
+      query.status = activeFilter;
+    }
+
     api
-      .getAllPayments(1, 50, statusFilter ? { status: statusFilter } : undefined)
+      .getAllPayments(1, 50, Object.keys(query).length > 0 ? query : undefined)
       .then((res) => setPayments(res.payments || []))
       .catch((e: any) => setError(e.message || 'Failed to load payments'))
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [activeFilter]);
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'ADMIN') load();
@@ -77,7 +90,9 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700 }}>Payments</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Verify bank transfers, mark COD collected, or reject</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+            Monitor full payments, track customer installment schedules, and verify bank collections
+          </p>
         </div>
         <Link href="/admin" className="btn btn-outline btn-sm">← Dashboard</Link>
       </div>
@@ -92,11 +107,11 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
         {STATUS_FILTERS.map((s) => (
           <button
-            key={s || 'ALL'}
-            onClick={() => setStatusFilter(s)}
-            className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`}
+            key={s.value || 'ALL'}
+            onClick={() => setActiveFilter(s.value)}
+            className={`btn btn-sm ${activeFilter === s.value ? 'btn-primary' : 'btn-outline'}`}
           >
-            {s || 'All'}
+            {s.label}
           </button>
         ))}
       </div>
@@ -111,7 +126,7 @@ export default function AdminPaymentsPage() {
             <table className="min-w-225" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                  {['Order', 'Customer', 'Method', 'Amount', 'Payment', 'Order Status', 'Actions'].map((h) => (
+                  {['Order', 'Customer', 'Method / Plan', 'Amount & Collection', 'Payment Status', 'Order Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {h}
                     </th>
@@ -119,48 +134,88 @@ export default function AdminPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>
-                      <Link href={`/admin/orders/${p.orderId}`} style={{ color: 'var(--color-accent)' }}>#{p.order.orderNumber}</Link>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      {p.order.user ? `${p.order.user.firstName} ${p.order.user.lastName}` : '—'}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>{methodIcon[p.method] || ''} {p.method}</td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{formatLKR(p.amount)}</td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span className={`badge ${statusBadge[p.status] || 'badge-info'}`}>{p.status}</span>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span className="badge badge-info">{p.order.status}</span>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      {p.status === 'COMPLETED' ? (
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>—</span>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            className="btn btn-sm btn-primary"
-                            disabled={busy === p.orderId + 'mark-paid'}
-                            onClick={() => act(p.orderId, 'mark-paid')}
-                          >
-                            {busy === p.orderId + 'mark-paid' ? '…' : p.method === 'COD' ? 'Mark Collected' : 'Mark Paid'}
-                          </button>
-                          {p.status !== 'FAILED' && (
-                            <button
+                {payments.map((p) => {
+                  const isInstallment = p.paymentPlan === 'INSTALLMENT' || (p.installments && p.installments.length > 0);
+                  const instList = p.installments || [];
+                  const paidList = instList.filter((i) => i.status === 'COMPLETED');
+                  const paidSum = paidList.reduce((sum, i) => sum + Number(i.amount), 0);
+
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>
+                        <Link href={`/admin/orders/${p.orderId}`} style={{ color: 'var(--color-accent)' }}>#{p.order.orderNumber}</Link>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        {p.order.user ? `${p.order.user.firstName} ${p.order.user.lastName}` : '—'}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        {isInstallment ? (
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>
+                              📅 INSTALLMENT ({instList.length || 3}x)
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {paidList.length} of {instList.length} settled
+                            </span>
+                          </div>
+                        ) : (
+                          <span>{methodIcon[p.method] || ''} {p.method}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <p style={{ fontWeight: 600, margin: 0 }}>{formatLKR(p.amount)}</p>
+                        {isInstallment && (
+                          <p style={{ fontSize: '0.75rem', color: paidList.length === instList.length ? '#059669' : '#d97706', margin: 0 }}>
+                            Paid: {formatLKR(paidSum)}
+                          </p>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className={`badge ${statusBadge[p.status] || 'badge-info'}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge badge-info">{p.order.status}</span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        {isInstallment ? (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <Link
+                              href={`/account/orders/${p.orderId}/installments`}
+                              target="_blank"
                               className="btn btn-sm btn-outline"
-                              disabled={busy === p.orderId + 'reject'}
-                              onClick={() => act(p.orderId, 'reject')}
+                              style={{ fontSize: '0.75rem' }}
                             >
-                              {busy === p.orderId + 'reject' ? '…' : 'Reject'}
+                              Schedule ↗
+                            </Link>
+                          </div>
+                        ) : p.status === 'COMPLETED' ? (
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>—</span>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn-sm btn-primary"
+                              disabled={busy === p.orderId + 'mark-paid'}
+                              onClick={() => act(p.orderId, 'mark-paid')}
+                            >
+                              {busy === p.orderId + 'mark-paid' ? '…' : p.method === 'COD' ? 'Mark Collected' : 'Mark Paid'}
                             </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                            {p.status !== 'FAILED' && (
+                              <button
+                                className="btn btn-sm btn-outline"
+                                disabled={busy === p.orderId + 'reject'}
+                                onClick={() => act(p.orderId, 'reject')}
+                              >
+                                {busy === p.orderId + 'reject' ? '…' : 'Reject'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

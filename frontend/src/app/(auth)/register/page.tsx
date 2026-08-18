@@ -46,6 +46,7 @@ export default function RegisterPage() {
 
       <div className="mt-8">
         <form
+          data-testid="register-form"
           onSubmit={handleSubmit((values) =>
             // confirmPassword is a form-only field; the API never sees it.
             // Empty contact fields are sent as undefined, not '', so the
@@ -63,6 +64,7 @@ export default function RegisterPage() {
         >
           <div className="grid grid-cols-2 gap-3">
             <FormField
+              data-testid="register-firstname-input"
               label="First name"
               autoComplete="given-name"
               error={errors.firstName?.message}
@@ -70,6 +72,7 @@ export default function RegisterPage() {
               {...register('firstName')}
             />
             <FormField
+              data-testid="register-lastname-input"
               label="Last name"
               autoComplete="family-name"
               error={errors.lastName?.message}
@@ -84,6 +87,7 @@ export default function RegisterPage() {
           </p>
 
           <FormField
+            data-testid="register-email-input"
             label="Email (optional if phone given)"
             type="email"
             autoComplete="email"
@@ -94,6 +98,7 @@ export default function RegisterPage() {
           />
 
           <FormField
+            data-testid="register-phone-input"
             label="Phone (optional if email given)"
             type="tel"
             autoComplete="tel"
@@ -104,6 +109,7 @@ export default function RegisterPage() {
           />
 
           <FormField
+            data-testid="register-password-input"
             label="Password"
             type="password"
             autoComplete="new-password"
@@ -114,6 +120,7 @@ export default function RegisterPage() {
           />
 
           <FormField
+            data-testid="register-confirm-password-input"
             label="Confirm password"
             type="password"
             autoComplete="new-password"
@@ -124,6 +131,7 @@ export default function RegisterPage() {
           />
 
           <Button
+            data-testid="register-submit-btn"
             type="submit"
             size="lg"
             loading={registerMutation.isPending}

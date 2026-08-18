@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type PaymentMethod = 'payhere' | 'cod';
+type PaymentMethod = 'payhere' | 'cod' | 'installment';
 
 const fmt = (n: number) =>
   'Rs ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -36,6 +36,7 @@ function MethodCard({
   subtitle,
   right,
   rightSub,
+  testId,
   children,
 }: {
   selected: boolean;
@@ -45,10 +46,12 @@ function MethodCard({
   subtitle: string;
   right?: string;
   rightSub?: string;
+  testId?: string;
   children?: React.ReactNode;
 }) {
   return (
     <div
+      data-testid={testId}
       onClick={onSelect}
       style={{
         border: selected ? '2px solid var(--clr-brand)' : '1.5px solid var(--clr-border)',
@@ -150,6 +153,7 @@ export default function CheckoutPage() {
   const methodLabel: Record<PaymentMethod, string> = {
     payhere: 'Card / Online Payment',
     cod: 'Cash on Delivery',
+    installment: 'Monthly Installments (3x Plan)',
   };
 
   const handlePlaceOrder = async () => {
@@ -175,6 +179,13 @@ export default function CheckoutPage() {
         await api.createCodPayment(order.id);
         clearCart();
         router.push(`/account/orders/${order.id}?success=true`);
+        return;
+      }
+
+      if (method === 'installment') {
+        await api.createInstallmentPayment(order.id, 3);
+        clearCart();
+        router.push(`/account/orders/${order.id}/installments?success=true`);
         return;
       }
 
@@ -210,7 +221,9 @@ export default function CheckoutPage() {
   const placeOrderLabel =
     method === 'cod'
       ? `Place Order — ${fmt(totalValue)}`
-      : `Pay with PayHere — ${fmt(totalValue)}`;
+      : method === 'installment'
+        ? `Start 3-Month Plan (1st Payment: ${fmt(totalValue / 3)})`
+        : `Pay with PayHere — ${fmt(totalValue)}`;
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
@@ -257,41 +270,42 @@ export default function CheckoutPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <label className="input-label">Full Name *</label>
-                  <input className="input" name="fullName" value={address.fullName} onChange={handleChange} placeholder="John Doe" required />
+                  <input data-testid="checkout-name-input" className="input" name="fullName" value={address.fullName} onChange={handleChange} placeholder="John Doe" required />
                 </div>
                 <div>
                   <label className="input-label">Address Line 1 *</label>
-                  <input className="input" name="addressLine1" value={address.addressLine1} onChange={handleChange} placeholder="123 Main Street" required />
+                  <input data-testid="checkout-address1-input" className="input" name="addressLine1" value={address.addressLine1} onChange={handleChange} placeholder="123 Main Street" required />
                 </div>
                 <div>
                   <label className="input-label">Address Line 2</label>
-                  <input className="input" name="addressLine2" value={address.addressLine2} onChange={handleChange} placeholder="Apt 4B" />
+                  <input data-testid="checkout-address2-input" className="input" name="addressLine2" value={address.addressLine2} onChange={handleChange} placeholder="Apt 4B" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label className="input-label">City *</label>
-                    <input className="input" name="city" value={address.city} onChange={handleChange} placeholder="Colombo" required />
+                    <input data-testid="checkout-city-input" className="input" name="city" value={address.city} onChange={handleChange} placeholder="Colombo" required />
                   </div>
                   <div>
                     <label className="input-label">State / Province *</label>
-                    <input className="input" name="state" value={address.state} onChange={handleChange} placeholder="Western Province" required />
+                    <input data-testid="checkout-state-input" className="input" name="state" value={address.state} onChange={handleChange} placeholder="Western Province" required />
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label className="input-label">Postal Code *</label>
-                    <input className="input" name="postalCode" value={address.postalCode} onChange={handleChange} placeholder="10100" required />
+                    <input data-testid="checkout-postal-input" className="input" name="postalCode" value={address.postalCode} onChange={handleChange} placeholder="10100" required />
                   </div>
                   <div>
                     <label className="input-label">Country *</label>
-                    <input className="input" name="country" value={address.country} onChange={handleChange} placeholder="Sri Lanka" required />
+                    <input data-testid="checkout-country-input" className="input" name="country" value={address.country} onChange={handleChange} placeholder="Sri Lanka" required />
                   </div>
                 </div>
                 <div>
                   <label className="input-label">Phone</label>
-                  <input className="input" name="phone" value={address.phone} onChange={handleChange} placeholder="+94 77 123 4567" />
+                  <input data-testid="checkout-phone-input" className="input" name="phone" value={address.phone} onChange={handleChange} placeholder="+94 77 123 4567" />
                 </div>
                 <button
+                  data-testid="checkout-continue-to-payment-btn"
                   className="btn btn-primary btn-lg"
                   style={{ marginTop: '0.5rem' }}
                   onClick={() => setStep(2)}
@@ -309,6 +323,7 @@ export default function CheckoutPage() {
               <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem' }}>Choose Payment Method</h2>
 
               <MethodCard
+                testId="payment-method-payhere"
                 selected={method === 'payhere'}
                 onSelect={() => setMethod('payhere')}
                 icon="💳"
@@ -319,6 +334,7 @@ export default function CheckoutPage() {
               />
 
               <MethodCard
+                testId="payment-method-cod"
                 selected={method === 'cod'}
                 onSelect={() => setMethod('cod')}
                 icon="💵"
@@ -328,10 +344,21 @@ export default function CheckoutPage() {
                 rightSub="On delivery"
               />
 
+              <MethodCard
+                testId="payment-method-installment"
+                selected={method === 'installment'}
+                onSelect={() => setMethod('installment')}
+                icon="📅"
+                title="Monthly Installments (3x Plan)"
+                subtitle="Split into 3 equal monthly payments. Pay 1st installment now, track schedule in your account."
+                right={`${fmt(totalValue / 3)} / mo`}
+                rightSub="3 monthly payments"
+              />
+
               {/* Navigation Buttons */}
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                 <button className="btn btn-outline btn-lg" onClick={() => setStep(1)}>← Back</button>
-                <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={() => setStep(3)}>
+                <button data-testid="checkout-continue-to-review-btn" className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={() => setStep(3)}>
                   Continue to Review
                 </button>
               </div>
@@ -363,12 +390,15 @@ export default function CheckoutPage() {
                   <button onClick={() => setStep(2)} className="btn btn-outline btn-sm">Change</button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>{method === 'payhere' ? '💳' : '💵'}</span>
+                  <span style={{ fontSize: '1.5rem' }}>
+                    {method === 'payhere' ? '💳' : method === 'installment' ? '📅' : '💵'}
+                  </span>
                   <div>
                     <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--clr-text)' }}>{methodLabel[method]}</p>
                     <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
                       {method === 'payhere' && <>Pay <strong>{fmt(totalValue)}</strong> securely via PayHere</>}
                       {method === 'cod' && <>Pay <strong>{fmt(totalValue)}</strong> in cash on delivery</>}
+                      {method === 'installment' && <>Pay <strong>{fmt(totalValue / 3)}</strong> first installment today. Remaining 2 installments tracked in your account schedule.</>}
                     </p>
                   </div>
                 </div>
@@ -391,7 +421,7 @@ export default function CheckoutPage() {
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button className="btn btn-outline btn-lg" onClick={() => setStep(2)}>← Back</button>
-                <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={handlePlaceOrder} disabled={loading}>
+                <button data-testid="checkout-place-order-btn" className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={handlePlaceOrder} disabled={loading}>
                   {loading ? 'Processing…' : placeOrderLabel}
                 </button>
               </div>

@@ -238,7 +238,13 @@ export class OrdersService {
         items: {
           include: { product: true },
         },
-        payment: true,
+        payment: {
+          include: {
+            installments: {
+              orderBy: { installmentNo: 'asc' },
+            },
+          },
+        },
         user: {
           select: {
             id: true,

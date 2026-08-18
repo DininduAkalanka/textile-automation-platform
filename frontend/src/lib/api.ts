@@ -236,6 +236,13 @@ class ApiClient {
     });
   }
 
+  async createInstallmentPayment(orderId: string, installmentCount = 3): Promise<any> {
+    return this.request('/payments/installments/create', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, installmentCount }),
+    });
+  }
+
   // ─── Admin Payments ───────────────────────────────────
 
   async getAllPayments(page = 1, limit = 20, filters?: { method?: string; status?: string }): Promise<AdminPaymentsResponse> {

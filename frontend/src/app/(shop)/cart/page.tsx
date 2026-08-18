@@ -118,6 +118,7 @@ export default function CartPage() {
               {/* BR3: a measured garment cannot be ordered until it has measurements. */}
               {needsMeasurements(item.product) && (
                 <button
+                  data-testid="cart-add-measurements-btn"
                   onClick={() => setMeasuring(item.product)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
@@ -182,6 +183,7 @@ export default function CartPage() {
           ))}
 
           <button
+            data-testid="cart-clear-btn"
             onClick={clearCart}
             className="btn btn-outline btn-sm"
             style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }}
@@ -260,6 +262,7 @@ export default function CartPage() {
 
           {checkoutAllowed ? (
             <Link
+              data-testid="cart-proceed-to-checkout-btn"
               href="/checkout"
               className="btn btn-primary btn-lg"
               style={{ width: '100%', marginBottom: '0.75rem' }}
@@ -267,7 +270,7 @@ export default function CartPage() {
               Proceed to Checkout
             </Link>
           ) : (
-            <Button size="lg" disabled className="mb-3 w-full">
+            <Button data-testid="cart-proceed-to-checkout-btn" size="lg" disabled className="mb-3 w-full">
               Proceed to Checkout
             </Button>
           )}

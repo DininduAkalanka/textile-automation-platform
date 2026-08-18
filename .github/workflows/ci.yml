@@ -142,3 +142,96 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+
+  e2e:
+    name: E2E Tests · Cypress
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: textile_admin
+          POSTGRES_PASSWORD: textile_ci_password
+          POSTGRES_DB: textile_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U textile_admin -d textile_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+      NODE_ENV: test
+      PORT: 3001
+      FRONTEND_URL: http://localhost:3000
+      JWT_SECRET: ci-only-secret-not-used-outside-github-actions
+      JWT_EXPIRATION: 7d
+      PAYHERE_MERCHANT_ID: '1221149'
+      PAYHERE_MERCHANT_SECRET: ci-only-sandbox-secret
+      PAYHERE_MODE: sandbox
+      PAYHERE_NOTIFY_URL: http://localhost:3001/api/v1/payments/payhere/notify
+      STRIPE_SECRET_KEY: sk_test_mock
+      STRIPE_PUBLISHABLE_KEY: pk_test_mock
+      STRIPE_WEBHOOK_SECRET: whsec_mock
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # 1. Setup & Start Backend
+      - name: Install & Start Backend
+        run: |
+          cd backend
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run db:seed
+          npm run start:dev &
+        env:
+          DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+
+      # 2. Setup & Start Frontend
+      - name: Install & Start Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          npm run start &
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+
+      # 3. Wait for services to respond
+      - name: Wait for Frontend & API
+        run: |
+          npx wait-on http://localhost:3001/api/v1/health http://localhost:3000 --timeout 60000
+
+      # 4. Run Cypress E2E Test Suite
+      - name: Run Cypress E2E Tests
+        run: |
+          cd frontend
+          npm run test:e2e
+        env:
+          CYPRESS_BASE_URL: http://localhost:3000
+          CYPRESS_API_URL: http://localhost:3001/api/v1
+
+      # 5. Archive artifacts on failure
+      - name: Upload Cypress Artifacts (Screenshots & Videos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
