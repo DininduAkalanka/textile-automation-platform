@@ -229,6 +229,9 @@ export interface AdminPayment {
   currency: string;
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   method: 'STRIPE' | 'PAYHERE' | 'COD' | 'INSTALLMENT';
+  paymentPlan?: 'FULL' | 'INSTALLMENT';
+  installmentCount?: number;
+  installments?: Installment[];
   paidAt?: string;
   createdAt: string;
   order: {

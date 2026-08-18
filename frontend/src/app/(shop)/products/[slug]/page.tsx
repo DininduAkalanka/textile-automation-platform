@@ -307,6 +307,7 @@ export default function ProductDetailPage() {
                 </button>
               </div>
               <button
+                data-testid="add-to-cart-btn"
                 onClick={handleAddToCart}
                 className={`btn btn-lg btn-add-cart ${added ? 'btn-secondary' : 'btn-primary'}`}
               >

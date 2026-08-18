@@ -819,13 +819,22 @@ export class PaymentsService {
     const skip = (p - 1) * l;
 
     const where: Prisma.PaymentWhereInput = {};
-    if (filters?.method) where.method = filters.method as PaymentMethod;
+    if (filters?.method) {
+      if (filters.method === 'INSTALLMENT') {
+        where.paymentPlan = PaymentPlan.INSTALLMENT;
+      } else {
+        where.method = filters.method as PaymentMethod;
+      }
+    }
     if (filters?.status) where.status = filters.status as PaymentStatus;
 
     const [payments, total] = await Promise.all([
       this.prisma.payment.findMany({
         where,
         include: {
+          installments: {
+            orderBy: { installmentNo: 'asc' },
+          },
           order: {
             select: {
               id: true,

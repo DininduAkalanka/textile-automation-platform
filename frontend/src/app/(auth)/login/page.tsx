@@ -37,11 +37,13 @@ function LoginForm() {
 
   return (
     <form
+      data-testid="login-form"
       onSubmit={handleSubmit((values) => login.mutate(values))}
       className="flex flex-col gap-5"
       noValidate
     >
       <FormField
+        data-testid="login-identifier-input"
         label="Email or phone"
         type="text"
         autoComplete="username"
@@ -52,6 +54,7 @@ function LoginForm() {
       />
 
       <FormField
+        data-testid="login-password-input"
         label="Password"
         type="password"
         autoComplete="current-password"
@@ -62,6 +65,7 @@ function LoginForm() {
       />
 
       <Button
+        data-testid="login-submit-btn"
         type="submit"
         size="lg"
         loading={login.isPending}

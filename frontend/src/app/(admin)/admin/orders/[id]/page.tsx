@@ -336,14 +336,18 @@ export default function AdminOrderDetailPage({
             <p className="text-[12px] text-[#928E82]">{order.user?.email}</p>
           </Card>
 
-          {/* Payment — status, method, gateway evidence */}
+          {/* Payment — status, method, installment schedule & gateway evidence */}
           <Card title="Payment">
             {order.payment ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium text-[#0F0F0F]">
-                    {order.payment.method}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-[#0F0F0F]">
+                      {order.payment.paymentPlan === 'INSTALLMENT' || (order.payment.installments && order.payment.installments.length > 0)
+                        ? `INSTALLMENTS (${order.payment.installments?.length || order.payment.installmentCount || 3}x)`
+                        : order.payment.method}
+                    </span>
+                  </div>
                   <span
                     className={cn(
                       'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
@@ -359,17 +363,89 @@ export default function AdminOrderDetailPage({
                     {order.payment.status}
                   </span>
                 </div>
-                <p className="mt-1 text-[13px] font-semibold tabular-nums text-[#0F0F0F]">
+
+                <p className="mt-1 text-[14px] font-bold tabular-nums text-[#0F0F0F]">
                   {formatLKR(order.payment.amount)}
                 </p>
+
                 {order.payment.transactionId && (
-                  <p className="mt-1 font-mono text-[11px] text-[#928E82]">
+                  <p className="mt-0.5 font-mono text-[11px] text-[#928E82]">
                     {order.payment.transactionId}
                   </p>
                 )}
 
-                {/* Webhook/gateway evidence — the raw payload the gateway sent,
-                    not a fabricated "slip viewer" nothing in this system produces. */}
+                {/* ─── Installments Breakdown Section ─── */}
+                {(order.payment.paymentPlan === 'INSTALLMENT' || (order.payment.installments && order.payment.installments.length > 0)) && (
+                  <div className="mt-3.5 rounded-lg border border-[#EAE8E1] bg-[#FAFAF8] p-3">
+                    {(() => {
+                      const list = order.payment.installments || [];
+                      const paidList = list.filter((i) => i.status === 'COMPLETED');
+                      const paidTotal = paidList.reduce((sum, i) => sum + Number(i.amount), 0);
+                      const totalAmt = Number(order.payment.amount);
+                      const percent = totalAmt > 0 ? Math.min(100, Math.round((paidTotal / totalAmt) * 100)) : 0;
+
+                      return (
+                        <>
+                          <div className="mb-2 flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-[#0F0F0F]">
+                              Collected: {formatLKR(paidTotal)}
+                            </span>
+                            <span className="font-medium text-[#928E82]">
+                              {percent}% ({paidList.length}/{list.length} paid)
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-[#EAE8E1]">
+                            <div
+                              className="h-full rounded-full bg-emerald-600 transition-all"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+
+                          {/* Installments List */}
+                          <div className="flex flex-col gap-2 border-t border-[#EAE8E1] pt-2.5">
+                            {list.map((inst) => (
+                              <div
+                                key={inst.id || inst.installmentNo}
+                                className="flex items-center justify-between text-[11px]"
+                              >
+                                <div>
+                                  <span className="font-medium text-[#0F0F0F]">
+                                    Inst #{inst.installmentNo}:
+                                  </span>{' '}
+                                  <span className="tabular-nums text-[#4A4740]">
+                                    {formatLKR(inst.amount)}
+                                  </span>
+                                </div>
+                                <span
+                                  className={cn(
+                                    'rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+                                    inst.status === 'COMPLETED'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-amber-100 text-amber-800',
+                                  )}
+                                >
+                                  {inst.status === 'COMPLETED' ? 'Paid' : 'Pending'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <Link
+                            href={`/account/orders/${order.id}/installments`}
+                            target="_blank"
+                            className="mt-3 block text-center text-[11px] font-semibold text-[#CC0000] hover:underline"
+                          >
+                            Open Customer Schedule View ↗
+                          </Link>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Webhook/gateway evidence — the raw payload the gateway sent */}
                 {order.payment.gatewayResponse && (
                   <div className="mt-3 border-t border-[#F4F3EF] pt-3">
                     <button

@@ -13,3 +13,11 @@ export class CreatePaymentDto {
   @IsString()
   paymentMethodId?: string;
 }
+
+export class CreateInstallmentPaymentDto {
+  @IsUUID()
+  orderId: string;
+
+  @IsOptional()
+  installmentCount?: number;
+}

@@ -66,12 +66,26 @@ async function bootstrap() {
   // Global response transform
   app.useGlobalInterceptors(new TransformInterceptor());
 
+  // Swagger OpenAPI Documentation (Session 10.3)
+  const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
+  const config = new DocumentBuilder()
+    .setTitle('Nandana Textile Platform API')
+    .setDescription(
+      'Enterprise E-Commerce, Production Management & AI Intelligence Platform API specification.',
+    )
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/v1/docs', app, document, {
+    customSiteTitle: 'Nandana Textile API Docs',
+  });
+
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
 
-  // The path was previously logged as /api, which is not where anything lives.
   Logger.log(
-    `Backend listening on http://localhost:${String(port)}/api/v1`,
+    `Backend listening on http://localhost:${String(port)}/api/v1 (Docs: http://localhost:${String(port)}/api/v1/docs)`,
     'Bootstrap',
   );
 }

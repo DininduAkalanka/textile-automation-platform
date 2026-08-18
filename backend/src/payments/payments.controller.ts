@@ -11,7 +11,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreateFullPaymentDto } from './dto/create-payment.dto';
+import { CreateFullPaymentDto, CreateInstallmentPaymentDto } from './dto/create-payment.dto';
 import { MarkPaidDto } from './dto/mark-paid.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -40,6 +40,21 @@ export class PaymentsController {
     @Body() dto: CreateFullPaymentDto,
   ) {
     return this.paymentsService.createPayherePayment(dto.orderId, req.user.sub);
+  }
+
+  // ─── Installments ────────────────────────────────────────
+
+  @Post('installments/create')
+  @UseGuards(JwtAuthGuard)
+  createInstallments(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateInstallmentPaymentDto,
+  ) {
+    return this.paymentsService.createInstallmentPayment(
+      dto.orderId,
+      req.user.sub,
+      dto.installmentCount || 3,
+    );
   }
 
   // ─── Cash on Delivery ────────────────────────────────────

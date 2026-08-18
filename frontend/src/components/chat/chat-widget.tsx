@@ -53,6 +53,7 @@ export function ChatWidget() {
       {/* Launcher — never obscures the page, only itself. */}
       <button
         type="button"
+        data-testid="ai-chat-toggle"
         onClick={toggle}
         aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
         className={cn(
@@ -71,6 +72,7 @@ export function ChatWidget() {
       {open && (
         <div
           role="dialog"
+          data-testid="ai-chat-dialog"
           aria-label="Shopping assistant"
           className={cn(
             'fixed z-40 flex flex-col overflow-hidden bg-white shadow-2xl',
@@ -100,7 +102,7 @@ export function ChatWidget() {
             </button>
           </header>
 
-          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4" data-testid="ai-chat-messages">
             {messages.length === 0 && (
               <div className="pt-6 text-center">
                 <Sparkles
@@ -131,8 +133,9 @@ export function ChatWidget() {
             )}
 
             {messages.map((message) => (
-              <div key={message.id}>
+              <div key={message.id} data-testid="ai-chat-message-row">
                 <div
+                  data-testid={`ai-chat-bubble-${message.role}`}
                   className={cn(
                     'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed',
                     message.role === 'user'
@@ -144,7 +147,7 @@ export function ChatWidget() {
                 </div>
 
                 {message.products && message.products.length > 0 && (
-                  <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
+                  <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1" data-testid="ai-chat-product-cards">
                     {message.products.map((product) => (
                       <ChatProductCard key={product.id} product={product} />
                     ))}
@@ -154,7 +157,7 @@ export function ChatWidget() {
             ))}
 
             {send.isPending && (
-              <div className="flex w-16 gap-1 rounded-2xl bg-neutral-100 px-3.5 py-3">
+              <div className="flex w-16 gap-1 rounded-2xl bg-neutral-100 px-3.5 py-3" data-testid="ai-chat-loading">
                 {[0, 150, 300].map((delay) => (
                   <span
                     key={delay}
@@ -176,6 +179,7 @@ export function ChatWidget() {
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <input
+                  data-testid="ai-chat-input"
                   value={draft}
                   onChange={(event) =>
                     setDraft(event.target.value.slice(0, MAX_CHARS))
@@ -194,6 +198,7 @@ export function ChatWidget() {
               <Button
                 type="submit"
                 size="icon"
+                data-testid="ai-chat-send-btn"
                 className="shrink-0 rounded-full"
                 disabled={!draft.trim() || send.isPending}
                 aria-label="Send"

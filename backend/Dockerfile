@@ -1,32 +1,54 @@
-FROM node:20-slim
-
+# ── Stage 1: Dependencies ────────────────────────────────────
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install OpenSSL required by Prisma
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache openssl
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Configure npm for flaky/slow network connections and install dependencies
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
-    npm config set fetch-timeout 300000 && \
     npm ci --no-audit --no-fund
 
-COPY . .
-
-# Generate Prisma client
 RUN npx prisma generate
 
-# Build the NestJS application
+# ── Stage 2: Builder ─────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+RUN apk add --no-cache openssl
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
 RUN npm run build
+
+# Prune devDependencies to keep image lean
+RUN npm prune --production
+
+# ── Stage 3: Runner (Production) ─────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=3001
+
+RUN apk add --no-cache openssl dumb-init
+
+# Run as non-root built-in node user (uid 1000)
+USER node
+
+COPY --chown=node:node --from=builder /app/package*.json ./
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-# Apply migration history, seed, then start the server.
-# `migrate deploy` never drops data and never prompts, so it is the only safe
-# form for an unattended container start. The seed step is idempotent but is a
-# development convenience: a production image must not run it.
-CMD npx prisma migrate deploy && npm run db:seed && npm run start:prod
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/api/v1/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
