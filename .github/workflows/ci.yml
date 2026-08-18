@@ -189,7 +189,7 @@ jobs:
             backend/package-lock.json
             frontend/package-lock.json
 
-      # 1. Setup & Start Backend
+      # 1. Setup, Build & Start Backend
       - name: Install & Start Backend
         run: |
           cd backend
@@ -197,35 +197,45 @@ jobs:
           npx prisma generate
           npx prisma migrate deploy
           npm run db:seed
-          npm run start:dev &
+          npm run build
+          nohup node dist/main.js > backend.log 2>&1 &
         env:
           DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
 
-      # 2. Setup & Start Frontend
+      # 2. Setup, Build & Start Frontend
       - name: Install & Start Frontend
         run: |
           cd frontend
           npm ci
           npm run build
-          npm run start &
+          nohup npm run start -- -p 3000 -H 0.0.0.0 > frontend.log 2>&1 &
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3001/api/v1
 
-      # 3. Wait for services to respond
+      # 3. Wait for services to respond (using http-get to avoid HEAD method drop)
       - name: Wait for Frontend & API
         run: |
-          npx wait-on http://localhost:3001/api/v1/health http://localhost:3000 --timeout 60000
+          npx wait-on -t 120000 http-get://127.0.0.1:3001/api/v1/health http-get://127.0.0.1:3000
 
-      # 4. Run Cypress E2E Test Suite
+      # 4. Dump Server Logs if Startup Fails
+      - name: Dump Logs on Startup Failure
+        if: failure()
+        run: |
+          echo "=== BACKEND LOG ==="
+          cat backend/backend.log || true
+          echo "=== FRONTEND LOG ==="
+          cat frontend/frontend.log || true
+
+      # 5. Run Cypress E2E Test Suite
       - name: Run Cypress E2E Tests
         run: |
           cd frontend
           npm run test:e2e
         env:
-          CYPRESS_BASE_URL: http://localhost:3000
-          CYPRESS_API_URL: http://localhost:3001/api/v1
+          CYPRESS_BASE_URL: http://127.0.0.1:3000
+          CYPRESS_API_URL: http://127.0.0.1:3001/api/v1
 
-      # 5. Archive artifacts on failure
+      # 6. Archive artifacts on failure
       - name: Upload Cypress Artifacts (Screenshots & Videos)
         if: failure()
         uses: actions/upload-artifact@v4
