@@ -10,7 +10,8 @@ describe('Admin Dashboard & Production Operations E2E', () => {
         method: 'GET',
         url: `${apiUrl}/products`,
       }).then((prodRes) => {
-        const product = prodRes.body.data.products[0];
+        const products = prodRes.body.data.products || prodRes.body.data;
+        const product = products.find((p: any) => !p.requiresMeasurement) || products[0];
         if (product) {
           cy.request({
             method: 'POST',
@@ -23,6 +24,24 @@ describe('Admin Dashboard & Production Operations E2E', () => {
                 {
                   productId: product.id,
                   quantity: 1,
+                  ...(product.requiresMeasurement
+                    ? {
+                        measurements: {
+                          personName: 'Admin Test Student',
+                          unit: 'cm',
+                          values: {
+                            chest: 96,
+                            length: 70,
+                            shoulder: 45,
+                            sleeve: 60,
+                            collar: 40,
+                            waist: 80,
+                            hips: 95,
+                            inseam: 75,
+                          },
+                        },
+                      }
+                    : {}),
                 },
               ],
               shippingAddress: {

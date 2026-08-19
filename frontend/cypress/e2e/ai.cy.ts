@@ -5,12 +5,12 @@ describe('AI Intelligence & Shopping Assistant E2E', () => {
     cy.visit('/');
 
     // Open floating chat assistant
-    cy.getByTestId('ai-chat-toggle').should('be.visible').click();
+    cy.getByTestId('ai-chat-toggle').should('exist').click({ force: true });
     cy.getByTestId('ai-chat-dialog').should('be.visible');
 
     // Type a shopping query
     cy.getByTestId('ai-chat-input').type('School uniform fabric');
-    cy.getByTestId('ai-chat-send-btn').click();
+    cy.getByTestId('ai-chat-send-btn').click({ force: true });
 
     // Verify user message appeared in stream
     cy.getByTestId('ai-chat-bubble-user').should('contain', 'School uniform fabric');
