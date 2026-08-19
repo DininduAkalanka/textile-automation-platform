@@ -208,19 +208,19 @@ export default function AdminOrdersPage() {
 
       <div className="overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)]">
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">
+          <div data-testid="admin-orders-loading" className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">
             <Loader2 size={15} className="animate-spin" aria-hidden />
             Loading orders…
           </div>
         ) : isError ? (
-          <p className="py-20 text-center text-sm text-[#CC0000]">Could not load orders.</p>
+          <p data-testid="admin-orders-error" className="py-20 text-center text-sm text-[#CC0000]">Could not load orders.</p>
         ) : !data || data.orders.length === 0 ? (
-          <p className="py-20 text-center text-sm text-[#928E82]">
+          <p data-testid="admin-orders-empty" className="py-20 text-center text-sm text-[#928E82]">
             {hasFilters ? 'No orders match these filters.' : 'No orders yet.'}
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left">
+            <table data-testid="admin-orders-table" className="w-full min-w-[760px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
                   {['Order', 'Customer', 'Placed', 'Items', 'Total', 'Status', 'Payment'].map(
@@ -239,6 +239,7 @@ export default function AdminOrdersPage() {
                 {data.orders.map((order) => (
                   <tr
                     key={order.id}
+                    data-testid="admin-order-row"
                     onClick={() => router.push(`/admin/orders/${order.id}`)}
                     className="cursor-pointer border-b border-[#F4F3EF] transition-colors hover:bg-[#FAFAF8]"
                   >

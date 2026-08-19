@@ -1,6 +1,46 @@
 /// <reference types="cypress" />
 
 describe('Admin Dashboard & Production Operations E2E', () => {
+  const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
+
+  before(() => {
+    // Hermetic setup: Seed at least 1 order via API so the admin table is populated
+    cy.loginByApi('customer@example.com', 'Customer@123456').then(({ accessToken }) => {
+      cy.request({
+        method: 'GET',
+        url: `${apiUrl}/products`,
+      }).then((prodRes) => {
+        const product = prodRes.body.data.products[0];
+        if (product) {
+          cy.request({
+            method: 'POST',
+            url: `${apiUrl}/orders`,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: {
+              items: [
+                {
+                  productId: product.id,
+                  quantity: 1,
+                },
+              ],
+              shippingAddress: {
+                fullName: 'Admin Test Customer',
+                addressLine1: '123 Galle Road',
+                city: 'Colombo',
+                state: 'Western',
+                postalCode: '00300',
+                country: 'Sri Lanka',
+                phone: '0771234567',
+              },
+            },
+          });
+        }
+      });
+    });
+  });
+
   beforeEach(() => {
     // Authenticate as Admin
     cy.loginByApi('admin@textileshop.com', 'Admin@123456');
@@ -15,8 +55,8 @@ describe('Admin Dashboard & Production Operations E2E', () => {
   it('2. Navigates to Orders management table and filters orders', () => {
     cy.visit('/admin/orders');
     cy.contains('Orders').should('be.visible');
-    cy.get('input[placeholder*="Order number"]').should('be.visible');
-    cy.get('select').should('have.length.at.least', 1);
+    cy.getByTestId('admin-orders-table').should('be.visible');
+    cy.getByTestId('admin-order-row').should('have.length.at.least', 1);
   });
 
   it('3. Views Production pipeline board and task stages', () => {
