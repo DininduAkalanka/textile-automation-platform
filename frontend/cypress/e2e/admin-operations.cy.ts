@@ -15,7 +15,8 @@ describe('Admin Dashboard & Production Operations E2E', () => {
   it('2. Navigates to Orders management table and filters orders', () => {
     cy.visit('/admin/orders');
     cy.contains('Orders').should('be.visible');
-    cy.get('table, [role="table"], .card').should('exist');
+    cy.get('input[placeholder*="Order number"]').should('be.visible');
+    cy.get('select').should('have.length.at.least', 1);
   });
 
   it('3. Views Production pipeline board and task stages', () => {
