@@ -1,34 +1,35 @@
 /// <reference types="cypress" />
 
 describe('Customer Journey E2E Flow', () => {
-  const timestamp = Date.now();
-  const testUser = {
-    firstName: 'Test',
-    lastName: 'Customer',
-    email: `cust_${timestamp}@example.com`,
-    phone: `077${Math.floor(1000000 + Math.random() * 9000000)}`,
-    password: 'Customer@123456',
-  };
-
   it('1. Registers a new customer account with verified status', () => {
+    const runId = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const phoneSuffix = String(Math.floor(Math.random() * 10000000)).padStart(7, '0');
+    const testUser = {
+      firstName: 'Test',
+      lastName: 'Customer',
+      email: `cust_${runId}@example.com`,
+      phone: `077${phoneSuffix}`,
+      password: 'Customer@123456',
+    };
+
     cy.visit('/register');
-    cy.getByTestId('register-firstname-input').type(testUser.firstName);
-    cy.getByTestId('register-lastname-input').type(testUser.lastName);
-    cy.getByTestId('register-email-input').type(testUser.email);
-    cy.getByTestId('register-phone-input').type(testUser.phone);
-    cy.getByTestId('register-password-input').type(testUser.password);
-    cy.getByTestId('register-confirm-password-input').type(testUser.password);
+    cy.getByTestId('register-firstname-input').should('be.visible').clear().type(testUser.firstName);
+    cy.getByTestId('register-lastname-input').should('be.visible').clear().type(testUser.lastName);
+    cy.getByTestId('register-email-input').should('be.visible').clear().type(testUser.email);
+    cy.getByTestId('register-phone-input').should('be.visible').clear().type(testUser.phone);
+    cy.getByTestId('register-password-input').should('be.visible').clear().type(testUser.password);
+    cy.getByTestId('register-confirm-password-input').should('be.visible').clear().type(testUser.password);
     cy.getByTestId('register-submit-btn').click();
 
-    // Verify redirected to verify or storefront or account
-    cy.url().should('not.include', '/register');
+    // Verify redirected to verify page
+    cy.url({ timeout: 10000 }).should('include', '/verify');
   });
 
   it('2. Browses products catalog, views detail, and adds to cart', () => {
     // Programmatically authenticate with existing verified demo customer
     cy.loginByApi('customer@example.com', 'Customer@123456');
 
-    cy.visit('/products');
+    cy.visit('/products?category=women');
     cy.get('a[href*="/products/"]').first().click();
 
     cy.url().should('match', /\/products\/[a-zA-Z0-9-]+/);
@@ -36,7 +37,7 @@ describe('Customer Journey E2E Flow', () => {
 
     // Add product to cart
     cy.getByTestId('add-to-cart-btn').click();
-    cy.contains('Added to Cart').should('be.visible');
+    cy.contains(/Added to Cart/i).should('be.visible');
 
     // Visit cart
     cy.visit('/cart');
@@ -51,7 +52,7 @@ describe('Customer Journey E2E Flow', () => {
     cy.loginByApi('customer@example.com', 'Customer@123456');
 
     // Navigate to products and add to cart first
-    cy.visit('/products');
+    cy.visit('/products?category=women');
     cy.get('a[href*="/products/"]').first().click();
     cy.getByTestId('add-to-cart-btn').click();
 
