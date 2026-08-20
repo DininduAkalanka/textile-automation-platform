@@ -10,6 +10,7 @@ from app.models import ProductDoc
 # ai_readonly_role migration) — this is the second layer of that same rule.
 _SELECT = """
     SELECT p.id::text,
+           p.slug,
            p.name,
            p.description,
            p.price::float8      AS price,

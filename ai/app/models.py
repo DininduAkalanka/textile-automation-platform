@@ -7,6 +7,7 @@ class ProductDoc(BaseModel):
     """A product as the retriever returns it, and as the LLM is shown it."""
 
     id: str
+    slug: str | None = None
     name: str
     description: str | None = None
     price: float

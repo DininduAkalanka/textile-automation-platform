@@ -30,9 +30,10 @@ class Settings(BaseSettings):
 
     # Provider-agnostic by design (plan Session 9.1, task 3). Switching provider
     # is an env change, not a code change.
-    llm_provider: Literal["anthropic", "openai"] = "anthropic"
+    llm_provider: Literal["anthropic", "openai", "groq"] = "groq"
     llm_api_key: str = ""
-    llm_model: str = "claude-sonnet-5"
+    llm_model: str = "openai/gpt-oss-120b"
+    llm_base_url: str = "https://api.groq.com/openai/v1/chat/completions"
 
     # Low temperature: this is a shopping assistant, not a poet. It must pick
     # from a fixed list of products, so creativity is a liability.
