@@ -406,7 +406,9 @@ export default function CheckoutPage() {
 
               {/* Items Review */}
               <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Order Items</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
+                  Order Items ({items.length} {items.length === 1 ? 'item' : 'items'})
+                </h3>
                 {items.map((item) => (
                   <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--color-border-light)' }}>
                     <div>

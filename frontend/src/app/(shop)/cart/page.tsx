@@ -48,7 +48,8 @@ export default function CartPage() {
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
-        Shopping Cart ({totalItems()} items)
+        Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'}
+        {totalItems() > items.length ? ` · ${totalItems()} units` : ''})
       </h1>
 
       <div className="cart-layout">
@@ -209,7 +210,10 @@ export default function CartPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>Subtotal ({totalItems()} items)</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>
+                Subtotal ({items.length} {items.length === 1 ? 'item' : 'items'}
+                {totalItems() > items.length ? ` · ${totalItems()} units` : ''})
+              </span>
               <span style={{ fontWeight: 500 }}>Rs. {subtotal().toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem' }}>

@@ -205,6 +205,6 @@ def _card(doc: ProductDoc) -> ProductCard:
         price=doc.price,
         stock=doc.stock,
         image=doc.image,
-        link=f"/products/{doc.id}",
+        link=f"/products/{doc.slug or doc.id}",
         requires_measurement=doc.requires_measurement,
     )

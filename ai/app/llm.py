@@ -64,12 +64,11 @@ class AnthropicClient(LlmClient):
 
 
 class OpenAiClient(LlmClient):
-    """Any OpenAI-compatible endpoint."""
-
-    _URL = "https://api.openai.com/v1/chat/completions"
+    """Any OpenAI-compatible endpoint (Groq, OpenAI, OpenRouter, Gemini)."""
 
     def __init__(self, settings: Settings) -> None:
         self._s = settings
+        self._url = settings.llm_base_url or "https://api.openai.com/v1/chat/completions"
 
     async def complete(self, system: str, user: str) -> str:
         payload = {
@@ -88,7 +87,7 @@ class OpenAiClient(LlmClient):
 
         try:
             async with httpx.AsyncClient(timeout=self._s.llm_timeout_seconds) as http:
-                response = await http.post(self._URL, json=payload, headers=headers)
+                response = await http.post(self._url, json=payload, headers=headers)
                 response.raise_for_status()
                 body = response.json()
         except httpx.HTTPError as exc:
@@ -104,7 +103,7 @@ def build_client(settings: Settings) -> LlmClient | None:
     """None when no key is configured — the pipeline then degrades gracefully."""
     if not settings.llm_enabled:
         return None
-    if settings.llm_provider == "openai":
+    if settings.llm_provider in ("openai", "groq"):
         return OpenAiClient(settings)
     return AnthropicClient(settings)
 

@@ -268,7 +268,7 @@ function NavLink({ item }: { item: typeof NAV[0] }) {
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const items           = useCartStore(s => s.items) || [];
-  const cartCount       = items.reduce((s, i) => s + i.quantity, 0);
+  const cartCount       = items.length;
   const wishlistCount   = useWishlistStore(s => s.items.length);
   const openVisualSearch = useModalStore(s => s.openVisualSearch);
 

@@ -56,7 +56,19 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (slug) {
-      api.getProductBySlug(slug).then(setProduct).catch(console.error).finally(() => setLoading(false));
+      setLoading(true);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      const fetcher = isUuid
+        ? api.getProductById(slug).catch(() => api.getProductBySlug(slug))
+        : api.getProductBySlug(slug).catch(() => api.getProductById(slug));
+
+      fetcher
+        .then(setProduct)
+        .catch((err) => {
+          console.error('Failed to load product:', err);
+          setProduct(null);
+        })
+        .finally(() => setLoading(false));
     }
   }, [slug]);
 

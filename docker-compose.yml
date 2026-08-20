@@ -86,18 +86,14 @@ services:
     restart: unless-stopped
     ports:
       - '8000:8000'
+    env_file:
+      - backend/.env
     environment:
       # READ-ONLY role. It can SELECT products, categories and inventory, and
       # nothing else — Postgres itself refuses writes and refuses to show it the
       # users table. See the ai_readonly_role migration.
       - DATABASE_URL_READONLY=postgresql://textile_ai_readonly:ai_readonly_local_dev_password@postgres:5432/textile_db
       - INTERNAL_API_KEY=local-dev-internal-key
-      # No key -> the service still runs and returns ranked products from the
-      # retriever. Add one to enable the LLM:
-      #   LLM_API_KEY=sk-ant-...
-      - LLM_PROVIDER=anthropic
-      - LLM_API_KEY=${LLM_API_KEY:-}
-      - LLM_MODEL=claude-sonnet-5
     depends_on:
       postgres:
         condition: service_healthy

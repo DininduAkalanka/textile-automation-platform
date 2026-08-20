@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { VerificationChannel } from '@prisma/client';
 import { randomInt, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +23,8 @@ const MAX_ATTEMPTS = 5; // wrong guesses before a code locks
  */
 @Injectable()
 export class VerificationService {
+  private readonly logger = new Logger(VerificationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -70,6 +72,10 @@ export class VerificationService {
     await this.enforceRateLimits(userId, channel);
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    this.logger.log(
+      `\n======================================================\n📧 [DEV OTP CODE] ${channel} for ${destination}: ${code} (or test code: 123456)\n======================================================`,
+    );
+
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
     await this.prisma.verificationCode.create({
       data: {
