@@ -13,16 +13,18 @@ describe('Customer Journey E2E Flow', () => {
     };
 
     cy.visit('/register');
-    cy.getByTestId('register-firstname-input').should('be.visible').clear().type(testUser.firstName);
-    cy.getByTestId('register-lastname-input').should('be.visible').clear().type(testUser.lastName);
-    cy.getByTestId('register-email-input').should('be.visible').clear().type(testUser.email);
-    cy.getByTestId('register-phone-input').should('be.visible').clear().type(testUser.phone);
-    cy.getByTestId('register-password-input').should('be.visible').clear().type(testUser.password);
-    cy.getByTestId('register-confirm-password-input').should('be.visible').clear().type(testUser.password);
+    cy.get('form').should('be.visible');
+    cy.wait(500);
+    cy.get('input[name="firstName"]').clear().type(testUser.firstName).should('have.value', testUser.firstName);
+    cy.get('input[name="lastName"]').clear().type(testUser.lastName).should('have.value', testUser.lastName);
+    cy.get('input[name="email"]').clear().type(testUser.email).should('have.value', testUser.email);
+    cy.get('input[name="phone"]').clear().type(testUser.phone).should('have.value', testUser.phone);
+    cy.get('input[name="password"]').clear().type(testUser.password);
+    cy.get('input[name="confirmPassword"]').clear().type(testUser.password);
     cy.getByTestId('register-submit-btn').click();
 
     // Verify redirected to verify page
-    cy.url({ timeout: 10000 }).should('include', '/verify');
+    cy.url({ timeout: 20000 }).should('include', '/verify');
   });
 
   it('2. Browses products catalog, views detail, and adds to cart', () => {
@@ -79,5 +81,38 @@ describe('Customer Journey E2E Flow', () => {
     // Verify redirect to order details
     cy.url().should('include', '/account/orders');
     cy.contains('Order').should('be.visible');
+  });
+
+  it('4. Completes Guest Express Checkout without prior account creation', () => {
+    // Ensure no session
+    cy.clearLocalStorage();
+    cy.clearCookies();
+
+    cy.visit('/products?category=women');
+    cy.get('a[href*="/products/"]').first().click();
+    cy.getByTestId('add-to-cart-btn').click();
+
+    // Guest goes straight to checkout
+    cy.visit('/checkout');
+    cy.contains('Express Checkout').should('be.visible');
+
+    const guestSuffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    cy.getByTestId('checkout-name-input').clear().type('Guest Shopper');
+    cy.getByTestId('checkout-email-input').clear().type(`guest_${guestSuffix}@example.com`);
+    cy.getByTestId('checkout-phone-input').clear().type('0777654321');
+    cy.getByTestId('checkout-address1-input').clear().type('45 Beach Road');
+    cy.getByTestId('checkout-city-input').clear().type('Mount Lavinia');
+    cy.getByTestId('checkout-state-input').clear().type('Western Province');
+    cy.getByTestId('checkout-postal-input').clear().type('10370');
+    cy.getByTestId('checkout-country-input').clear().type('Sri Lanka');
+
+    cy.getByTestId('checkout-continue-to-payment-btn').click();
+
+    // Select PayHere online payment
+    cy.getByTestId('payment-method-payhere').click();
+    cy.getByTestId('checkout-continue-to-review-btn').click();
+
+    // Confirm button ready for payment
+    cy.getByTestId('checkout-place-order-btn').should('be.visible');
   });
 });

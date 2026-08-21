@@ -981,20 +981,11 @@
   flex-shrink: 0;
 }
 @media (max-width: 768px) {
-  /* Switching to a plain block stack (rather than flex-direction: column)
-     sidesteps a real bug: the content div's flex: 1 — set inline for the
-     desktop row layout, to fill the width left by the 240px sidebar —
-     resolves to flex-basis: 0% on whichever axis is the main axis, so once
-     this became a column it collapsed the box's height below what the
-     product grid actually needs. The grid then visually spilled past it,
-     into where the footer starts. Plain block stacking has no main-axis
-     sizing to collapse. */
   .products-layout {
     display: block;
   }
   .products-sidebar {
-    width: 100%;
-    margin-bottom: 1.5rem;
+    display: none !important;
   }
   .products-content {
     flex: none !important;

@@ -3,12 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductionService } from '../production/production.service';
 import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
+import { AuthService } from '../auth/auth.service';
+import { VerificationService } from '../verification/verification.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { GuestCheckoutDto } from './dto/guest-checkout.dto';
 import { validateMeasurements } from './measurements.config';
 import {
   OrderStatus,
@@ -16,6 +20,7 @@ import {
   UserRole,
   PaymentStatus,
   PaymentMethod,
+  VerificationChannel,
 } from '@prisma/client';
 import {
   OrderAction,
@@ -32,6 +37,8 @@ export class OrdersService {
     private inventory: InventoryService,
     private production: ProductionService,
     private dispatch: NotificationDispatchService,
+    @Optional() private authService?: AuthService,
+    @Optional() private verificationService?: VerificationService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -40,11 +47,69 @@ export class OrdersService {
     return `TXL-${timestamp}-${random}`;
   }
 
+  async guestCheckout(dto: GuestCheckoutDto, userAgent?: string) {
+    if (!this.authService) {
+      throw new BadRequestException('Auth service unavailable for guest checkout');
+    }
+
+    const { user, session } = await this.authService.provisionOrFindGuestUser(
+      dto.email,
+      dto.phone,
+      dto.fullName,
+      dto.password,
+      userAgent,
+    );
+
+    // If verification code is provided, verify on the fly
+    if (dto.verificationCode && this.verificationService) {
+      try {
+        await this.verificationService.verifyCode(
+          user.id,
+          VerificationChannel.EMAIL,
+          dto.verificationCode,
+        );
+        user.emailVerified = true;
+      } catch {
+        try {
+          await this.verificationService.verifyCode(
+            user.id,
+            VerificationChannel.SMS,
+            dto.verificationCode,
+          );
+          user.phoneVerified = true;
+        } catch {
+          throw new BadRequestException({
+            code: 'OTP_INVALID',
+            message: 'Invalid or expired verification code.',
+          });
+        }
+      }
+    }
+
+    // COD gate: prevent fake courier dispatches by requiring verified contact
+    if (dto.paymentMethod === PaymentMethod.COD) {
+      if (!user.emailVerified && !user.phoneVerified) {
+        throw new BadRequestException({
+          code: 'VERIFICATION_REQUIRED',
+          message: 'Cash on Delivery requires a verified email or phone number OTP.',
+        });
+      }
+    }
+
+    const order = await this.createOrderInternal(user.id, {
+      items: dto.items,
+      shippingAddress: dto.shippingAddress,
+      billingAddress: dto.billingAddress,
+      notes: dto.notes,
+    });
+
+    return {
+      order,
+      session,
+    };
+  }
+
   async create(userId: string, dto: CreateOrderDto) {
-    // Checkout gate: a customer must have at least one VERIFIED contact
-    // (email or phone) before they can place an order, so order/payment
-    // updates can actually reach them. Verification happens via OTP; this is
-    // the server-side enforcement behind the frontend's pre-checkout prompt.
     const contact = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { emailVerified: true, phoneVerified: true },
@@ -55,6 +120,11 @@ export class OrdersService {
         message: 'Verify your email or phone number before placing an order.',
       });
     }
+
+    return this.createOrderInternal(userId, dto);
+  }
+
+  private async createOrderInternal(userId: string, dto: CreateOrderDto) {
 
     // Validate all products exist and have sufficient stock
     const productIds = dto.items.map((item) => item.productId);
