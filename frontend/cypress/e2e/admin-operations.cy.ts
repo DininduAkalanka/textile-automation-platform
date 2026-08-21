@@ -11,7 +11,7 @@ describe('Admin Dashboard & Production Operations E2E', () => {
         url: `${apiUrl}/products`,
       }).then((prodRes) => {
         const products = prodRes.body.data.products || prodRes.body.data;
-        const product = products.find((p: any) => !p.requiresMeasurement) || products[0];
+        const product = products.find((p: any) => !p.requiresMeasurement && p.productType === 'READY_MADE') || products[0];
         if (product) {
           cy.request({
             method: 'POST',
@@ -31,13 +31,13 @@ describe('Admin Dashboard & Production Operations E2E', () => {
                           unit: 'cm',
                           values: {
                             chest: 96,
-                            length: 70,
-                            shoulder: 45,
-                            sleeve: 60,
-                            collar: 40,
                             waist: 80,
-                            hips: 95,
-                            inseam: 75,
+                            shoulder: 45,
+                            sleeveLength: 60,
+                            shirtLength: 70,
+                            trouserWaist: 80,
+                            hip: 95,
+                            trouserLength: 100,
                           },
                         },
                       }

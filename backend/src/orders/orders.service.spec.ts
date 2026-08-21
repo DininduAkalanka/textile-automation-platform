@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, PaymentMethod } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -171,5 +171,133 @@ describe('OrdersService — reserve on create (D3)', () => {
     await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  describe('guestCheckout', () => {
+    const authService = {
+      provisionOrFindGuestUser: jest.fn(),
+    } as any;
+    const verificationService = {
+      verifyCode: jest.fn(),
+    } as any;
+
+    let guestService: OrdersService;
+
+    beforeEach(() => {
+      guestService = new OrdersService(
+        prisma as any,
+        inventory as any,
+        production as any,
+        { sendOrderConfirmation: jest.fn() } as any,
+        authService,
+        verificationService,
+      );
+    });
+
+    it('provisions guest user and creates order for online payment', async () => {
+      const guestDto = {
+        items: [{ productId: 'p1', quantity: 2 }],
+        shippingAddress: {
+          fullName: 'Jane Doe',
+          addressLine1: '456 Sea Road',
+          city: 'Galle',
+          state: 'Southern',
+          postalCode: '80000',
+          country: 'Sri Lanka',
+          phone: '0771234567',
+        },
+        email: 'guest@example.com',
+        phone: '0771234567',
+        fullName: 'Jane Doe',
+        paymentMethod: PaymentMethod.PAYHERE,
+      };
+
+      authService.provisionOrFindGuestUser.mockResolvedValue({
+        user: { id: 'u_guest', emailVerified: false, phoneVerified: false },
+        session: { accessToken: 'token_123' },
+      });
+      prisma.product.findMany.mockResolvedValue([makeProduct()]);
+      tx.order.create.mockResolvedValue({ id: 'o_guest', orderNumber: 'TXL-GUEST' });
+
+      const result = await guestService.guestCheckout(guestDto);
+
+      expect(result.order).toEqual({ id: 'o_guest', orderNumber: 'TXL-GUEST' });
+      expect(result.session).toEqual({ accessToken: 'token_123' });
+      expect(authService.provisionOrFindGuestUser).toHaveBeenCalledWith(
+        'guest@example.com',
+        '0771234567',
+        'Jane Doe',
+        undefined,
+        undefined,
+      );
+    });
+
+    it('rejects unverified guest for Cash on Delivery (COD) without OTP', async () => {
+      const codDto = {
+        items: [{ productId: 'p1', quantity: 1 }],
+        shippingAddress: {
+          fullName: 'Jane Doe',
+          addressLine1: '456 Sea Road',
+          city: 'Galle',
+          state: 'Southern',
+          postalCode: '80000',
+          country: 'Sri Lanka',
+          phone: '0771234567',
+        },
+        email: 'guest@example.com',
+        phone: '0771234567',
+        fullName: 'Jane Doe',
+        paymentMethod: PaymentMethod.COD,
+      };
+
+      authService.provisionOrFindGuestUser.mockResolvedValue({
+        user: { id: 'u_guest', emailVerified: false, phoneVerified: false },
+        session: { accessToken: 'token_123' },
+      });
+
+      await expect(guestService.guestCheckout(codDto)).rejects.toMatchObject({
+        response: expect.objectContaining({ code: 'VERIFICATION_REQUIRED' }),
+      });
+    });
+
+    it('allows guest COD when valid verification code is provided', async () => {
+      const codDto = {
+        items: [{ productId: 'p1', quantity: 1 }],
+        shippingAddress: {
+          fullName: 'Jane Doe',
+          addressLine1: '456 Sea Road',
+          city: 'Galle',
+          state: 'Southern',
+          postalCode: '80000',
+          country: 'Sri Lanka',
+          phone: '0771234567',
+        },
+        email: 'guest@example.com',
+        phone: '0771234567',
+        fullName: 'Jane Doe',
+        paymentMethod: PaymentMethod.COD,
+        verificationCode: '849201',
+      };
+
+      authService.provisionOrFindGuestUser.mockResolvedValue({
+        user: { id: 'u_guest', emailVerified: false, phoneVerified: false },
+        session: { accessToken: 'token_123' },
+      });
+      verificationService.verifyCode.mockResolvedValue({
+        emailVerified: true,
+        phoneVerified: false,
+      });
+      prisma.product.findMany.mockResolvedValue([makeProduct()]);
+      tx.order.create.mockResolvedValue({ id: 'o_cod', orderNumber: 'TXL-COD' });
+
+      const result = await guestService.guestCheckout(codDto);
+
+      expect(result.order).toEqual({ id: 'o_cod', orderNumber: 'TXL-COD' });
+      expect(verificationService.verifyCode).toHaveBeenCalledWith(
+        'u_guest',
+        'EMAIL',
+        '849201',
+      );
+    });
   });
 });

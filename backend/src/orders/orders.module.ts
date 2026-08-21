@@ -6,6 +6,9 @@ import { ProductionModule } from '../production/production.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { InvoiceModule } from '../invoices/invoice.module';
 
+import { AuthModule } from '../auth/auth.module';
+import { VerificationModule } from '../verification/verification.module';
+
 @Module({
   // ProductionModule provides the ProductionTrigger that confirmOrder fires on
   // CONFIRMED (decision D8). NotificationsModule provides the post-commit
@@ -16,6 +19,8 @@ import { InvoiceModule } from '../invoices/invoice.module';
     ProductionModule,
     NotificationsModule,
     InvoiceModule,
+    AuthModule,
+    VerificationModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

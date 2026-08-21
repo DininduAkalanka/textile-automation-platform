@@ -198,6 +198,66 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Auto-provisions a new customer account or finds an existing user
+   * for guest checkout, issuing an active session so the customer
+   * is logged in immediately upon order completion.
+   */
+  async provisionOrFindGuestUser(
+    email: string,
+    phone: string,
+    fullName: string,
+    password?: string,
+    userAgent?: string,
+  ) {
+    const normEmail = email?.trim().toLowerCase() || null;
+    const normPhone = phone ? normalizeLkPhone(phone) : null;
+
+    const orConditions: { email?: string; phone?: string }[] = [];
+    if (normEmail) orConditions.push({ email: normEmail });
+    if (normPhone) orConditions.push({ phone: normPhone });
+
+    let user = orConditions.length > 0
+      ? await this.prisma.user.findFirst({ where: { OR: orConditions } })
+      : null;
+
+    if (!user) {
+      const parts = fullName.trim().split(/\s+/);
+      const firstName = parts[0] || 'Guest';
+      const lastName = parts.slice(1).join(' ') || 'Customer';
+      const passwordToHash = password || randomBytes(16).toString('hex');
+      const passwordHash = await bcrypt.hash(passwordToHash, 12);
+
+      user = await this.prisma.user.create({
+        data: {
+          email: normEmail,
+          phone: normPhone,
+          firstName,
+          lastName,
+          passwordHash,
+          role: 'CUSTOMER',
+          emailVerified: false,
+          phoneVerified: false,
+        },
+      });
+    }
+
+    const session = await this.issueSession(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+      },
+      userAgent,
+    );
+
+    return { user, session };
+  }
+
   // ─── Helpers ────────────────────────────────────────────
 
   private async issueSession(user: SessionUser, userAgent?: string) {

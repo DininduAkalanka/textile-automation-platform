@@ -113,6 +113,20 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async sendVerificationCode(channel: 'EMAIL' | 'SMS' = 'EMAIL') {
+    return this.request('/auth/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
+    });
+  }
+
+  async verifyContactCode(channel: 'EMAIL' | 'SMS', code: string) {
+    return this.request<{ emailVerified: boolean; phoneVerified: boolean }>('/auth/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ channel, code }),
+    });
+  }
+
   async logout() {
     try {
       await this.request('/auth/logout', { method: 'POST' });
@@ -181,8 +195,6 @@ class ApiClient {
     return this.request<Category[]>('/categories');
   }
 
-  // ─── Orders ───────────────────────────────────────────
-
   async createOrder(data: {
     items: {
       productId: string;
@@ -202,6 +214,39 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  /**
+   * Public Express / Guest Checkout endpoint.
+   * Auto-provisions user account and creates order with session return.
+   */
+  async guestCheckout(data: {
+    items: {
+      productId: string;
+      quantity: number;
+      measurements?: {
+        personName: string;
+        label?: string;
+        values: Record<string, number>;
+      };
+    }[];
+    shippingAddress: any;
+    billingAddress?: any;
+    email: string;
+    phone: string;
+    fullName: string;
+    paymentMethod: 'PAYHERE' | 'COD' | 'INSTALLMENT' | 'STRIPE';
+    verificationCode?: string;
+    password?: string;
+    notes?: string;
+  }): Promise<{ order: Order; session: { accessToken: string; refreshToken: string; user: any } }> {
+    return this.request<{ order: Order; session: { accessToken: string; refreshToken: string; user: any } }>(
+      '/orders/guest-checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    );
   }
 
   /**

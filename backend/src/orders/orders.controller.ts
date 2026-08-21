@@ -7,14 +7,17 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Req,
   Res,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request as ExpressRequest } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
 import { InvoiceService } from '../invoices/invoice.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { GuestCheckoutDto } from './dto/guest-checkout.dto';
 import { OrderActionDto } from './dto/order-action.dto';
 import { AdminOrdersQueryDto } from './dto/admin-orders-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -24,18 +27,30 @@ import { UserRole } from '@prisma/client';
 import type { RequestWithUser } from '../common/types/request-with-user';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly invoiceService: InvoiceService,
   ) {}
 
+  /**
+   * Public Express / Guest Checkout endpoint.
+   * Auto-provisions or links the user account, verifies OTP if provided,
+   * creates the order, and returns order details along with the JWT session.
+   */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('guest-checkout')
+  guestCheckout(@Body() dto: GuestCheckoutDto, @Req() req: ExpressRequest) {
+    return this.ordersService.guestCheckout(dto, req.headers['user-agent']);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Request() req: RequestWithUser, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   findUserOrders(
     @Request() req: RequestWithUser,
@@ -45,6 +60,7 @@ export class OrdersController {
     return this.ordersService.findUserOrders(req.user.sub, page, limit);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findById(
     @Request() req: RequestWithUser,
@@ -61,6 +77,7 @@ export class OrdersController {
    *  confirmation. findById() enforces ownership (throws 403/404) before we
    *  render, so a customer can only fetch their own. Streams the raw PDF via
    *  @Res(), bypassing the JSON response envelope. */
+  @UseGuards(JwtAuthGuard)
   @Get(':id/invoice.pdf')
   async invoice(
     @Request() req: RequestWithUser,
@@ -86,6 +103,7 @@ export class OrdersController {
   /** Customer self-service: cancel their own order. The service enforces that
    *  this only works while it is still PENDING — anything past that is an
    *  admin's judgment call, through the action route below. */
+  @UseGuards(JwtAuthGuard)
   @Put(':id/cancel')
   cancelMine(
     @Request() req: RequestWithUser,

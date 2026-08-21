@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
@@ -8,6 +9,7 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { CategoryMegaNav, CATEGORIES_DATA } from '@/components/layout/CategoryMegaNav';
 
 /* ── SVG Icon Components ──────────────────────────────────── */
 const IconSearch = ({ size = 18 }: { size?: number }) => (
@@ -402,31 +404,87 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* ── Desktop Navigation ───────────────────────── */}
-          <nav
-            className="hide-mobile"
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.125rem',
-            }}
-          >
-            {NAV.map(item => (
-              <NavLink key={item.label} item={item} />
-            ))}
-          </nav>
+          {/* ── Center Search Bar ────────────────────────── */}
+          <div className="hide-mobile" style={{ flex: 1, maxWidth: '480px', margin: '0 auto' }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = searchQuery.trim();
+                if (q) window.location.href = `/products?search=${encodeURIComponent(q)}`;
+              }}
+              style={{ position: 'relative', width: '100%' }}
+            >
+              <input
+                type="text"
+                placeholder="Search fabrics, sarees, uniforms, shirts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '38px',
+                  padding: '0 38px 0 16px',
+                  fontSize: '0.84rem',
+                  border: '1.5px solid var(--clr-border)',
+                  borderRadius: '20px',
+                  outline: 'none',
+                  background: '#f9fafb',
+                  transition: 'all 200ms ease',
+                  fontFamily: 'var(--font-sans)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#CC0000';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--clr-border)';
+                  e.currentTarget.style.background = '#f9fafb';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                style={{
+                  position: 'absolute',
+                  right: '5px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: '#CC0000',
+                  color: '#fff',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 150ms ease',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#990000'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#CC0000'}
+              >
+                <IconSearch size={13} />
+              </button>
+            </form>
+          </div>
 
           {/* ── Actions ──────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.125rem', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
+            {/* LKR Currency Indicator */}
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.725rem', fontWeight: 600, color: 'var(--clr-text-2)', padding: '0.3rem 0.6rem', background: '#f3f4f6', borderRadius: '14px', marginRight: '0.25rem' }}>
+              <span>🇱🇰</span>
+              <span>LKR</span>
+            </div>
 
-            {/* Search */}
+            {/* Visual Search button */}
             <button
               id="search-btn"
               aria-label="Search"
               className="btn-icon"
               onClick={() => setSearchOpen(true)}
+              title="Quick Search & AI Lens"
             >
               <IconSearch size={17} />
             </button>
@@ -698,6 +756,8 @@ export default function Header() {
 
         {/* Thin brand accent line */}
         <div style={{ height: '2px', background: 'var(--clr-brand)', opacity: 0.9 }} />
+        {/* ── Signature Red Category Navigation Bar (Fashion Bug Style) ── */}
+        <CategoryMegaNav />
       </header>
 
       {/* ── Search Overlay ────────────────────────────────── */}
@@ -714,45 +774,38 @@ export default function Header() {
           <div
             style={{
               position: 'fixed', top: 0, left: 0, right: 0,
-              background: '#fff',
-              borderBottom: '1px solid var(--clr-border)',
-              padding: '1.25rem 2rem',
-              zIndex: 491,
-              animation: 'fadeInDown 0.25s var(--ease-out-expo)',
-              boxShadow: 'var(--shadow-lg)',
+              background: '#fff', borderBottom: '1px solid var(--clr-border)',
+              padding: '1.25rem 1rem 1.5rem', zIndex: 495,
+              boxShadow: 'var(--shadow-lg)', animation: 'slideDown 0.2s ease',
             }}
           >
-            <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div
                 style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  borderBottom: '2px solid var(--clr-brand)',
-                  paddingBottom: '0.625rem',
+                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.75rem 1rem', border: '1.5px solid var(--clr-brand)',
+                  borderRadius: 'var(--r-md)', background: 'var(--warm-50)',
                 }}
               >
                 <IconSearch size={18} />
                 <input
                   ref={searchInputRef}
-                  type="text"
-                  id="search-input"
+                  type="search"
+                  placeholder="Search products, fabrics, uniforms, sarees..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Escape') setSearchOpen(false); }}
-                  placeholder="Search products, uniforms, fabrics..."
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      setSearchOpen(false);
+                      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`;
+                    }
+                  }}
                   style={{
-                    flex: 1,
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '1.0625rem',
-                    color: 'var(--clr-text)',
-                    background: 'transparent',
-                    fontFamily: 'var(--font-sans)',
+                    flex: 1, border: 'none', outline: 'none', fontSize: '0.9375rem',
+                    color: 'var(--clr-text)', background: 'transparent', fontFamily: 'var(--font-sans)',
                   }}
                 />
-                {/* Visual Search camera shortcut inside search bar */}
+                {/* Visual Search shortcut */}
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -761,14 +814,9 @@ export default function Header() {
                   }}
                   title="Search by image (AI Visual Search)"
                   style={{
-                    color: 'var(--clr-text-3)',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    color: 'var(--clr-text-3)', background: 'transparent',
+                    border: 'none', cursor: 'pointer', padding: '2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'color 150ms ease',
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--clr-brand)'}
@@ -791,13 +839,8 @@ export default function Header() {
             </div>
             <p
               style={{
-                maxWidth: '680px',
-                margin: '0.625rem auto 0',
-                paddingLeft: '1.75rem',
-                fontSize: '0.72rem',
-                color: 'var(--clr-text-3)',
-                fontFamily: 'var(--font-mono)',
-                letterSpacing: '0.06em',
+                maxWidth: '680px', margin: '0.625rem auto 0', paddingLeft: '1.75rem',
+                fontSize: '0.72rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em',
               }}
             >
               Press Escape to close &mdash; suggestions appear as you type
@@ -810,138 +853,150 @@ export default function Header() {
       <div
         onClick={closeMobile}
         style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.55)',
-          backdropFilter: 'blur(2px)',
-          zIndex: 490,
-          opacity: mobileOpen ? 1 : 0,
-          visibility: mobileOpen ? 'visible' : 'hidden',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+          backdropFilter: 'blur(2px)', zIndex: 490,
+          opacity: mobileOpen ? 1 : 0, visibility: mobileOpen ? 'visible' : 'hidden',
           transition: 'opacity 0.4s ease, visibility 0.4s',
           pointerEvents: mobileOpen ? 'all' : 'none',
         }}
       />
 
-      {/* ── Mobile Drawer ─────────────────────────────────── */}
+      {/* ── Mobile Drawer (Fashion Bug Mobile Style) ─────────── */}
       <div
         id="mobile-drawer"
         style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 'auto',
-          width: 'min(85vw, 360px)',
-          background: 'var(--clr-surface)',
-          zIndex: 491,
+          position: 'fixed', top: 0, right: 0, bottom: 0, left: 'auto',
+          width: 'min(88vw, 360px)', background: '#ffffff', zIndex: 491,
           transform: mobileOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: 'var(--shadow-xl)',
-          overflowY: 'auto',
+          transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: 'var(--shadow-xl)', overflowY: 'auto',
         }}
       >
-        {/* Drawer Header */}
+        {/* Drawer Header (Pure Black with Menu Title & Close) */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1.125rem 1.25rem',
-            borderBottom: '1px solid var(--clr-border-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem 1.25rem', background: '#000000', color: '#ffffff',
           }}
         >
-          <Link href="/" onClick={closeMobile} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <BrandMark size={32} style={{ flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--clr-text)' }}>Nandana Textile</span>
-          </Link>
-          <button onClick={closeMobile} className="btn-icon" aria-label="Close menu">
-            <IconClose size={18} />
+          <span style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '0.02em', color: '#ffffff' }}>
+            Menu
+          </span>
+          <button
+            onClick={closeMobile}
+            className="btn-icon"
+            aria-label="Close menu"
+            style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
+          >
+            <IconClose size={20} />
           </button>
         </div>
 
-        {/* Drawer Nav */}
+        {/* Drawer Nav (Categories with Circular Thumbnails & Chevron) */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {NAV.map(item => {
-            const hasChildren = 'dropdown' in item || 'isMega' in item;
+          {CATEGORIES_DATA.map(item => {
+            const hasChildren = Boolean(item.columns && item.columns.length > 0);
             const isExpanded  = mobileExpanded === item.label;
             return (
-              <div key={item.label} style={{ borderBottom: '1px solid var(--clr-border-2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <Link
-                    href={item.href}
-                    onClick={closeMobile}
-                    style={{
-                      flex: 1,
-                      display: 'block',
-                      padding: '0.9rem 1.25rem',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                      color: 'var(--clr-text)',
-                      fontFamily: 'var(--font-sans)',
-                    }}
-                  >
-                    {item.label}
-                  </Link>
-                  {hasChildren && (
-                    <button
-                      onClick={() => setMobileExpanded(isExpanded ? null : item.label)}
+              <div key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <div
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.75rem 1.25rem', cursor: 'pointer',
+                    background: isExpanded ? '#f9fafb' : '#ffffff',
+                    transition: 'background 150ms ease',
+                  }}
+                  onClick={() => {
+                    if (hasChildren) {
+                      setMobileExpanded(isExpanded ? null : item.label);
+                    } else {
+                      closeMobile();
+                      window.location.href = item.href;
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    {/* Circular Thumbnail Avatar */}
+                    {item.thumbnail ? (
+                      <div
+                        style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          overflow: 'hidden', flexShrink: 0, position: 'relative',
+                          border: '1.5px solid #f3f4f6', background: '#f9fafb',
+                        }}
+                      >
+                        <Image
+                          src={item.thumbnail}
+                          alt={item.label}
+                          width={38}
+                          height={38}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          background: '#f3f4f6', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', color: '#6b7280', fontSize: '0.8rem',
+                          fontWeight: 700, flexShrink: 0,
+                        }}
+                      >
+                        {item.label[0]}
+                      </div>
+                    )}
+
+                    {/* Category Label */}
+                    <span
                       style={{
-                        padding: '0.9rem 1.25rem',
-                        color: 'var(--clr-text-2)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'transform 240ms ease',
-                        transform: isExpanded ? 'rotate(180deg)' : 'none',
+                        fontSize: '0.925rem', fontWeight: 500, color: '#111827',
+                        fontFamily: 'var(--font-sans)',
                       }}
-                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
                     >
-                      <IconChevronDown size={14} />
-                    </button>
+                      {item.label}
+                    </span>
+                  </div>
+
+                  {/* Right Chevron */}
+                  {hasChildren && (
+                    <div
+                      style={{
+                        color: '#9ca3af',
+                        transition: 'transform 200ms ease',
+                        transform: isExpanded ? 'rotate(90deg)' : 'none',
+                      }}
+                    >
+                      <IconChevronRight size={16} />
+                    </div>
                   )}
                 </div>
 
-                {isExpanded && hasChildren && (
-                  <div style={{ background: 'var(--warm-50)', padding: '0.375rem 0 0.75rem' }}>
-                    {'dropdown' in item && (item as { dropdown: { label: string; href: string }[] }).dropdown?.map(link => (
-                      <Link
-                        key={link.label}
-                        href={link.href}
-                        onClick={closeMobile}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem 1.75rem',
-                          fontSize: '0.8125rem',
-                          color: 'var(--clr-text-2)',
-                        }}
-                      >
-                        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--clr-border)', display: 'block', flexShrink: 0 }} />
-                        {link.label}
-                      </Link>
-                    ))}
-                    {'megaCols' in item && (item as { megaCols: { title: string; viewAll: string; links: { label: string; href: string; note: string }[] }[] }).megaCols?.map(col => (
-                      <div key={col.title}>
-                        <p style={{ padding: '0.625rem 1.75rem 0.25rem', fontSize: '0.6rem', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--clr-brand)', fontFamily: 'var(--font-mono)' }}>
+                {/* Subcategory Accordion */}
+                {isExpanded && hasChildren && item.columns && (
+                  <div style={{ background: '#f9fafb', padding: '0.5rem 0 0.875rem', borderTop: '1px solid #f3f4f6' }}>
+                    {item.columns.map((col, cIdx) => (
+                      <div key={cIdx} style={{ marginBottom: '0.875rem' }}>
+                        <p style={{ padding: '0.5rem 1.5rem 0.25rem', fontSize: '0.675rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#CC0000', fontFamily: 'var(--font-sans)' }}>
                           {col.title}
                         </p>
-                        {col.links.map(link => (
+                        {col.links.map((link, lIdx) => (
                           <Link
-                            key={link.label}
+                            key={lIdx}
                             href={link.href}
                             onClick={closeMobile}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '0.5rem',
-                              padding: '0.45rem 2.25rem', fontSize: '0.8125rem', color: 'var(--clr-text-2)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '0.45rem 2rem', fontSize: '0.84rem', color: '#4b5563',
+                              transition: 'color 150ms ease',
                             }}
                           >
-                            <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--clr-border)', display: 'block', flexShrink: 0 }} />
-                            {link.label}
+                            <span>{link.label}</span>
+                            {link.note && (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)' }}>
+                                {link.note}
+                              </span>
+                            )}
                           </Link>
                         ))}
                       </div>
@@ -953,8 +1008,19 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Drawer Footer */}
-        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--clr-border-2)' }}>
+        {/* Currency Switcher & Footer (Fashion Bug Style) */}
+        <div style={{ padding: '1.25rem', borderTop: '1px solid #f3f4f6', background: '#f9fafb' }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#111827', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+              CURRENCY
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
+              <span style={{ fontSize: '1.1rem' }}>🇱🇰</span>
+              <span>LKR</span>
+            </div>
+          </div>
+
+          {/* Quick Account / Sign In */}
           {mounted && isAuthenticated ? (
             <button
               onClick={() => { logout(); closeMobile(); }}
@@ -966,7 +1032,7 @@ export default function Header() {
           ) : (
             <div style={{ display: 'flex', gap: '0.625rem' }}>
               <Link href="/login"    onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Sign In</Link>
-              <Link href="/register" onClick={closeMobile} className="btn btn-brand"   style={{ flex: 1, justifyContent: 'center' }}>Register</Link>
+              <Link href="/register" onClick={closeMobile} className="btn btn-brand"   style={{ flex: 1, justifyContent: 'center', background: '#CC0000' }}>Register</Link>
             </div>
           )}
         </div>
