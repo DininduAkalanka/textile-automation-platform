@@ -120,7 +120,7 @@ export class OrdersController {
   // ─── Admin Endpoints ───────────────────────────────────
 
   @Get('admin/all')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   findAllOrders(@Query() query: AdminOrdersQueryDto) {
     return this.ordersService.findAllOrders(query);
@@ -131,7 +131,7 @@ export class OrdersController {
    *  "mark_collected" are NOT here, they are payments.service.ts's
    *  markPaymentPaid under two labels (see AdminOrderAction's docblock). */
   @Put('admin/:id/action')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   action(
     @Request() req: RequestWithUser,
