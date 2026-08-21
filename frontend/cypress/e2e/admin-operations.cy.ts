@@ -74,6 +74,7 @@ describe('Admin Dashboard & Production Operations E2E', () => {
   it('2. Navigates to Orders management table and filters orders', () => {
     cy.visit('/admin/orders');
     cy.contains('Orders').should('be.visible');
+    cy.getByTestId('admin-orders-loading').should('not.exist', { timeout: 10000 });
     cy.getByTestId('admin-orders-table').should('be.visible');
     cy.getByTestId('admin-order-row').should('have.length.at.least', 1);
   });
