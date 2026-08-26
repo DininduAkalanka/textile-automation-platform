@@ -1,10 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
+import { Public } from './common/decorators/public.decorator';
 
 @Controller()
 export class AppController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Public()
   @Get()
   getHello() {
     return {
@@ -22,6 +24,7 @@ export class AppController {
    * tell the difference is worse than none: Phase 10 wires this to health-checked
    * releases and the uptime monitor, so it has to mean something.
    */
+  @Public()
   @Get('health')
   async getHealth() {
     let database = 'up';

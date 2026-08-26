@@ -38,6 +38,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+      DIRECT_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
       NODE_ENV: test
       PORT: 3001
       FRONTEND_URL: http://localhost:3000
@@ -164,6 +165,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+      DIRECT_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
       NODE_ENV: test
       PORT: 3001
       FRONTEND_URL: http://127.0.0.1:3000
@@ -201,6 +203,7 @@ jobs:
           nohup node dist/main.js > backend.log 2>&1 &
         env:
           DATABASE_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
+          DIRECT_URL: postgresql://textile_admin:textile_ci_password@localhost:5432/textile_ci?schema=public
 
       # 2. Setup, Build & Start Frontend
       - name: Install & Start Frontend
