@@ -83,11 +83,45 @@ function CategoryFormInner({
 
   const isEdit = category !== null;
   const busy = createCategory.isPending || updateCategory.isPending;
-  const hasChildren = isEdit && (category._count?.children ?? 0) > 0;
-
-  const parentOptions = categories.filter(
-    (c) => !c.parentId && c.id !== category?.id,
+  
+  // Calculate depth requirements
+  const categoryChildren = categories.filter(c => c.parentId === category?.id);
+  const hasChildren = categoryChildren.length > 0;
+  const hasGrandchildren = categoryChildren.some(child => 
+    categories.some(grandchild => grandchild.parentId === child.id)
   );
+
+  function getDepth(catId: string): number {
+    let depth = 1;
+    let currentId = catId;
+    while(true) {
+      const parent = categories.find(c => c.id === currentId)?.parentId;
+      if (!parent) break;
+      depth++;
+      currentId = parent;
+    }
+    return depth;
+  }
+
+  const parentOptions = categories.filter((c) => {
+    if (c.id === category?.id) return false;
+    
+    let isDescendant = false;
+    let p = c.parentId;
+    while(p) {
+      if (p === category?.id) { isDescendant = true; break; }
+      p = categories.find(parent => parent.id === p)?.parentId;
+    }
+    if (isDescendant) return false;
+
+    const targetDepth = getDepth(c.id);
+    if (hasGrandchildren) return false; 
+    if (hasChildren && targetDepth >= 2) return false; 
+    if (targetDepth >= 3) return false; 
+    
+    return true;
+  });
+
   const valid = name.trim() !== '';
 
   function submit() {
@@ -101,7 +135,7 @@ function CategoryFormInner({
             name: name.trim(),
             description: description.trim() || undefined,
             imageUrl: imageUrl.trim() || undefined,
-            parentId: hasChildren ? undefined : parentId || null,
+            parentId: hasGrandchildren ? undefined : parentId || null,
           },
         },
         { onSuccess: onClose },
@@ -126,7 +160,7 @@ function CategoryFormInner({
           {isEdit ? `Edit ${category.name}` : 'New category'}
         </DialogTitle>
         <DialogDescription className="mt-0.5 text-xs text-[#928E82]">
-          {isEdit ? 'Rename, describe, or move it.' : 'Categories nest one level deep.'}
+          {isEdit ? 'Rename, describe, or move it.' : 'Categories nest up to three levels deep.'}
         </DialogDescription>
       </div>
 
@@ -165,10 +199,10 @@ function CategoryFormInner({
           />
         </div>
 
-        {hasChildren ? (
+        {hasGrandchildren ? (
           <p className="rounded-lg bg-[#FAFAF8] px-3 py-2.5 text-[12px] text-[#928E82]">
-            This category has sub-categories of its own, so it cannot be
-            nested under another one.
+            This category has children and grandchildren, so it cannot be
+            nested under another category.
           </p>
         ) : (
           <div>
@@ -182,10 +216,11 @@ function CategoryFormInner({
               <option value="">No parent (top-level)</option>
               {parentOptions.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {getDepth(c.id) > 1 ? '— ' : ''}{c.name}
                 </option>
               ))}
             </select>
+            {hasChildren && <p className="mt-2 text-[11px] text-[#928E82]">This category has sub-categories, so it can only be nested under a top-level category.</p>}
           </div>
         )}
       </div>

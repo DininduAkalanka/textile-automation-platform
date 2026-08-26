@@ -199,7 +199,7 @@ export default function Footer() {
                   marginBottom: '1.75rem',
                 }}
               >
-                Sri Lanka's trusted textile and uniform specialist. Quality fabrics for school, office, and everyday life — since 2009.
+                Sri Lanka's trusted textile and uniform specialist. Quality fabrics for school, office, and everyday life since 2009.
               </p>
 
               {/* Social */}

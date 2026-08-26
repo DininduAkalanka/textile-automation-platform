@@ -57,6 +57,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         // A loading button that stays clickable submits the form twice.
         disabled={disabled ?? loading}
+        suppressHydrationWarning
         {...props}
       >
         {loading ? (

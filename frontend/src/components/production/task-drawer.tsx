@@ -64,7 +64,7 @@ export function TaskDrawer({ task, open, onOpenChange }: TaskDrawerProps) {
 
           {task.status === 'IN_PROGRESS' && (
             <p className="text-xs text-neutral-500">
-              Work has started — finish or fail it before reassigning.
+              Work has started; finish or fail it before reassigning.
             </p>
           )}
           {!task.worker && (

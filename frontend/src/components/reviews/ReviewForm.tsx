@@ -168,7 +168,7 @@ export function ReviewForm(props: ReviewFormProps) {
       <DialogContent className="max-w-xl">
         <DialogTitle>{props.mode === 'edit' ? 'Edit your review' : 'Write a review'}</DialogTitle>
         <DialogDescription>
-          Share details that help other shoppers — fit, fabric, and how it held up.
+          Share details that help other shoppers, such as the fit, fabric, and how it held up.
         </DialogDescription>
 
         <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto pr-1">

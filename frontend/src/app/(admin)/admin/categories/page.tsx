@@ -55,7 +55,7 @@ export default function AdminCategoriesPage() {
             Categories
           </h1>
           <p className="mt-0.5 text-[13px] text-[#928E82]">
-            Two levels deep — a category, and its sub-categories.
+            Three levels deep — Category, Sub-category, and Sub-sub-category.
           </p>
         </div>
 
@@ -86,30 +86,13 @@ export default function AdminCategoriesPage() {
         ) : (
           <ul className="divide-y divide-[#F4F3EF]">
             {tree.map((top) => (
-              <li key={top.id}>
-                <CategoryRow
-                  category={top}
-                  onEdit={() => setFormState({ category: top })}
-                  onAddChild={() =>
-                    setFormState({ category: null, initialParentId: top.id })
-                  }
-                  onDelete={() => setDeleteTarget(top)}
-                />
-                {top.children.length > 0 && (
-                  <ul className="divide-y divide-[#F4F3EF] bg-[#FAFAF8]">
-                    {top.children.map((child) => (
-                      <li key={child.id}>
-                        <CategoryRow
-                          category={child}
-                          indented
-                          onEdit={() => setFormState({ category: child })}
-                          onDelete={() => setDeleteTarget(child)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
+              <RecursiveCategoryItem
+                key={top.id}
+                node={top}
+                depth={0}
+                setFormState={setFormState}
+                setDeleteTarget={setDeleteTarget}
+              />
             ))}
           </ul>
         )}
@@ -161,15 +144,68 @@ export default function AdminCategoriesPage() {
   );
 }
 
+function RecursiveCategoryItem({
+  node,
+  depth,
+  setFormState,
+  setDeleteTarget,
+}: {
+  node: any;
+  depth: number;
+  setFormState: any;
+  setDeleteTarget: any;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const hasChildren = node.children && node.children.length > 0;
+  
+  return (
+    <li className={depth > 0 ? "bg-[#FAFAF8]" : ""}>
+      <CategoryRow
+        category={node}
+        depth={depth}
+        isExpanded={isExpanded}
+        hasChildren={hasChildren}
+        onToggle={() => setIsExpanded(!isExpanded)}
+        onEdit={() => setFormState({ category: node })}
+        onAddChild={
+          depth < 2
+            ? () => setFormState({ category: null, initialParentId: node.id })
+            : undefined
+        }
+        onDelete={() => setDeleteTarget(node)}
+      />
+      {hasChildren && isExpanded && (
+        <ul className="divide-y divide-[#F4F3EF] border-t border-[#F4F3EF]">
+          {node.children.map((child: any) => (
+            <RecursiveCategoryItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              setFormState={setFormState}
+              setDeleteTarget={setDeleteTarget}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 function CategoryRow({
   category,
-  indented,
+  depth = 0,
+  isExpanded,
+  hasChildren,
+  onToggle,
   onEdit,
   onAddChild,
   onDelete,
 }: {
   category: Category;
-  indented?: boolean;
+  depth?: number;
+  isExpanded?: boolean;
+  hasChildren?: boolean;
+  onToggle?: () => void;
   onEdit: () => void;
   onAddChild?: () => void;
   onDelete: () => void;
@@ -178,18 +214,37 @@ function CategoryRow({
   const childCount = category._count?.children ?? 0;
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3">
-      <div className={`min-w-0 flex-1 ${indented ? 'pl-6' : ''}`}>
-        <p className="truncate text-[13px] font-medium text-[#0F0F0F]">
-          {indented && <span className="mr-1.5 text-[#D5D2C8]">—</span>}
-          {category.name}
-        </p>
-        <p className="truncate text-[11px] text-[#928E82]">
-          {productCount} product{productCount === 1 ? '' : 's'}
-          {!indented && childCount > 0
-            ? ` · ${childCount} sub-categor${childCount === 1 ? 'y' : 'ies'}`
-            : ''}
-        </p>
+    <div 
+      className="flex items-center justify-between gap-4 px-4 py-3"
+      style={{ paddingLeft: `${1 + depth * 1.5}rem` }}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {hasChildren ? (
+          <button 
+            onClick={onToggle}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-[#EAE8E1] text-[#928E82] transition-colors hover:bg-[#F4F3EF] hover:text-[#0F0F0F]"
+          >
+            {isExpanded ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            )}
+          </button>
+        ) : (
+          <div className="h-5 w-5 shrink-0" />
+        )}
+        
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-medium text-[#0F0F0F]">
+            {category.name}
+          </p>
+          <p className="truncate text-[11px] text-[#928E82]">
+            {productCount} product{productCount === 1 ? '' : 's'}
+            {childCount > 0
+              ? ` · ${childCount} sub-categor${childCount === 1 ? 'y' : 'ies'}`
+              : ''}
+          </p>
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">

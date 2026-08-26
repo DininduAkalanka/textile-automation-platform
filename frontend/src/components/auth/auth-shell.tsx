@@ -133,7 +133,7 @@ function BrandPanel() {
               Uniforms, fabrics &amp; made-to-measure.
             </h2>
             <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-white/70">
-              Measured, made and delivered island-wide — with the whole catalogue
+              Measured, made and delivered island-wide, with the whole catalogue
               a click away.
             </p>
           </div>
