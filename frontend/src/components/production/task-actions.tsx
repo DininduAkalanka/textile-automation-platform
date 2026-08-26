@@ -63,7 +63,7 @@ export function TaskActions({ task, size = 'default' }: TaskActionsProps) {
       >
         {blockedByBr5
           ? 'Assign a worker before this task can be started.'
-          : 'This task is finished — nothing left to do.'}
+          : 'This task is finished, nothing left to do.'}
       </p>
     );
   }

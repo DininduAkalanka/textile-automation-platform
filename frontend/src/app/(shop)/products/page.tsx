@@ -38,6 +38,37 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid-4');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  // Category accordion state
+  const [expandedMainCategory, setExpandedMainCategory] = useState<string | null>(null);
+  const [expandedSubCategory, setExpandedSubCategory] = useState<string | null>(null);
+
+  // Auto-expand accordion based on active filters
+  useEffect(() => {
+    if (categories.length > 0) {
+      const activeId = categoryId || categories.find(c => c.slug === categorySlug)?.id;
+      if (activeId) {
+        const cat = categories.find(c => c.id === activeId);
+        if (cat) {
+          if (!cat.parentId) {
+            setExpandedMainCategory(cat.id);
+          } else {
+            const parent = categories.find(c => c.id === cat.parentId);
+            if (parent && !parent.parentId) {
+              setExpandedMainCategory(parent.id);
+              setExpandedSubCategory(cat.id);
+            } else if (parent && parent.parentId) {
+              const grandParent = categories.find(c => c.id === parent.parentId);
+              if (grandParent) {
+                setExpandedMainCategory(grandParent.id);
+                setExpandedSubCategory(parent.id);
+              }
+            }
+          }
+        }
+      }
+    }
+  }, [categoryId, categorySlug, categories]);
+
   // Dynamic heading based on active category/subcategory
   const getPageHeading = () => {
     if (subCategory) {
@@ -160,7 +191,7 @@ function ProductsContent() {
 
         {/* Mobile Filter & Sort Bar (Fashion Bug Mobile Style) */}
         <div className="show-mobile" style={{ display: 'none', marginBottom: '1.25rem', gap: '0.75rem', alignItems: 'center' }}>
-          <button
+          <button suppressHydrationWarning
             onClick={() => setMobileFilterOpen(true)}
             className="btn btn-outline"
             style={{
@@ -195,7 +226,7 @@ function ProductsContent() {
           </button>
 
           <div style={{ flex: 1 }}>
-            <select
+            <select suppressHydrationWarning
               value={`${sortBy}-${sortOrder}`}
               onChange={(e) => {
                 const [newSortBy, newSortOrder] = e.target.value.split('-');
@@ -250,14 +281,8 @@ function ProductsContent() {
                 <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '0.02em', color: '#ffffff' }}>
                   Filters & Categories
                 </span>
-                <button
-                  onClick={() => setMobileFilterOpen(false)}
-                  style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                <button suppressHydrationWarning onClick={() => setMobileFilterOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--clr-text-3)', padding: '0.25rem' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
 
@@ -266,7 +291,7 @@ function ProductsContent() {
                 {/* Search */}
                 <form onSubmit={(e) => { handleSearch(e); setMobileFilterOpen(false); }} style={{ marginBottom: '1.5rem' }}>
                   <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Search</label>
-                  <input
+                  <input suppressHydrationWarning
                     className="input"
                     placeholder="Search in category..."
                     value={searchDraft}
@@ -283,7 +308,7 @@ function ProductsContent() {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Categories</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                    <button
+                    <button suppressHydrationWarning
                       onClick={() => {
                         updateFilters({ categoryId: null, category: null, sub: null, collection: null, offers: null, tier: null, period: null });
                         setMobileFilterOpen(false);
@@ -300,7 +325,7 @@ function ProductsContent() {
                       All Categories
                     </button>
 
-                    <button
+                    <button suppressHydrationWarning
                       onClick={() => {
                         updateFilters({ categoryId: null, category: 'new-arrivals', sub: null, collection: 'new-arrivals' });
                         setMobileFilterOpen(false);
@@ -317,25 +342,133 @@ function ProductsContent() {
                       New Arrivals
                     </button>
 
-                    {categories.map((cat) => {
+                    {categories.filter(c => !c.parentId).map((cat) => {
                       const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
+                      const subCategories = categories.filter(sub => sub.parentId === cat.id);
+                      const isExpanded = expandedMainCategory === cat.id;
+                      
                       return (
-                        <button
-                          key={cat.id}
-                          onClick={() => {
-                            updateFilters({ categoryId: cat.id, category: cat.slug, sub: null, collection: null });
-                            setMobileFilterOpen(false);
-                          }}
-                          style={{
-                            textAlign: 'left', padding: '0.55rem 0.75rem',
-                            background: isSelected ? '#CC0000' : 'transparent',
-                            color: isSelected ? 'white' : 'var(--clr-text)',
-                            border: 'none', borderRadius: 'var(--r-sm)', fontSize: '0.85rem',
-                            fontWeight: isSelected ? 700 : 500, cursor: 'pointer',
-                          }}
-                        >
-                          {cat.name}
-                        </button>
+                        <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <button suppressHydrationWarning
+                              onClick={() => {
+                                updateFilters({ categoryId: cat.id, category: cat.slug, sub: null, collection: null });
+                                setMobileFilterOpen(false);
+                              }}
+                              style={{
+                                textAlign: 'left', padding: '0.55rem 0.75rem',
+                                background: isSelected ? '#CC0000' : 'transparent',
+                                color: isSelected ? 'white' : 'var(--clr-text)',
+                                border: 'none', borderRadius: 'var(--r-sm)', fontSize: '0.85rem',
+                                fontWeight: isSelected ? 700 : 500, cursor: 'pointer', flex: 1,
+                              }}
+                            >
+                              {cat.name}
+                            </button>
+                            {subCategories.length > 0 && (
+                              <button suppressHydrationWarning
+                                onClick={() => {
+                                  setExpandedMainCategory(isExpanded ? null : cat.id);
+                                  setExpandedSubCategory(null);
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '0.55rem',
+                                  color: isSelected ? 'white' : 'var(--clr-text-3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: 'var(--r-sm)',
+                                }}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div style={{ display: 'grid', gridTemplateRows: isExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.2s ease' }}>
+                            <div style={{ overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.75rem', marginTop: '0.125rem' }}>
+                                {subCategories.map((sub) => {
+                                  const isSubSelected = categoryId === sub.id || (categorySlug === sub.slug && categorySlug !== 'new-arrivals');
+                                  const subSubCategories = categories.filter(subSub => subSub.parentId === sub.id);
+                                  const isSubExpanded = expandedSubCategory === sub.id;
+                                  return (
+                                    <div key={sub.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <button suppressHydrationWarning
+                                          onClick={() => {
+                                            updateFilters({ categoryId: sub.id, category: sub.slug, sub: null, collection: null });
+                                            setMobileFilterOpen(false);
+                                          }}
+                                          style={{
+                                            textAlign: 'left', padding: '0.4rem 0.75rem',
+                                            background: isSubSelected ? '#CC0000' : 'transparent',
+                                            color: isSubSelected ? 'white' : 'var(--clr-text-2)',
+                                            border: 'none', borderRadius: 'var(--r-sm)', fontSize: '0.8rem',
+                                            fontWeight: isSubSelected ? 600 : 400, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1,
+                                          }}
+                                        >
+                                          {sub.name}
+                                        </button>
+                                        {subSubCategories.length > 0 && (
+                                          <button suppressHydrationWarning
+                                            onClick={() => setExpandedSubCategory(isSubExpanded ? null : sub.id)}
+                                            style={{
+                                              background: 'transparent',
+                                              border: 'none',
+                                              cursor: 'pointer',
+                                              padding: '0.4rem',
+                                              color: isSubSelected ? 'white' : 'var(--clr-text-3)',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              borderRadius: 'var(--r-sm)',
+                                            }}
+                                          >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s ease', transform: isSubExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      <div style={{ display: 'grid', gridTemplateRows: isSubExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.2s ease' }}>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.75rem', marginTop: '0.125rem' }}>
+                                            {subSubCategories.map((subSub) => {
+                                              const isSubSubSelected = categoryId === subSub.id || (categorySlug === subSub.slug && categorySlug !== 'new-arrivals');
+                                              return (
+                                                <button suppressHydrationWarning
+                                                  key={subSub.id}
+                                                  onClick={() => {
+                                                    updateFilters({ categoryId: subSub.id, category: subSub.slug, sub: null, collection: null });
+                                                    setMobileFilterOpen(false);
+                                                  }}
+                                                  style={{
+                                                    textAlign: 'left', padding: '0.35rem 0.75rem',
+                                                    background: isSubSubSelected ? '#CC0000' : 'transparent',
+                                                    color: isSubSubSelected ? 'white' : 'var(--clr-text-3)',
+                                                    border: 'none', borderRadius: 'var(--r-sm)', fontSize: '0.75rem',
+                                                    fontWeight: isSubSubSelected ? 600 : 400, cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                                  }}
+                                                >
+                                                  {subSub.name}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -345,7 +478,7 @@ function ProductsContent() {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Price Range</label>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
+                    <input suppressHydrationWarning
                       className="input"
                       type="number"
                       placeholder="Min"
@@ -354,7 +487,7 @@ function ProductsContent() {
                       style={{ width: '50%', padding: '0.5rem 0.75rem', border: '1px solid var(--clr-border)', borderRadius: 'var(--r-sm)', fontSize: '0.875rem' }}
                     />
                     <span style={{ color: 'var(--clr-text-3)' }}>—</span>
-                    <input
+                    <input suppressHydrationWarning
                       className="input"
                       type="number"
                       placeholder="Max"
@@ -363,7 +496,7 @@ function ProductsContent() {
                       style={{ width: '50%', padding: '0.5rem 0.75rem', border: '1px solid var(--clr-border)', borderRadius: 'var(--r-sm)', fontSize: '0.875rem' }}
                     />
                   </div>
-                  <button
+                  <button suppressHydrationWarning
                     onClick={() => {
                       updateFilters({ minPrice: minPriceDraft, maxPrice: maxPriceDraft });
                       setMobileFilterOpen(false);
@@ -378,7 +511,7 @@ function ProductsContent() {
 
               {/* Drawer Footer Actions */}
               <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #f3f4f6', background: '#f9fafb', display: 'flex', gap: '0.75rem' }}>
-                <button
+                <button suppressHydrationWarning
                   onClick={() => {
                     updateFilters({ categoryId: null, category: null, sub: null, collection: null, minPrice: null, maxPrice: null, search: null });
                     setSearchDraft('');
@@ -391,7 +524,7 @@ function ProductsContent() {
                 >
                   Clear All
                 </button>
-                <button
+                <button suppressHydrationWarning
                   onClick={() => setMobileFilterOpen(false)}
                   className="btn btn-brand"
                   style={{ flex: 2, justifyContent: 'center', fontSize: '0.8125rem', background: '#CC0000' }}
@@ -410,7 +543,7 @@ function ProductsContent() {
             <form onSubmit={handleSearch} style={{ marginBottom: '1.75rem' }}>
               <label className="input-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Search</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
+                <input suppressHydrationWarning
                   className="input"
                   placeholder="Search products..."
                   value={searchDraft}
@@ -434,7 +567,7 @@ function ProductsContent() {
             <div style={{ marginBottom: '1.75rem' }}>
               <label className="input-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Categories</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                <button
+                <button suppressHydrationWarning
                   onClick={() => updateFilters({ categoryId: null, category: null, sub: null, collection: null, offers: null, tier: null, period: null })}
                   style={{
                     textAlign: 'left',
@@ -455,7 +588,7 @@ function ProductsContent() {
                 </button>
 
                 {/* New Arrivals Category item */}
-                <button
+                <button suppressHydrationWarning
                   onClick={() => updateFilters({ categoryId: null, category: 'new-arrivals', sub: null, collection: 'new-arrivals' })}
                   style={{
                     textAlign: 'left',
@@ -475,29 +608,156 @@ function ProductsContent() {
                   New Arrivals
                 </button>
 
-                {categories.map((cat) => {
+                {categories.filter(c => !c.parentId).map((cat) => {
                   const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
+                  const subCategories = categories.filter(sub => sub.parentId === cat.id);
+                  const isExpanded = expandedMainCategory === cat.id;
+                  
                   return (
-                    <button
-                      key={cat.id}
-                      onClick={() => updateFilters({ categoryId: cat.id, category: cat.slug, sub: null, collection: null })}
-                      style={{
-                        textAlign: 'left',
-                        padding: '0.5rem 0.75rem',
-                        background: isSelected ? 'var(--clr-brand)' : 'transparent',
-                        color: isSelected ? 'white' : 'var(--clr-text)',
-                        border: 'none',
-                        borderRadius: 'var(--r-sm)',
-                        fontSize: '0.85rem',
-                        fontWeight: isSelected ? 600 : 400,
-                        cursor: 'pointer',
-                        transition: 'all 150ms ease',
-                      }}
-                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--clr-brand-tint)'; }}
-                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {cat.name}
-                    </button>
+                    <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <button suppressHydrationWarning
+                          onClick={() => updateFilters({ categoryId: cat.id, category: cat.slug, sub: null, collection: null })}
+                          style={{
+                            textAlign: 'left',
+                            padding: '0.5rem 0.75rem',
+                            background: isSelected ? 'var(--clr-brand)' : 'transparent',
+                            color: isSelected ? 'white' : 'var(--clr-text)',
+                            border: 'none',
+                            borderRadius: 'var(--r-sm)',
+                            fontSize: '0.85rem',
+                            fontWeight: isSelected ? 600 : 400,
+                            cursor: 'pointer',
+                            transition: 'all 150ms ease',
+                            flex: 1,
+                          }}
+                          onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--clr-brand-tint)'; }}
+                          onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {cat.name}
+                        </button>
+                        {subCategories.length > 0 && (
+                          <button suppressHydrationWarning
+                            onClick={() => {
+                              setExpandedMainCategory(isExpanded ? null : cat.id);
+                              setExpandedSubCategory(null);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '0.5rem',
+                              color: isSelected ? 'white' : 'var(--clr-text-3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 'var(--r-sm)',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--clr-brand-tint)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateRows: isExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.2s ease' }}>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.75rem', marginTop: '0.125rem' }}>
+                            {subCategories.map((sub) => {
+                              const isSubSelected = categoryId === sub.id || (categorySlug === sub.slug && categorySlug !== 'new-arrivals');
+                              const subSubCategories = categories.filter(subSub => subSub.parentId === sub.id);
+                              const isSubExpanded = expandedSubCategory === sub.id;
+                              
+                              return (
+                                <div key={sub.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <button suppressHydrationWarning
+                                      onClick={() => updateFilters({ categoryId: sub.id, category: sub.slug, sub: null, collection: null })}
+                                      style={{
+                                        textAlign: 'left',
+                                        padding: '0.4rem 0.75rem',
+                                        background: isSubSelected ? 'var(--clr-brand)' : 'transparent',
+                                        color: isSubSelected ? 'white' : 'var(--clr-text-2)',
+                                        border: 'none',
+                                        borderRadius: 'var(--r-sm)',
+                                        fontSize: '0.8rem',
+                                        fontWeight: isSubSelected ? 500 : 400,
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        flex: 1,
+                                      }}
+                                      onMouseEnter={(e) => { if (!isSubSelected) e.currentTarget.style.background = 'var(--clr-brand-tint)'; }}
+                                      onMouseLeave={(e) => { if (!isSubSelected) e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                      {sub.name}
+                                    </button>
+                                    {subSubCategories.length > 0 && (
+                                      <button suppressHydrationWarning
+                                        onClick={() => setExpandedSubCategory(isSubExpanded ? null : sub.id)}
+                                        style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          padding: '0.4rem',
+                                          color: isSubSelected ? 'white' : 'var(--clr-text-3)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          borderRadius: 'var(--r-sm)',
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--clr-brand-tint)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                      >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s ease', transform: isSubExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateRows: isSubExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.2s ease' }}>
+                                    <div style={{ overflow: 'hidden' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.75rem', marginTop: '0.125rem' }}>
+                                        {subSubCategories.map((subSub) => {
+                                          const isSubSubSelected = categoryId === subSub.id || (categorySlug === subSub.slug && categorySlug !== 'new-arrivals');
+                                          return (
+                                            <button suppressHydrationWarning
+                                              key={subSub.id}
+                                              onClick={() => updateFilters({ categoryId: subSub.id, category: subSub.slug, sub: null, collection: null })}
+                                              style={{
+                                                textAlign: 'left',
+                                                padding: '0.35rem 0.75rem',
+                                                background: isSubSubSelected ? 'var(--clr-brand)' : 'transparent',
+                                                color: isSubSubSelected ? 'white' : 'var(--clr-text-3)',
+                                                border: 'none',
+                                                borderRadius: 'var(--r-sm)',
+                                                fontSize: '0.75rem',
+                                                fontWeight: isSubSubSelected ? 500 : 400,
+                                                cursor: 'pointer',
+                                                transition: 'all 150ms ease',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem'
+                                              }}
+                                              onMouseEnter={(e) => { if (!isSubSubSelected) e.currentTarget.style.background = 'var(--clr-brand-tint)'; }}
+                                              onMouseLeave={(e) => { if (!isSubSubSelected) e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                              {subSub.name}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -507,7 +767,7 @@ function ProductsContent() {
             <div style={{ marginBottom: '1.75rem' }}>
               <label className="input-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Price Range</label>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input
+                <input suppressHydrationWarning
                   className="input"
                   type="number"
                   placeholder="Min"
@@ -523,7 +783,7 @@ function ProductsContent() {
                   }}
                 />
                 <span style={{ color: 'var(--clr-text-3)' }}>—</span>
-                <input
+                <input suppressHydrationWarning
                   className="input"
                   type="number"
                   placeholder="Max"
@@ -539,7 +799,7 @@ function ProductsContent() {
                   }}
                 />
               </div>
-              <button
+              <button suppressHydrationWarning
                 onClick={() => updateFilters({ minPrice: minPriceDraft, maxPrice: maxPriceDraft })}
                 className="btn btn-outline btn-sm"
                 style={{ width: '100%', marginTop: '0.75rem', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}
@@ -551,7 +811,7 @@ function ProductsContent() {
             {/* Sort */}
             <div>
               <label className="input-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Sort By</label>
-              <select
+              <select suppressHydrationWarning
                 className="input"
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
@@ -593,13 +853,13 @@ function ProductsContent() {
                 {(categorySlug === 'new-arrivals' || collection === 'new-arrivals') && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', background: 'var(--clr-brand-tint)', border: '1px solid var(--clr-brand)', borderRadius: 'var(--r-full)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--clr-brand)' }}>
                     Category: New Arrivals
-                    <button onClick={() => updateFilters({ category: null, collection: null, sub: null })} style={{ display: 'inline-flex', alignSelf: 'center', cursor: 'pointer', fontWeight: 700, paddingLeft: '0.25rem', border: 'none', background: 'none', color: 'var(--clr-brand)' }}>×</button>
+                    <button suppressHydrationWarning onClick={() => updateFilters({ category: null, collection: null, sub: null })} style={{ display: 'inline-flex', alignSelf: 'center', cursor: 'pointer', fontWeight: 700, paddingLeft: '0.25rem', border: 'none', background: 'none', color: 'var(--clr-brand)' }}>×</button>
                   </div>
                 )}
                 {subCategory && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', background: 'var(--clr-brand-tint)', border: '1px solid var(--clr-brand)', borderRadius: 'var(--r-full)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--clr-brand)', textTransform: 'capitalize' }}>
                     Subcategory: {subCategory.replace(/-/g, ' ')}
-                    <button onClick={() => updateFilters({ sub: null, offers: null, tier: null, period: null })} style={{ display: 'inline-flex', alignSelf: 'center', cursor: 'pointer', fontWeight: 700, paddingLeft: '0.25rem', border: 'none', background: 'none', color: 'var(--clr-brand)' }}>×</button>
+                    <button suppressHydrationWarning onClick={() => updateFilters({ sub: null, offers: null, tier: null, period: null })} style={{ display: 'inline-flex', alignSelf: 'center', cursor: 'pointer', fontWeight: 700, paddingLeft: '0.25rem', border: 'none', background: 'none', color: 'var(--clr-brand)' }}>×</button>
                   </div>
                 )}
               </div>
@@ -636,7 +896,7 @@ function ProductsContent() {
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="mt-14 flex flex-wrap items-center justify-center gap-2">
-                    <button
+                    <button suppressHydrationWarning
                       className="btn btn-outline btn-sm"
                       disabled={page <= 1}
                       onClick={() => updateFilters({ page: page - 1 })}
@@ -645,7 +905,7 @@ function ProductsContent() {
                       Previous
                     </button>
                     {Array.from({ length: pagination.totalPages }, (_, i) => (
-                      <button
+                      <button suppressHydrationWarning
                         key={i + 1}
                         className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-outline'}`}
                         onClick={() => updateFilters({ page: i + 1 })}
@@ -654,7 +914,7 @@ function ProductsContent() {
                         {i + 1}
                       </button>
                     ))}
-                    <button
+                    <button suppressHydrationWarning
                       className="btn btn-outline btn-sm"
                       disabled={page >= pagination.totalPages}
                       onClick={() => updateFilters({ page: page + 1 })}

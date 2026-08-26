@@ -537,24 +537,23 @@ export class ProductsService {
 
   // ─── Category Methods ─────────────────────────────────
 
-  /**
-   * Depth is capped at 2 (doc 06 §5.2: category -> sub-category, no deeper).
-   * Postgres can't express "no grandparents" as a constraint, so both the
-   * create and reparent paths check it here, against the CANDIDATE parent's
-   * own parentId.
-   */
+  // Depth is capped at 3 (category -> sub-category -> sub-sub-category).
   private async assertValidParent(parentId: string) {
     const parent = await this.prisma.category.findUnique({
       where: { id: parentId },
-      select: { id: true, parentId: true },
     });
     if (!parent) {
       throw new NotFoundException('Parent category not found');
     }
     if (parent.parentId) {
-      throw new ConflictException(
-        'Category depth is limited to 2 levels — the selected parent is already a sub-category',
-      );
+      const grandParent = await this.prisma.category.findUnique({
+        where: { id: parent.parentId },
+      });
+      if (grandParent && grandParent.parentId) {
+        throw new ConflictException(
+          'Category depth is limited to 3 levels — the selected parent is already a sub-sub-category',
+        );
+      }
     }
   }
 
@@ -635,15 +634,35 @@ export class ProductsService {
         update.parent = { disconnect: true };
       } else {
         await this.assertValidParent(data.parentId);
-        // A category with children of its own would become a depth-3 branch
-        // (its children's children) if nested under another category.
-        const childCount = await this.prisma.category.count({
+        // A category with children of its own can only be moved to a top-level category (level 1).
+        // If it has grandchildren, it cannot be moved to any parent.
+        const childCategories = await this.prisma.category.findMany({
           where: { parentId: id },
+          select: { id: true },
         });
-        if (childCount > 0) {
-          throw new ConflictException(
-            'This category has sub-categories of its own and cannot be nested under another category',
-          );
+        
+        if (childCategories.length > 0) {
+          const grandChildCount = await this.prisma.category.count({
+            where: { parentId: { in: childCategories.map(c => c.id) } },
+          });
+          
+          if (grandChildCount > 0) {
+            throw new ConflictException(
+              'This category has children and grandchildren (a 3-level depth structure) and cannot be nested under another category'
+            );
+          }
+          
+          // It only has children (max depth 2 from this node). 
+          // It can only be nested under a top-level category (which has no parentId).
+          const targetParent = await this.prisma.category.findUnique({
+            where: { id: data.parentId }
+          });
+          
+          if (targetParent?.parentId) {
+            throw new ConflictException(
+              'This category has sub-categories and can only be nested under a top-level category'
+            );
+          }
         }
         update.parent = { connect: { id: data.parentId } };
       }

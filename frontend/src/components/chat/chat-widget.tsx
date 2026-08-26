@@ -32,6 +32,11 @@ export function ChatWidget() {
 
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Keep the newest message in view as the conversation grows.
   useEffect(() => {
@@ -47,6 +52,8 @@ export function ChatWidget() {
     setDraft('');
     send.mutate(message);
   };
+
+  if (!mounted) return null;
 
   return (
     <>
@@ -113,7 +120,7 @@ export function ChatWidget() {
                   What are you looking for?
                 </p>
                 <p className="mx-auto mt-1 max-w-[16rem] text-xs text-neutral-500">
-                  Describe it in your own words — I&apos;ll find it in our
+                  Describe it in your own words, and I&apos;ll find it in our
                   catalogue.
                 </p>
 

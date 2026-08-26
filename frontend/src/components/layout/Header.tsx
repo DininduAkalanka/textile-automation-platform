@@ -277,6 +277,7 @@ export default function Header() {
   const [scrolled,        setScrolled]        = useState(false);
   const [mobileOpen,      setMobileOpen]      = useState(false);
   const [profileOpen,     setProfileOpen]      = useState(false);
+  const [currencyOpen,    setCurrencyOpen]    = useState(false);
   const [searchOpen,      setSearchOpen]      = useState(false);
   const [searchQuery,     setSearchQuery]     = useState('');
   const [mobileExpanded,  setMobileExpanded]  = useState<string | null>(null);
@@ -357,7 +358,7 @@ export default function Header() {
         <div className="container" style={{ display: 'flex', alignItems: 'center', height: '64px', gap: 'clamp(0.25rem, 2.5vw, 1rem)' }}>
 
           {/* Mobile hamburger */}
-          <button
+          <button suppressHydrationWarning
             id="mobile-menu-btn"
             aria-label="Open navigation"
             onClick={() => setMobileOpen(true)}
@@ -414,7 +415,7 @@ export default function Header() {
               }}
               style={{ position: 'relative', width: '100%' }}
             >
-              <input
+              <input suppressHydrationWarning
                 type="text"
                 placeholder="Search fabrics, sarees, uniforms, shirts..."
                 value={searchQuery}
@@ -442,7 +443,7 @@ export default function Header() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               />
-              <button
+              <button suppressHydrationWarning
                 type="submit"
                 aria-label="Submit search"
                 style={{
@@ -473,13 +474,74 @@ export default function Header() {
           {/* ── Actions ──────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
             {/* LKR Currency Indicator */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.725rem', fontWeight: 600, color: 'var(--clr-text-2)', padding: '0.3rem 0.6rem', background: '#f3f4f6', borderRadius: '14px', marginRight: '0.25rem' }}>
-              <span>🇱🇰</span>
-              <span>LKR</span>
+            <div className="hide-mobile" style={{ position: 'relative' }}>
+              <button suppressHydrationWarning
+                onClick={() => setCurrencyOpen(p => !p)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: 600, 
+                  color: 'var(--clr-text)', 
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.2rem',
+                }}
+              >
+                <img src="https://flagcdn.com/w40/lk.png" alt="Sri Lanka Flag" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                <span>LKR</span>
+                <IconChevronDown size={11} />
+              </button>
+
+              {currencyOpen && (
+                <>
+                  <div onClick={() => setCurrencyOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '0.5rem',
+                      background: '#fff',
+                      border: '1px solid var(--clr-border)',
+                      borderRadius: 'var(--r-sm)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      minWidth: '100px',
+                      zIndex: 99,
+                      padding: '0.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    <button suppressHydrationWarning
+                      onClick={() => setCurrencyOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '0.75rem',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left',
+                        borderRadius: 'var(--r-sm)',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <img src="https://flagcdn.com/w40/lk.png" alt="Sri Lanka Flag" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--clr-text)', borderBottom: '1.5px solid var(--clr-text)', paddingBottom: '1px' }}>LKR</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Visual Search button */}
-            <button
+            <button suppressHydrationWarning
               id="search-btn"
               aria-label="Search"
               className="btn-icon"
@@ -608,7 +670,7 @@ export default function Header() {
             {mounted && (
               isAuthenticated ? (
                 <div style={{ position: 'relative' }}>
-                  <button
+                  <button suppressHydrationWarning
                     id="profile-btn"
                     aria-label="Account"
                     onClick={() => setProfileOpen(p => !p)}
@@ -706,7 +768,7 @@ export default function Header() {
                         ))}
 
                         <div style={{ height: '1px', background: 'var(--clr-border-2)', margin: '0.25rem 0.75rem' }} />
-                        <button
+                        <button suppressHydrationWarning
                           onClick={() => { logout(); setProfileOpen(false); }}
                           style={{
                             display: 'flex',
@@ -788,7 +850,7 @@ export default function Header() {
                 }}
               >
                 <IconSearch size={18} />
-                <input
+                <input suppressHydrationWarning
                   ref={searchInputRef}
                   type="search"
                   placeholder="Search products, fabrics, uniforms, sarees..."
@@ -806,7 +868,7 @@ export default function Header() {
                   }}
                 />
                 {/* Visual Search shortcut */}
-                <button
+                <button suppressHydrationWarning
                   onClick={(e) => {
                     e.preventDefault();
                     setSearchOpen(false);
@@ -828,7 +890,7 @@ export default function Header() {
                   </svg>
                 </button>
               </div>
-              <button
+              <button suppressHydrationWarning
                 onClick={() => setSearchOpen(false)}
                 className="btn-icon"
                 aria-label="Close search"
@@ -883,7 +945,7 @@ export default function Header() {
           <span style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '0.02em', color: '#ffffff' }}>
             Menu
           </span>
-          <button
+          <button suppressHydrationWarning
             onClick={closeMobile}
             className="btn-icon"
             aria-label="Close menu"
@@ -1014,15 +1076,15 @@ export default function Header() {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#111827', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
               CURRENCY
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
-              <span style={{ fontSize: '1.1rem' }}>🇱🇰</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
+              <img src="https://flagcdn.com/w40/lk.png" alt="Sri Lanka Flag" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
               <span>LKR</span>
             </div>
           </div>
 
           {/* Quick Account / Sign In */}
           {mounted && isAuthenticated ? (
-            <button
+            <button suppressHydrationWarning
               onClick={() => { logout(); closeMobile(); }}
               className="btn btn-outline-brand"
               style={{ width: '100%', justifyContent: 'center' }}

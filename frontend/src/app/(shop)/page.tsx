@@ -29,7 +29,7 @@ const HERO_SLIDES = [
     id: 1,
     eyebrow: 'New Season 2024',
     headline: 'Curated Textiles for Every Occasion',
-    subheadline: 'School, office, and fashion — precision-crafted fabrics with over 15 years of expertise in Sri Lanka.',
+    subheadline: 'School, office, and fashion fabrics crafted with precision, backed by over 15 years of expertise in Sri Lanka.',
     primaryCta:   { label: 'Shop New Arrivals',  href: '/products?sort=newest' },
     secondaryCta: { label: 'Explore Categories', href: '/products' },
     accentColor: 'var(--crimson-600)',
@@ -39,7 +39,7 @@ const HERO_SLIDES = [
     id: 2,
     eyebrow: 'Uniform Specialists',
     headline: 'School & Office Uniforms, Precisely Tailored',
-    subheadline: 'Government and private school uniforms, corporate formal wear — uniform-grade fabrics trusted by institutions across Sri Lanka.',
+    subheadline: 'Uniform-grade fabrics for government and private schools, as well as corporate formal wear, trusted by institutions across Sri Lanka.',
     primaryCta:   { label: 'View Uniform Collection', href: '/products?category=uniforms' },
     secondaryCta: { label: 'Request Bulk Order',       href: '/products?category=uniforms&bulk=1' },
     accentColor: 'var(--gold-500)',
@@ -49,7 +49,7 @@ const HERO_SLIDES = [
     id: 3,
     eyebrow: "Women's Collection",
     headline: 'Sarees, Dress Materials & Kurthas',
-    subheadline: 'From traditional sarees to contemporary dress materials — discover the finest women\'s fabrics, curated for every celebration.',
+    subheadline: 'Discover the finest women\'s fabrics curated for every celebration, from traditional sarees to contemporary dress materials.',
     primaryCta:   { label: "Shop Women's Collection", href: '/products?category=women' },
     secondaryCta: { label: 'View Sarees',              href: '/products?category=women&sub=sarees' },
     accentColor: 'var(--crimson-600)',
@@ -58,11 +58,11 @@ const HERO_SLIDES = [
 ];
 
 const CATEGORIES = [
-  { id: 'new-arrivals', label: 'New Arrivals',  subLabel: 'This Season',     href: '/products?sort=newest',          bg: 'linear-gradient(160deg, #0d0d0d 0%, #1f0000 100%)' },
-  { id: 'women',        label: 'Women',          subLabel: 'Sarees & More',   href: '/products?category=women',       bg: 'linear-gradient(160deg, #0d0005 0%, #1f0015 100%)' },
-  { id: 'men',          label: 'Men',            subLabel: 'Formal & Casual', href: '/products?category=men',         bg: 'linear-gradient(160deg, #000a0d 0%, #00151f 100%)' },
-  { id: 'teenagers',    label: 'Teenagers',      subLabel: 'Trending',        href: '/products?category=teenagers',   bg: 'linear-gradient(160deg, #050d00 0%, #0f1f00 100%)' },
-  { id: 'uniforms',     label: 'Uniforms',       subLabel: 'School & Office', href: '/products?category=uniforms',   bg: 'linear-gradient(160deg, #0d0500 0%, #1f0f00 100%)' },
+  { id: 'new-arrivals', label: 'New Arrivals',  subLabel: 'This Season',     href: '/products?sort=newest',          image: '/images/categories/cat_new_arrivals_1787734548473.jpg' },
+  { id: 'women',        label: 'Women',          subLabel: 'Sarees & More',   href: '/products?category=women',       image: '/images/categories/cat_women_1787734666543.jpg' },
+  { id: 'men',          label: 'Men',            subLabel: 'Formal & Casual', href: '/products?category=men',         image: '/images/categories/cat_men_1787735083689.jpg' },
+  { id: 'teenagers',    label: 'Teenagers',      subLabel: 'Trending',        href: '/products?category=teenagers',   image: '/images/categories/cat_teenagers_1787735291651.jpg' },
+  { id: 'uniforms',     label: 'Uniforms',       subLabel: 'School & Office', href: '/products?category=uniforms',   image: '/images/categories/cat_uniforms_1787735527255.jpg' },
 ];
 
 const UNIFORM_SEGMENTS = [
@@ -85,7 +85,7 @@ const UNIFORM_SEGMENTS = [
   {
     id: 'corporate',
     label: 'Corporate Office Uniforms',
-    description: 'Polished, professional formal wear for corporate environments — tailored for comfort across long working hours.',
+    description: 'Polished, professional formal wear for corporate environments, tailored for comfort across long working hours.',
     badge: '',
     href: '/products?category=uniforms&sub=corporate',
     bg: 'linear-gradient(155deg, #00080d 0%, #00141f 100%)',
@@ -93,7 +93,7 @@ const UNIFORM_SEGMENTS = [
   {
     id: 'industrial',
     label: 'Workwear & Industrial',
-    description: 'Heavy-duty fabrics engineered for industrial and workwear applications — built to last in demanding conditions.',
+    description: 'Heavy-duty fabrics engineered for industrial and workwear applications, built to last in demanding conditions.',
     badge: '',
     href: '/products?category=uniforms&sub=industrial',
     bg: 'linear-gradient(155deg, #060600 0%, #141400 100%)',
@@ -105,7 +105,7 @@ const MARQUEE_ITEMS = [
   'Government School Uniforms Available',
   'Private School Uniform Specialists',
   'Corporate & Office Uniform Orders',
-  'Women\'s Saree Collection — New Season',
+  'New Season Women\'s Saree Collection',
   'Island-Wide Delivery across Sri Lanka',
   'Bulk Orders Welcome',
   '15+ Years of Textile Excellence',
@@ -120,7 +120,7 @@ const TRUST_ITEMS = [
 
 const WHY_US = [
   { id: 'experience', num: '15+',   label: 'Years in Business',    body: 'Established in 2009, we have built deep supplier relationships and an unmatched local reputation.' },
-  { id: 'products',   num: '500+',  label: 'Fabric Variants',      body: 'From uniform-grade drill fabric to luxury silks — the broadest selection of any retailer in Sri Lanka.' },
+  { id: 'products',   num: '500+',  label: 'Fabric Variants',      body: 'The broadest selection of any retailer in Sri Lanka, from uniform-grade drill fabric to luxury silks.' },
   { id: 'customers',  num: '10K+',  label: 'Satisfied Customers',  body: 'Families, schools, and corporates across all provinces return to us season after season.' },
   { id: 'districts',  num: '25',    label: 'Districts Delivered',   body: 'Our logistics network covers every district island-wide with fast, trackable delivery.' },
 ];
@@ -540,9 +540,11 @@ export default function HomePage() {
                 }}
               >
                 <div
-                  className="cat-card-inner"
+                  className="cat-card-inner group"
                   style={{
-                    background: cat.bg,
+                    backgroundImage: `url(${cat.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     aspectRatio: '3 / 4',
                     display: 'flex',
                     flexDirection: 'column',
@@ -558,12 +560,19 @@ export default function HomePage() {
                       backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0, rgba(255,255,255,0.012) 1px, transparent 0, transparent 50%)',
                       backgroundSize: '14px 14px',
                       pointerEvents: 'none',
+                      zIndex: 0,
                     }}
                   />
-                  {/* Gradient overlay */}
+                  {/* Gradient overlay to make text readable */}
                   <div
                     className="cat-card-overlay"
-                    style={{ position: 'absolute', inset: 0 }}
+                    style={{ 
+                      position: 'absolute', 
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)',
+                      zIndex: 0,
+                      transition: 'background 300ms ease',
+                    }}
                   />
                   {/* Text */}
                   <div style={{ position: 'relative', zIndex: 1 }}>
@@ -637,7 +646,7 @@ export default function HomePage() {
                 maxWidth: '520px',
               }}
             >
-              Government &amp; private school uniforms, corporate formal wear, and industrial workwear — all under one roof, crafted with precision.
+              Government and private school uniforms, corporate formal wear, and industrial workwear, all crafted with precision under one roof.
             </p>
           </div>
 

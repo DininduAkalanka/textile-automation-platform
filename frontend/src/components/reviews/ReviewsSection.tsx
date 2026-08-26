@@ -41,7 +41,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
   if (isError) {
     return (
       <p className="py-8 text-center text-sm text-neutral-500">
-        Couldn't load reviews right now — please try again shortly.
+        Couldn't load reviews right now, please try again shortly.
       </p>
     );
   }

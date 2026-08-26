@@ -67,7 +67,7 @@ export function WriteReviewCta({ productId }: { productId: string }) {
     return (
       <div className="flex items-start gap-2.5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-        <span>You've already reviewed this product — find your review below to edit it.</span>
+        <span>You've already reviewed this product. Find your review below to edit it.</span>
       </div>
     );
   }

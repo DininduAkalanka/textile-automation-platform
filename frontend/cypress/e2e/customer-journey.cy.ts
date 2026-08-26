@@ -60,15 +60,7 @@ describe('Customer Journey E2E Flow', () => {
 
     cy.visit('/checkout');
 
-    // Step 1: Shipping & Contact
-    // Fill email explicitly — the in-memory token store (F-04) means
-    // isAuthenticated may be false after page navigation in CI, so the
-    // validation requires email to be non-empty.
-    cy.getByTestId('checkout-email-input').then(($el) => {
-      if (!$el.prop('disabled')) {
-        cy.wrap($el).clear().type('customer@example.com');
-      }
-    });
+    // Step 1: Shipping
     cy.getByTestId('checkout-name-input').clear().type('Nandana Evaluator');
     cy.getByTestId('checkout-address1-input').clear().type('123 Galle Road');
     cy.getByTestId('checkout-city-input').clear().type('Colombo');

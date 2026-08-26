@@ -43,7 +43,7 @@ export function ChatProductCard({ product }: { product: ChatProduct }) {
 
     toast.success(
       product.requiresMeasurement
-        ? `${product.name} added — measurements needed at checkout`
+        ? `${product.name} added (measurements needed at checkout)`
         : `${product.name} added to cart`,
     );
   };
