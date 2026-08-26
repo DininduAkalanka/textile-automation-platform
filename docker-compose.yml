@@ -49,6 +49,7 @@ services:
     env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql://textile_admin:textile_secure_pass_2024@postgres:5432/textile_db?schema=public
+      - DIRECT_URL=postgresql://textile_admin:textile_secure_pass_2024@postgres:5432/textile_db?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       # Local development only. Must be >= 32 chars (validated at boot).
