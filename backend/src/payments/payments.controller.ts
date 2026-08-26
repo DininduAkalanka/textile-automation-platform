@@ -16,6 +16,7 @@ import { MarkPaidDto } from './dto/mark-paid.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 import type { RequestWithUser } from '../common/types/request-with-user';
 import type { Request as ExpressRequest } from 'express';
@@ -26,6 +27,7 @@ export class PaymentsController {
 
   // ─── Stripe Config ──────────────────────────────────────
 
+  @Public()
   @Get('config')
   getStripeConfig() {
     return this.paymentsService.getStripeConfig();
@@ -150,6 +152,7 @@ export class PaymentsController {
 
   // ─── PayHere Notify (server-to-server, public) ──────────
 
+  @Public()
   @Post('payhere/notify')
   handlePayhereNotify(@Body() body: any) {
     return this.paymentsService.handlePayhereNotify(body);
@@ -157,6 +160,7 @@ export class PaymentsController {
 
   // ─── Stripe Webhook ─────────────────────────────────────
 
+  @Public()
   @Post('webhook')
   handleWebhook(
     @Request() req: ExpressRequest,

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '@/types';
 import { api } from '@/lib/api';
+import { getToken, setToken, clearToken } from '@/lib/token-store';
 
 /**
  * The `role` cookie is a HINT for proxy.ts so it can redirect without a round
@@ -44,20 +45,21 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
+  // F-04: token starts null — re-hydrated from httpOnly refresh cookie on mount
   user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  token: null,
   isLoading: false,
   isAuthenticated: false,
 
   setAuth: (user: User, token: string) => {
-    localStorage.setItem('token', token);
+    setToken(token); // in-memory only — no localStorage
     setRoleCookie(user.role);
     set({ user, token, isAuthenticated: true, isLoading: false });
   },
 
   /** Called by the axios interceptor when a refresh finally fails. */
   clearSession: () => {
-    localStorage.removeItem('token');
+    clearToken(); // clears in-memory token
     clearRoleCookie();
     set({ user: null, token: null, isAuthenticated: false, isLoading: false });
   },
@@ -66,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const response = await api.login(email, password);
-      localStorage.setItem('token', response.accessToken);
+      setToken(response.accessToken); // in-memory only
       setRoleCookie(response.user.role);
       set({
         user: response.user,
@@ -84,7 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const response = await api.register(data);
-      localStorage.setItem('token', response.accessToken);
+      setToken(response.accessToken); // in-memory only
       setRoleCookie(response.user.role);
       set({
         user: response.user,
@@ -100,13 +102,39 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     api.logout().catch(() => {}); // revoke refresh token server-side (best-effort)
-    localStorage.removeItem('token');
+    clearToken(); // clears in-memory token
     clearRoleCookie();
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   loadUser: async () => {
-    const token = localStorage.getItem('token');
+    // F-04: In-memory token is lost on page reload. Silently call /auth/refresh
+    // to re-hydrate it from the httpOnly refresh cookie before checking the profile.
+    // This preserves session persistence without exposing the access token in storage.
+    const existingToken = getToken();
+    if (!existingToken) {
+      // Try a silent refresh via the httpOnly cookie
+      try {
+        const refreshed = await api.refresh();
+        if (refreshed?.accessToken) {
+          setToken(refreshed.accessToken);
+          if (refreshed.user) setRoleCookie(refreshed.user.role);
+          set({
+            user: refreshed.user ?? null,
+            token: refreshed.accessToken,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return;
+        }
+      } catch {
+        // No valid refresh cookie — user is not logged in
+        set({ isAuthenticated: false, isLoading: false });
+        return;
+      }
+    }
+
+    const token = getToken();
     if (!token) {
       set({ isAuthenticated: false, isLoading: false });
       return;
@@ -118,7 +146,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       setRoleCookie(user.role);
       set({ user, token, isAuthenticated: true, isLoading: false });
     } catch {
-      localStorage.removeItem('token');
+      clearToken();
       clearRoleCookie();
       set({ user: null, token: null, isAuthenticated: false, isLoading: false });
     }

@@ -17,6 +17,7 @@ import { SendCodeDto } from './dto/send-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { VerificationService } from '../verification/verification.service';
+import { Public } from '../common/decorators/public.decorator';
 import type { Request as ExpressRequest } from 'express';
 import type { RequestWithUser } from '../common/types/request-with-user';
 
@@ -43,6 +44,7 @@ export class AuthController {
     });
   }
 
+  @Public()
   @Throttle(AUTH_THROTTLE)
   @Post('register')
   async register(
@@ -58,6 +60,7 @@ export class AuthController {
     return result; // { user, accessToken }
   }
 
+  @Public()
   @Throttle(AUTH_THROTTLE)
   @Post('login')
   async login(
@@ -73,6 +76,7 @@ export class AuthController {
     return result;
   }
 
+  @Public()
   @Throttle(AUTH_THROTTLE)
   @Post('refresh')
   async refresh(
@@ -87,6 +91,7 @@ export class AuthController {
     return { user, accessToken };
   }
 
+  @Public()
   @Post('logout')
   async logout(
     @Req() req: ExpressRequest,
