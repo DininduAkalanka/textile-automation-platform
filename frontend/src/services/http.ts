@@ -3,6 +3,7 @@ import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { getToken, setToken, clearToken } from '@/lib/token-store';
 
 /**
  * The single HTTP client (doc 05 §3.5, CODING_STANDARDS §4.1).
@@ -35,19 +36,6 @@ let onSessionExpired: (() => void) | null = null;
 
 export function setSessionExpiredHandler(handler: () => void) {
   onSessionExpired = handler;
-}
-
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
-
-function setToken(token: string) {
-  if (typeof window !== 'undefined') localStorage.setItem('token', token);
-}
-
-function clearToken() {
-  if (typeof window !== 'undefined') localStorage.removeItem('token');
 }
 
 export const http: AxiosInstance = axios.create({

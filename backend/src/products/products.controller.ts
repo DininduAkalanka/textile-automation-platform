@@ -19,6 +19,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('products')
@@ -27,6 +28,7 @@ export class ProductsController {
 
   // ─── Public Endpoints ──────────────────────────────────
 
+  @Public()
   @Get()
   findAll(
     @Query('page') page?: number,
@@ -62,11 +64,13 @@ export class ProductsController {
     });
   }
 
+  @Public()
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.productsService.findBySlug(slug);
   }
 
+  @Public()
   @Get(':id')
   findById(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.findById(id);
@@ -74,6 +78,7 @@ export class ProductsController {
 
   /** "Customers also bought" — market-basket recommendation for the product
    *  page. Public; two path segments so it never collides with ':id'. */
+  @Public()
   @Get(':id/frequently-bought-together')
   frequentlyBoughtTogether(
     @Param('id', ParseUUIDPipe) id: string,
@@ -87,6 +92,7 @@ export class ProductsController {
 
   /** "You may also like" — content-based (same category/fabric/colour) related
    *  products. Public. */
+  @Public()
   @Get(':id/related')
   relatedProducts(
     @Param('id', ParseUUIDPipe) id: string,

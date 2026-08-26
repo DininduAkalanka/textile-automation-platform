@@ -66,20 +66,23 @@ async function bootstrap() {
   // Global response transform
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // Swagger OpenAPI Documentation (Session 10.3)
-  const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
-  const config = new DocumentBuilder()
-    .setTitle('Nandana Textile Platform API')
-    .setDescription(
-      'Enterprise E-Commerce, Production Management & AI Intelligence Platform API specification.',
-    )
-    .setVersion('1.0.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/docs', app, document, {
-    customSiteTitle: 'Nandana Textile API Docs',
-  });
+  // Swagger OpenAPI Documentation — dev/staging ONLY (never in production).
+  // In production, /api/v1/docs returns 404 — no API map exposed to attackers.
+  if (process.env.NODE_ENV !== 'production') {
+    const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
+    const config = new DocumentBuilder()
+      .setTitle('Nandana Textile Platform API')
+      .setDescription(
+        'Enterprise E-Commerce, Production Management & AI Intelligence Platform API specification.',
+      )
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/v1/docs', app, document, {
+      customSiteTitle: 'Nandana Textile API Docs',
+    });
+  }
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);

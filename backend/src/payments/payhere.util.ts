@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 
 /**
  * PayHere hashing (per PayHere Checkout/Notify spec). The merchant secret is
@@ -70,4 +70,17 @@ export function payhereNotifySig(params: {
       statusCode +
       payhereSecretHash(merchantSecret),
   ).toUpperCase();
+}
+
+/**
+ * F-06 fix: timing-safe string comparison to replace plain === on the
+ * PayHere signature.  MD5 hex strings are always 32 ASCII chars, so the
+ * Buffers are always equal length — but we check explicitly to keep
+ * timingSafeEqual's contract (throws if lengths differ).
+ */
+export function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  return timingSafeEqual(bufA, bufB);
 }

@@ -1,11 +1,11 @@
 import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
+import { getToken, setToken, clearToken } from '@/lib/token-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 class ApiClient {
   private getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('token');
+    return getToken(); // F-04: reads from in-memory store, not localStorage
   }
 
   private refreshing: Promise<string | null> | null = null;
@@ -75,15 +75,23 @@ class ApiClient {
       if (!res.ok) throw new Error('refresh failed');
       const json = await res.json();
       const token: string | null = json?.data?.accessToken ?? json?.accessToken ?? null;
-      if (token && typeof window !== 'undefined') {
-        localStorage.setItem('token', token);
-      }
+      if (token) setToken(token); // F-04: in-memory only
       return token;
     } catch {
-      if (typeof window !== 'undefined') localStorage.removeItem('token');
+      clearToken(); // F-04: clear in-memory token on failure
       return null;
     } finally {
       this.refreshing = null;
+    }
+  }
+
+  /** Explicit public refresh — called by useAuthStore.loadUser() on page mount
+   *  to re-hydrate the in-memory access token from the httpOnly refresh cookie. */
+  async refresh(): Promise<AuthResponse | null> {
+    try {
+      return await this.request<AuthResponse>('/auth/refresh', { method: 'POST' }, false);
+    } catch {
+      return null;
     }
   }
 
@@ -131,7 +139,7 @@ class ApiClient {
     try {
       await this.request('/auth/logout', { method: 'POST' });
     } finally {
-      if (typeof window !== 'undefined') localStorage.removeItem('token');
+      clearToken(); // F-04: clear in-memory token
     }
   }
 

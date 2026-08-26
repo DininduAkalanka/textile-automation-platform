@@ -20,6 +20,7 @@ import {
   payhereCheckoutHash,
   payhereNotifySig,
   formatPayhereAmount,
+  timingSafeCompare,
 } from './payhere.util';
 
 @Injectable()
@@ -677,7 +678,8 @@ export class PaymentsService {
       : '';
     const signatureValid =
       !!md5sig &&
-      localSig === md5sig.toUpperCase() &&
+      // F-06: timing-safe comparison prevents timing side-channel on MD5 sig
+      timingSafeCompare(localSig, md5sig.toUpperCase()) &&
       String(body?.merchant_id ?? '') === merchantId;
 
     // 1. Persist the raw event first (idempotency + audit).

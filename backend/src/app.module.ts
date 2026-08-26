@@ -17,6 +17,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AppController } from './app.controller';
 import { validateEnv } from './common/config/env.validation';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -45,6 +46,12 @@ import { validateEnv } from './common/config/env.validation';
     ReviewsModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // F-07: Global deny-by-default JWT guard. Every route requires a valid
+    // JWT unless decorated with @Public(). This means a new controller that
+    // forgets @UseGuards(JwtAuthGuard) fails CLOSED (401) rather than open.
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+  ],
 })
 export class AppModule {}

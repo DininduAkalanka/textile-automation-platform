@@ -23,8 +23,14 @@ import { AdminOrdersQueryDto } from './dto/admin-orders-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 import type { RequestWithUser } from '../common/types/request-with-user';
+
+// Mirrors the same constants used in AuthController so guest sessions
+// share the same cookie name/lifetime and can silently refresh.
+const REFRESH_COOKIE = 'refresh_token';
+const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 @Controller('orders')
 export class OrdersController {
@@ -34,14 +40,41 @@ export class OrdersController {
   ) {}
 
   /**
-   * Public Express / Guest Checkout endpoint.
-   * Auto-provisions or links the user account, verifies OTP if provided,
-   * creates the order, and returns order details along with the JWT session.
+   * F-01 fix: set the refresh token as an httpOnly cookie — identical to the
+   * /auth/login and /auth/register contract — and strip it from the JSON
+   * response body so it is never accessible to page scripts.
+   * Previously the service result was returned verbatim, which exposed
+   * the raw refreshToken to any XSS on the page (audit finding F-01).
+   *
+   * F-07: @Public() allows unauthenticated access — guests have no JWT yet.
    */
+  @Public()
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('guest-checkout')
-  guestCheckout(@Body() dto: GuestCheckoutDto, @Req() req: ExpressRequest) {
-    return this.ordersService.guestCheckout(dto, req.headers['user-agent']);
+  async guestCheckout(
+    @Body() dto: GuestCheckoutDto,
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { order, session } = await this.ordersService.guestCheckout(
+      dto,
+      req.headers['user-agent'],
+    );
+    // F-01 fix: strip refreshToken from the JSON body and set it as an
+    // httpOnly cookie — identical to the /auth/login and /auth/register
+    // contract — so the refresh token is never accessible to page scripts.
+    const { refreshToken, ...sessionWithoutToken } = session as {
+      refreshToken: string;
+      [key: string]: unknown;
+    };
+    res.cookie(REFRESH_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: REFRESH_MAX_AGE,
+    });
+    return { order, session: sessionWithoutToken };
   }
 
   @UseGuards(JwtAuthGuard)

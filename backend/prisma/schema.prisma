@@ -7,8 +7,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Required for Neon (and any PgBouncer-pooled DB): migrations use a direct
+  // connection that bypasses the pooler; app queries use the pooled URL above.
+  // On local Docker both variables can point to the same URL — no effect.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────
@@ -354,8 +358,14 @@ model Installment {
 }
 
 // ─── Inventory ledger (D2/D3) — single source of truth for stock ──
-// NOTE: additive for now. Services still use products.stock_quantity until the
-// reserve→deduct rewire lands; a backfill seeds these rows + INITIAL movements.
+// The ledger IS authoritative. `Inventory.quantityAvailable` and
+// `quantityReserved` are denormalized caches of the movement sum, updated
+// atomically inside the SAME transaction as each `InventoryMovement` write.
+// `Product.stockQuantity` is a read-optimised derived value kept in sync
+// by `inventory.service.ts` within the same transaction — it is NOT a
+// second source of truth. Trusting this comment over the service is safe:
+// inventory.service.ts documents the invariant and the reconciliation script
+// (`scripts/reconcile.ts`) enforces it in CI.
 
 model Inventory {
   id                String   @id @default(uuid()) @db.Uuid
