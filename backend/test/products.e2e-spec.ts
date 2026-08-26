@@ -243,16 +243,17 @@ describe('Admin catalog management (plan Session 2.2)', () => {
       expect(child.parentId).toBe(parent.id);
     });
 
-    it('refuses a third level — a sub-category cannot itself be a parent', async () => {
-      const parent = await seedCategory('depth3-parent');
-      const child = await seedCategory('depth3-child', parent.id);
+    it('refuses a fourth level — a sub-sub-category cannot itself be a parent', async () => {
+      const parent = await seedCategory('depth4-parent');
+      const child = await seedCategory('depth4-child', parent.id);
+      const grandChild = await seedCategory('depth4-grandchild', child.id);
 
       await expect(
         products.createCategory({
-          name: `${TAG} depth3-grandchild`,
-          parentId: child.id,
+          name: `${TAG} depth4-greatgrandchild`,
+          parentId: grandChild.id,
         }),
-      ).rejects.toThrow(/depth is limited to 2/i);
+      ).rejects.toThrow(/depth is limited to 3/i);
     });
 
     it('refuses a parentId that does not exist', async () => {
@@ -323,24 +324,27 @@ describe('Admin catalog management (plan Session 2.2)', () => {
       expect(updated.parentId).toBeNull();
     });
 
-    it('refuses to reparent under a category that is itself a sub-category', async () => {
+    it('refuses to reparent under a category that is itself a sub-sub-category', async () => {
       const parent = await seedCategory('reparent-depth-parent');
       const child = await seedCategory('reparent-depth-child', parent.id);
+      const grandChild = await seedCategory('reparent-depth-grandchild', child.id);
       const other = await seedCategory('reparent-depth-other');
 
       await expect(
-        products.updateCategory(other.id, { parentId: child.id }),
-      ).rejects.toThrow(/depth is limited to 2/i);
+        products.updateCategory(other.id, { parentId: grandChild.id }),
+      ).rejects.toThrow(/depth is limited to 3/i);
     });
 
-    it('refuses to reparent a category that already has children of its own', async () => {
+    it('refuses to reparent a category that already has children under a sub-category', async () => {
       const parent = await seedCategory('reparent-haschild-parent');
       await seedCategory('reparent-haschild-child', parent.id);
-      const newHome = await seedCategory('reparent-haschild-newhome');
+      
+      const newHomeParent = await seedCategory('reparent-haschild-newhome-parent');
+      const newHomeChild = await seedCategory('reparent-haschild-newhome-child', newHomeParent.id);
 
       await expect(
-        products.updateCategory(parent.id, { parentId: newHome.id }),
-      ).rejects.toThrow(/has sub-categories of its own/i);
+        products.updateCategory(parent.id, { parentId: newHomeChild.id }),
+      ).rejects.toThrow(/only be nested under a top-level category/i);
     });
 
     it('refuses to make a category its own parent', async () => {
