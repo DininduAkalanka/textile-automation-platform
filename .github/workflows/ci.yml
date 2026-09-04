@@ -52,6 +52,7 @@ jobs:
       STRIPE_SECRET_KEY: sk_test_mock
       STRIPE_PUBLISHABLE_KEY: pk_test_mock
       STRIPE_WEBHOOK_SECRET: whsec_mock
+      ALLOW_DEV_OTP_BYPASS: 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -178,6 +179,7 @@ jobs:
       STRIPE_SECRET_KEY: sk_test_mock
       STRIPE_PUBLISHABLE_KEY: pk_test_mock
       STRIPE_WEBHOOK_SECRET: whsec_mock
+      ALLOW_DEV_OTP_BYPASS: 'true'
 
     steps:
       - uses: actions/checkout@v4

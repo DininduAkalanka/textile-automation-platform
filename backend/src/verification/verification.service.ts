@@ -72,8 +72,12 @@ export class VerificationService {
     await this.enforceRateLimits(userId, channel);
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const isBypassAllowed =
+      process.env.NODE_ENV !== 'production' &&
+      process.env.ALLOW_DEV_OTP_BYPASS === 'true';
+
     this.logger.log(
-      `\n======================================================\n📧 [DEV OTP CODE] ${channel} for ${destination}: ${code} (or test code: 123456)\n======================================================`,
+      `\n======================================================\n📧 [DEV OTP CODE] ${channel} for ${destination}: ${code}${isBypassAllowed ? ' (or dev bypass code: 123456)' : ''}\n======================================================`,
     );
 
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
