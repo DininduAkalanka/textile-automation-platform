@@ -41,9 +41,22 @@ async function bootstrap() {
     index: false,
   });
 
-  // CORS. FRONTEND_URL is validated at boot, so there is no fallback origin.
+  // CORS. Allows configured FRONTEND_URL, all Vercel deployments, and local development.
+  const configuredFrontend = process.env.FRONTEND_URL;
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin === configuredFrontend ||
+        origin === 'https://textile-automation-platform.vercel.app' ||
+        origin.endsWith('.vercel.app') ||
+        origin === 'http://localhost:3000' ||
+        origin === 'http://localhost:3001'
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
