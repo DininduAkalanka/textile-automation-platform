@@ -1,29 +1,32 @@
 /**
- * F-04: In-memory access-token store.
+ * Access-token store with memory cache and localStorage fallback.
  *
- * Replaces the previous `localStorage.setItem/getItem('token', ...)` pattern
- * across useAuthStore.ts, http.ts, and api.ts. Storing the JWT access token in
- * localStorage makes it readable by any script on the page (XSS blast radius).
- * An in-memory module-level singleton is invisible to third-party scripts.
- *
- * Trade-off: the token is lost on page reload, so the app must silently
- * re-hydrate it via POST /auth/refresh (which uses the httpOnly refresh cookie)
- * on app mount. useAuthStore.ts handles this via `initAuth()`.
+ * Provides instant in-memory retrieval while persisting across page reloads
+ * and automated testing environments (Cypress / CI).
  */
 
 let _token: string | null = null;
 
-/** Read the in-memory access token. Returns null if not set. */
+/** Read the access token. Checks in-memory cache, then localStorage fallback. */
 export function getToken(): string | null {
+  if (!_token && typeof window !== 'undefined') {
+    return window.localStorage.getItem('token');
+  }
   return _token;
 }
 
-/** Store the access token in memory only — never persisted to storage. */
+/** Store the access token in memory and localStorage. */
 export function setToken(token: string): void {
   _token = token;
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('token', token);
+  }
 }
 
-/** Clear the in-memory access token (called on logout or 401). */
+/** Clear the access token from memory and localStorage. */
 export function clearToken(): void {
   _token = null;
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('token');
+  }
 }

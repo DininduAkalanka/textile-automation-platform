@@ -64,26 +64,28 @@ function MethodCard({
         background: selected ? 'var(--clr-brand-tint)' : 'var(--clr-surface)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{
-          width: '3rem', height: '3rem', borderRadius: 'var(--r-md)',
-          background: selected ? 'var(--clr-brand)' : 'var(--clr-surface-3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem',
-          color: selected ? '#fff' : 'inherit',
-        }}>
-          {selected ? '✓' : icon}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'var(--clr-text)' }}>{title}</h3>
-            {selected && <span className="badge badge-brand" style={{ fontSize: '0.6rem' }}>SELECTED</span>}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3.5 flex-1 min-w-0">
+          <div style={{
+            width: '2.75rem', height: '2.75rem', borderRadius: 'var(--r-md)',
+            background: selected ? 'var(--clr-brand)' : 'var(--clr-surface-3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem',
+            color: selected ? '#fff' : 'inherit', flexShrink: 0,
+          }}>
+            {selected ? '✓' : icon}
           </div>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)', marginTop: '0.25rem' }}>{subtitle}</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--clr-text)', margin: 0 }}>{title}</h3>
+              {selected && <span className="badge badge-brand" style={{ fontSize: '0.6rem' }}>SELECTED</span>}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--clr-text-2)', marginTop: '0.25rem' }}>{subtitle}</p>
+          </div>
         </div>
         {right && (
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--clr-text)' }}>{right}</p>
-            {rightSub && <p style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)' }}>{rightSub}</p>}
+          <div className="pl-14 sm:pl-0 sm:text-right border-t border-neutral-100 pt-2 sm:border-t-0 sm:pt-0">
+            <p style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--clr-text)', margin: 0 }}>{right}</p>
+            {rightSub && <p style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)', marginTop: '0.125rem' }}>{rightSub}</p>}
           </div>
         )}
       </div>
@@ -364,11 +366,13 @@ export default function CheckoutPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label className="input-label">Full Name *</label>
+                  <label htmlFor="checkout-name-input" className="input-label">Full Name *</label>
                   <input
+                    id="checkout-name-input"
                     data-testid="checkout-name-input"
                     className="input"
                     name="fullName"
+                    autoComplete="name"
                     value={address.fullName}
                     onChange={handleChange}
                     placeholder="e.g. Kasun Perera"
@@ -378,11 +382,13 @@ export default function CheckoutPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label className="input-label">Email Address *</label>
+                    <label htmlFor="checkout-email-input" className="input-label">Email Address *</label>
                     <input
+                      id="checkout-email-input"
                       data-testid="checkout-email-input"
                       type="email"
                       className="input"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
@@ -395,11 +401,14 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="input-label">Mobile Phone (Delivery Contact) *</label>
+                    <label htmlFor="checkout-phone-input" className="input-label">Mobile Phone (Delivery Contact) *</label>
                     <input
+                      id="checkout-phone-input"
                       data-testid="checkout-phone-input"
                       className="input"
                       name="phone"
+                      type="tel"
+                      autoComplete="tel"
                       value={address.phone || phone}
                       onChange={(e) => {
                         setPhone(e.target.value);
@@ -415,11 +424,13 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="input-label">Street Address Line 1 *</label>
+                  <label htmlFor="checkout-address1-input" className="input-label">Street Address Line 1 *</label>
                   <input
+                    id="checkout-address1-input"
                     data-testid="checkout-address1-input"
                     className="input"
                     name="addressLine1"
+                    autoComplete="address-line1"
                     value={address.addressLine1}
                     onChange={handleChange}
                     placeholder="House / Building No, Street Name"
@@ -428,24 +439,28 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="input-label">Address Line 2 (Optional)</label>
+                  <label htmlFor="checkout-address2-input" className="input-label">Address Line 2 (Optional)</label>
                   <input
+                    id="checkout-address2-input"
                     data-testid="checkout-address2-input"
                     className="input"
                     name="addressLine2"
+                    autoComplete="address-line2"
                     value={address.addressLine2}
                     onChange={handleChange}
                     placeholder="Apartment, suite, unit, etc."
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="input-label">City *</label>
+                    <label htmlFor="checkout-city-input" className="input-label">City *</label>
                     <input
+                      id="checkout-city-input"
                       data-testid="checkout-city-input"
                       className="input"
                       name="city"
+                      autoComplete="address-level2"
                       value={address.city}
                       onChange={handleChange}
                       placeholder="Colombo / Kandy / Galle"
@@ -453,11 +468,13 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="input-label">Province / State *</label>
+                    <label htmlFor="checkout-state-input" className="input-label">Province / State *</label>
                     <input
+                      id="checkout-state-input"
                       data-testid="checkout-state-input"
                       className="input"
                       name="state"
+                      autoComplete="address-level1"
                       value={address.state}
                       onChange={handleChange}
                       placeholder="Western Province"
@@ -466,13 +483,15 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="input-label">Postal Code *</label>
+                    <label htmlFor="checkout-postal-input" className="input-label">Postal Code *</label>
                     <input
+                      id="checkout-postal-input"
                       data-testid="checkout-postal-input"
                       className="input"
                       name="postalCode"
+                      autoComplete="postal-code"
                       value={address.postalCode}
                       onChange={handleChange}
                       placeholder="00300"
@@ -480,11 +499,13 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="input-label">Country *</label>
+                    <label htmlFor="checkout-country-input" className="input-label">Country *</label>
                     <input
+                      id="checkout-country-input"
                       data-testid="checkout-country-input"
                       className="input"
                       name="country"
+                      autoComplete="country-name"
                       value={address.country}
                       onChange={handleChange}
                       placeholder="Sri Lanka"
@@ -683,9 +704,19 @@ export default function CheckoutPage() {
             </span>
           </div>
 
-          <div style={{ background: 'var(--clr-surface-2)', padding: '0.75rem 1rem', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--clr-text-2)' }}>
-            <ShieldCheck size={18} style={{ color: '#059669', flexShrink: 0 }} />
-            <span>Encrypted SSL payment & verified Sri Lankan delivery</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--clr-surface-2)', padding: '1rem', borderRadius: 'var(--r-md)', border: '1px solid var(--clr-border-2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--clr-text)' }}>
+              <ShieldCheck size={18} style={{ color: '#059669', flexShrink: 0 }} />
+              <span>Bank-Grade 256-bit SSL Encryption</span>
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'var(--clr-text-3)', margin: 0, lineHeight: 1.4 }}>
+              Payments processed securely via PayHere (Central Bank of Sri Lanka approved). Zero raw card details stored on our servers.
+            </p>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>PayHere Verified</span>
+              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Islandwide COD</span>
+              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>14-Day Exchange</span>
+            </div>
           </div>
         </div>
       </div>

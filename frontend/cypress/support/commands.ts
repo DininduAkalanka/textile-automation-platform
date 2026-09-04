@@ -32,8 +32,10 @@ Cypress.Commands.add(
       })
       .then((response) => {
         const { user, accessToken } = response.body.data || response.body;
-        // Sync with actual auth store mechanics in the app
+        Cypress.env('token', accessToken);
+        Cypress.env('user', user);
         window.localStorage.setItem('token', accessToken);
+        window.localStorage.setItem('user', JSON.stringify(user));
         return cy.setCookie('role', user.role).then(() => {
           return { user, accessToken };
         });
@@ -42,7 +44,10 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add('setSessionUser', (user: any, token: string) => {
+  Cypress.env('token', token);
+  Cypress.env('user', user);
   window.localStorage.setItem('token', token);
+  window.localStorage.setItem('user', JSON.stringify(user));
   cy.setCookie('role', user.role);
 });
 

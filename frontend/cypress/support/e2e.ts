@@ -1,17 +1,28 @@
 import './commands';
 
-// Catch uncaught exceptions gracefully without failing tests unless they originate from the test runner
-Cypress.on('uncaught:exception', (err, runnable) => {
-  // Return false to prevent Cypress from failing the test on unhandled React/Next hydration warnings.
-  // In development builds the message says "Hydration"; in production builds React minifies it to
-  // "Minified React error #418" (text-content mismatch) or "#423" (tag mismatch).
-  if (
-    err.message.includes('NEXT_REDIRECT') ||
-    err.message.includes('Hydration') ||
-    err.message.includes('Minified React error #418') ||
-    err.message.includes('Minified React error #423')
-  ) {
+// Catch uncaught exceptions: only allow benign framework signals like NEXT_REDIRECT
+Cypress.on('uncaught:exception', (err) => {
+  if (err.message.includes('NEXT_REDIRECT')) {
     return false;
   }
   return true;
+});
+
+// Hydrate test token and user profile into AUT window.localStorage on every page navigation
+Cypress.on('window:before:load', (win) => {
+  const token = Cypress.env('token');
+  const user = Cypress.env('user');
+  if (token) {
+    win.localStorage.setItem('token', token);
+  } else {
+    win.localStorage.removeItem('token');
+  }
+  if (user) {
+    win.localStorage.setItem(
+      'user',
+      typeof user === 'string' ? user : JSON.stringify(user),
+    );
+  } else {
+    win.localStorage.removeItem('user');
+  }
 });

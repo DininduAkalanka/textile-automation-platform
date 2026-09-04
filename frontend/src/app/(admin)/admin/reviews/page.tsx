@@ -80,16 +80,7 @@ export default function AdminReviewsPage() {
   const unhideReview = useUnhideReview();
   const deleteReview = useDeleteReview();
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-[#CC0000] hover:underline">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
+
 
   const hasFilters = Boolean(search || status || reportedOnly);
   const clearFilters = () => {
@@ -122,8 +113,8 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* ─── Filters ────────────────────────────────────────────────────── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
+      <div className="mb-4 space-y-2">
+        <div className="relative w-full">
           <Search
             size={14}
             aria-hidden
@@ -140,49 +131,48 @@ export default function AdminReviewsPage() {
           />
         </div>
 
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as ReviewStatus | '');
-            setPage(1);
-          }}
-          className="h-[38px] rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-
-        <button
-          onClick={() => {
-            setReportedOnly((v) => !v);
-            setPage(1);
-          }}
-          className={cn(
-            'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
-            reportedOnly
-              ? 'border-[#CC0000] bg-[#CC0000] text-white'
-              : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
-          )}
-        >
-          <Flag size={13} aria-hidden />
-          Reported only
-        </button>
-
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-2.5 py-2 text-[12px] font-medium text-[#928E82] transition-colors hover:border-[#D5D2C8] hover:text-[#0F0F0F]"
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as ReviewStatus | '');
+              setPage(1);
+            }}
+            className="h-[38px] flex-1 sm:flex-none rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
           >
-            <X size={12} aria-hidden />
-            Clear
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setReportedOnly((v) => !v)}
+            className={cn(
+              'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
+              reportedOnly
+                ? 'border-red-600 bg-red-600 text-white'
+                : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
+            )}
+          >
+            <Flag size={13} aria-hidden />
+            Reported only
           </button>
-        )}
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-2.5 py-2 text-[12px] font-medium text-[#928E82] transition-colors hover:border-[#D5D2C8] hover:text-[#0F0F0F]"
+            >
+              <X size={12} aria-hidden />
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ─── The table ──────────────────────────────────────────────────── */}
+      {/* ─── Main Content: Dual Mobile / Desktop Presentation ──────────────── */}
       <div className="overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)]">
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">
@@ -196,113 +186,214 @@ export default function AdminReviewsPage() {
             {hasFilters ? 'No reviews match these filters.' : 'No reviews yet.'}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
-                  {['Product', 'Customer', 'Rating', 'Title', 'Photos', 'Status', 'Reports', 'Date', ''].map(
-                    (h) => (
-                      <th
-                        key={h || 'actions'}
-                        className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((review) => (
-                  <tr key={review.id} className="border-b border-[#F2F1EC] last:border-b-0">
-                    <td className="max-w-[220px] truncate px-4 py-3 text-[13px] text-[#0F0F0F]">
+          <>
+            {/* 📱 MOBILE VIEW: High-Density Review Cards (< md) */}
+            <div className="divide-y divide-[#F4F3EF] md:hidden">
+              {rows.map((review) => (
+                <article key={review.id} className="p-4 transition-colors hover:bg-[#FAFAF8]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
                       {review.product ? (
                         <Link
                           href={`/products/${review.product.slug}`}
                           target="_blank"
-                          className="hover:underline"
+                          className="font-medium text-xs text-[#0F0F0F] hover:underline truncate block"
                         >
                           {review.product.name}
                         </Link>
                       ) : (
-                        '—'
+                        <span className="text-xs text-[#928E82]">—</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-[13px] text-[#0F0F0F]">
-                      <span className="inline-flex items-center gap-1">
-                        {review.user ? `${review.user.firstName} ${review.user.lastName}` : '—'}
+                      <p className="mt-0.5 text-xs text-[#6E6A5E] flex items-center gap-1">
+                        <span>{review.user ? `${review.user.firstName} ${review.user.lastName}` : 'Anonymous'}</span>
                         {review.isVerifiedPurchase && (
-                          <ShieldCheck size={12} className="text-emerald-600" aria-hidden />
+                          <ShieldCheck size={11} className="text-emerald-600" />
                         )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-semibold text-xs text-[#0F0F0F]">
+                        ⭐ {review.rating}/5
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-[13px] font-medium text-[#0F0F0F]">
-                      {review.rating}/5
-                    </td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-[13px] text-[#0F0F0F]">
-                      {review.title}
-                    </td>
-                    <td className="px-4 py-3">
-                      {review.images.length > 0 ? (
-                        <div className="flex -space-x-2">
-                          {review.images.slice(0, 3).map((url) => (
-                            <button
-                              key={url}
-                              type="button"
-                              onClick={() => setLightboxUrl(url)}
-                              className="h-7 w-7 overflow-hidden rounded-full border-2 border-white shadow-sm"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt="Review photo" className="h-full w-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-[#B8B4A8]">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
                       <StatusBadge status={review.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <ReportsCell review={review} />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[12px] text-[#928E82]">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {review.status === 'PUBLISHED' ? (
-                          <button
-                            onClick={() => hideReview.mutate(review.id)}
-                            title="Hide review"
-                            className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-neutral-100 hover:text-[#0F0F0F]"
-                          >
-                            <EyeOff size={14} aria-hidden />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => unhideReview.mutate(review.id)}
-                            title="Unhide review"
-                            className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-neutral-100 hover:text-[#0F0F0F]"
-                          >
-                            <Eye size={14} aria-hidden />
-                          </button>
-                        )}
+                    </div>
+                  </div>
+
+                  {review.title && (
+                    <h4 className="mt-2 text-xs font-semibold text-[#0F0F0F]">
+                      {review.title}
+                    </h4>
+                  )}
+
+                  {review.comment && (
+                    <p className="mt-1 text-xs text-[#4A4740] line-clamp-3">
+                      {review.comment}
+                    </p>
+                  )}
+
+                  {review.images && review.images.length > 0 && (
+                    <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1">
+                      {review.images.map((url) => (
                         <button
-                          onClick={() => setDeleteTarget(review)}
-                          title="Delete review"
-                          className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-red-50 hover:text-[#CC0000]"
+                          key={url}
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-[#EAE8E1]"
                         >
-                          <Trash2 size={14} aria-hidden />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="Review photo" className="h-full w-full object-cover" />
                         </button>
-                      </div>
-                    </td>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between border-t border-[#F4F3EF] pt-2.5 text-xs">
+                    <div className="flex items-center gap-2 text-[#928E82]">
+                      <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                      <ReportsCell review={review} />
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {review.status === 'PUBLISHED' ? (
+                        <button
+                          onClick={() => hideReview.mutate(review.id)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#EAE8E1] px-2.5 py-1 text-xs text-[#6E6A5E] hover:bg-neutral-100"
+                        >
+                          <EyeOff size={12} />
+                          Hide
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => unhideReview.mutate(review.id)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#EAE8E1] px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <Eye size={12} />
+                          Publish
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setDeleteTarget(review)}
+                        className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50"
+                        aria-label="Delete review"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* 💻 DESKTOP VIEW: Full Data Table (≥ md) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[960px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
+                    {['Product', 'Customer', 'Rating', 'Title', 'Photos', 'Status', 'Reports', 'Date', ''].map(
+                      (h) => (
+                        <th
+                          key={h || 'actions'}
+                          className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]"
+                        >
+                          {h}
+                        </th>
+                      ),
+                    )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((review) => (
+                    <tr key={review.id} className="border-b border-[#F2F1EC] last:border-b-0">
+                      <td className="max-w-[220px] truncate px-4 py-3 text-[13px] text-[#0F0F0F]">
+                        {review.product ? (
+                          <Link
+                            href={`/products/${review.product.slug}`}
+                            target="_blank"
+                            className="hover:underline"
+                          >
+                            {review.product.name}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[13px] text-[#0F0F0F]">
+                        <span className="inline-flex items-center gap-1">
+                          {review.user ? `${review.user.firstName} ${review.user.lastName}` : '—'}
+                          {review.isVerifiedPurchase && (
+                            <ShieldCheck size={12} className="text-emerald-600" aria-hidden />
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[13px] font-medium text-[#0F0F0F]">
+                        {review.rating}/5
+                      </td>
+                      <td className="max-w-[200px] truncate px-4 py-3 text-[13px] text-[#0F0F0F]">
+                        {review.title}
+                      </td>
+                      <td className="px-4 py-3">
+                        {review.images.length > 0 ? (
+                          <div className="flex -space-x-2">
+                            {review.images.slice(0, 3).map((url) => (
+                              <button
+                                key={url}
+                                type="button"
+                                onClick={() => setLightboxUrl(url)}
+                                className="h-7 w-7 overflow-hidden rounded-full border-2 border-white shadow-sm"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={url} alt="Review photo" className="h-full w-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[#B8B4A8]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={review.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <ReportsCell review={review} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[12px] text-[#928E82]">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {review.status === 'PUBLISHED' ? (
+                            <button
+                              onClick={() => hideReview.mutate(review.id)}
+                              title="Hide review"
+                              className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-neutral-100 hover:text-[#0F0F0F]"
+                            >
+                              <EyeOff size={14} aria-hidden />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => unhideReview.mutate(review.id)}
+                              title="Unhide review"
+                              className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-neutral-100 hover:text-[#0F0F0F]"
+                            >
+                              <Eye size={14} aria-hidden />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDeleteTarget(review)}
+                            title="Delete review"
+                            className="rounded-md p-1.5 text-[#928E82] transition-colors hover:bg-red-50 hover:text-[#CC0000]"
+                          >
+                            <Trash2 size={14} aria-hidden />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

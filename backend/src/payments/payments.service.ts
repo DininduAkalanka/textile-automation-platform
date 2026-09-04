@@ -816,8 +816,8 @@ export class PaymentsService {
     limit = 20,
     filters?: { method?: string; status?: string },
   ) {
-    const p = Number(page) || 1;
-    const l = Number(limit) || 20;
+    const p = Math.max(1, Number(page) || 1);
+    const l = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (p - 1) * l;
 
     const where: Prisma.PaymentWhereInput = {};

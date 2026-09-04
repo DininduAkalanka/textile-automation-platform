@@ -108,10 +108,15 @@ export class AnalyticsService {
 
   /** Defaults to the trailing 30 days when the caller supplies no range. */
   resolveRange(from?: string, to?: string): DateRange {
-    const end = to ? new Date(to) : new Date();
-    const start = from
+    let end = to ? new Date(to) : new Date();
+    let start = from
       ? new Date(from)
       : new Date(end.getTime() - DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    if (start.getTime() > end.getTime()) {
+      const temp = start;
+      start = end;
+      end = temp;
+    }
     return { from: start, to: end };
   }
 

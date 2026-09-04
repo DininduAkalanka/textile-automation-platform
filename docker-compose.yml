@@ -110,6 +110,7 @@ services:
       - '3000:3000'
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+      - INTERNAL_BACKEND_URL=http://backend:3001
       - WATCHPACK_POLLING=true
     volumes:
       - ./frontend:/app

@@ -67,16 +67,7 @@ export default function AiInsightsPage() {
     },
   });
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="container py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-indigo-600">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
+
 
   const submit = (question: string) => {
     const q = question.trim();

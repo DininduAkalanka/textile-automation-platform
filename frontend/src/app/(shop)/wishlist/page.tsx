@@ -6,6 +6,7 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 /* ── SVG Icons ─────────────────────────────────────────────── */
 const IconHeart = ({ size = 20 }: { size?: number }) => (
@@ -35,11 +36,13 @@ function WishlistCard({ product, index }: { product: Product; index: number }) {
   const addItem    = useCartStore(s => s.addItem);
   const [cartState, setCartState] = useState<'idle' | 'added'>('idle');
 
-  const initialImg = product.images && product.images.length > 0 ? product.images[0] : `/images/prod${(index % 3) + 1}.png`;
+  const rawImg = product.images && product.images.length > 0 ? product.images[0] : null;
+  const initialImg = normalizeImageUrl(rawImg, `/images/prod${(index % 3) + 1}.png`);
   const [imgSrc, setImgSrc] = useState<string>(initialImg);
 
   useEffect(() => {
-    setImgSrc(product.images && product.images.length > 0 ? product.images[0] : `/images/prod${(index % 3) + 1}.png`);
+    const raw = product.images && product.images.length > 0 ? product.images[0] : null;
+    setImgSrc(normalizeImageUrl(raw, `/images/prod${(index % 3) + 1}.png`));
   }, [product.images, index]);
 
   const discount = product.compareAtPrice
@@ -80,7 +83,6 @@ function WishlistCard({ product, index }: { product: Product; index: number }) {
             src={imgSrc}
             alt={product.name}
             fill
-            unoptimized
             onError={() => setImgSrc(`/images/prod${(index % 3) + 1}.png`)}
             style={{ objectFit: 'cover', transition: 'transform 400ms ease' }}
             sizes="(max-width: 768px) 50vw, 25vw"

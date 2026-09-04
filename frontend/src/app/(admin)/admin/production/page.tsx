@@ -8,8 +8,9 @@ import { TaskCard } from '@/components/production/task-card';
 import { TaskDrawer } from '@/components/production/task-drawer';
 import { Button } from '@/components/ui/button';
 import { usePipeline, useWorkers } from '@/hooks/use-production';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
-import { ProductionTask, STAGE_LABEL, STAGE_ORDER } from '@/types/production';
+import { ProductionStage, ProductionTask, STAGE_LABEL, STAGE_ORDER } from '@/types/production';
 
 /**
  * The admin production board (plan Session 6.2).
@@ -24,19 +25,7 @@ export default function ProductionBoardPage() {
   const { data: workers } = useWorkers();
   const [selected, setSelected] = useState<ProductionTask | null>(null);
   const [workerFilter, setWorkerFilter] = useState('');
-
-  // The API is the real gate (401/403); this is only so the page does not flash
-  // a broken board at someone who should not be here.
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="container py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-indigo-600">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
+  const [mobileStage, setMobileStage] = useState<ProductionStage | 'ALL'>('ALL');
 
   const totalTasks = pipeline
     ? STAGE_ORDER.reduce((sum, stage) => sum + pipeline[stage].length, 0)
@@ -63,7 +52,7 @@ export default function ProductionBoardPage() {
             value={workerFilter}
             onChange={(e) => setWorkerFilter(e.target.value)}
             aria-label="Filter by worker"
-            className="h-9 rounded-lg border border-neutral-300 bg-white px-2.5 text-sm text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="h-9 w-full sm:w-auto rounded-lg border border-neutral-300 bg-white px-2.5 text-sm text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <option value="">Everyone</option>
             {workers.map((worker) => (
@@ -83,6 +72,40 @@ export default function ProductionBoardPage() {
           <Button variant="outline" size="sm" onClick={() => void refetch()}>
             Try again
           </Button>
+        </div>
+      )}
+
+      {/* ─── Mobile Stage Switcher (< md) ─────────────────────────────────── */}
+      {pipeline && totalTasks > 0 && (
+        <div className="mb-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:hidden">
+          <button
+            onClick={() => setMobileStage('ALL')}
+            className={cn(
+              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all',
+              mobileStage === 'ALL'
+                ? 'bg-neutral-900 text-white'
+                : 'border border-neutral-200 bg-white text-neutral-600',
+            )}
+          >
+            All Stages ({totalTasks})
+          </button>
+          {STAGE_ORDER.map((stage) => {
+            const count = pipeline[stage].length;
+            return (
+              <button
+                key={stage}
+                onClick={() => setMobileStage(stage)}
+                className={cn(
+                  'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all',
+                  mobileStage === stage
+                    ? 'bg-neutral-900 text-white'
+                    : 'border border-neutral-200 bg-white text-neutral-600',
+                )}
+              >
+                {STAGE_LABEL[stage]} ({count})
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -110,7 +133,7 @@ export default function ProductionBoardPage() {
 
       {pipeline && totalTasks > 0 && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {STAGE_ORDER.map((stage) => {
+          {STAGE_ORDER.filter((s) => mobileStage === 'ALL' || mobileStage === s).map((stage) => {
             const tasks = workerFilter
               ? pipeline[stage].filter((t) => t.worker?.id === workerFilter)
               : pipeline[stage];

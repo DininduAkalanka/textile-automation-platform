@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+
+import { useCategories } from '@/hooks/use-categories';
 
 /* ── Types ────────────────────────────────────────────────── */
 export interface SubCategoryLink {
@@ -231,9 +233,69 @@ export const CATEGORIES_DATA: CategoryItem[] = [
 
 /* ── Fashion Bug Style Category Navigation Bar Component ──── */
 export function CategoryMegaNav() {
+  const { data: dbCategories } = useCategories();
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const activeCategory = CATEGORIES_DATA.find((c) => c.id === activeId);
+  // Dynamically merge DB categories with rich template mega-menu structures
+  const categories = useMemo(() => {
+    // Fixed initial items
+    const navItems: CategoryItem[] = [
+      CATEGORIES_DATA[0], // HOME
+      CATEGORIES_DATA[1], // NEW ARRIVALS
+    ];
+
+    if (dbCategories && dbCategories.length > 0) {
+      // Find top-level categories (parentId is null or empty)
+      const topLevel = dbCategories.filter((c) => !c.parentId);
+
+      topLevel.forEach((cat) => {
+        const catSlug = (cat.slug || cat.name).toLowerCase();
+        // Match existing rich template if available (e.g. women, men, teenagers, uniforms)
+        const template = CATEGORIES_DATA.find(
+          (t) =>
+            t.id.toLowerCase() === catSlug ||
+            t.label.toLowerCase() === cat.name.toLowerCase(),
+        );
+
+        if (template) {
+          navItems.push({
+            ...template,
+            id: cat.slug || template.id,
+            label: cat.name.toUpperCase(),
+            href: `/products?category=${encodeURIComponent(cat.slug || cat.id)}`,
+          });
+        } else {
+          // Dynamic category created in Admin panel (e.g. "School")!
+          const children = dbCategories.filter((c) => c.parentId === cat.id);
+          navItems.push({
+            id: cat.slug || cat.id,
+            label: cat.name.toUpperCase(),
+            href: `/products?category=${encodeURIComponent(cat.slug || cat.id)}`,
+            thumbnail: cat.imageUrl || undefined,
+            columns:
+              children.length > 0
+                ? [
+                    {
+                      title: cat.name.toUpperCase(),
+                      viewAllHref: `/products?category=${encodeURIComponent(cat.slug || cat.id)}`,
+                      links: children.map((sub) => ({
+                        label: sub.name,
+                        href: `/products?category=${encodeURIComponent(sub.slug || sub.id)}`,
+                      })),
+                    },
+                  ]
+                : undefined,
+          });
+        }
+      });
+
+      return navItems;
+    }
+
+    return CATEGORIES_DATA;
+  }, [dbCategories]);
+
+  const activeCategory = categories.find((c) => c.id === activeId);
 
   return (
     <div
@@ -245,21 +307,21 @@ export function CategoryMegaNav() {
         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
       }}
     >
-      {/* ── Desktop Signature Red Category Navigation Bar ── */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* ── Signature Red Category Navigation Bar (Responsive & Dynamic) ── */}
+      <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <nav
-          className="hidden md:flex items-center justify-start gap-1 lg:gap-2"
+          className="flex items-center justify-start gap-0.5 sm:gap-1 lg:gap-2 overflow-x-auto no-scrollbar py-0.5"
           aria-label="Main Store Categories"
         >
-          {CATEGORIES_DATA.map((cat) => {
+          {categories.map((cat) => {
             const isActive = activeId === cat.id;
             const hasMenu = Boolean(cat.columns && cat.columns.length > 0);
 
             return (
               <div
                 key={cat.id}
-                className="relative"
-                onMouseEnter={() => hasMenu ? setActiveId(cat.id) : setActiveId(null)}
+                className="relative shrink-0"
+                onMouseEnter={() => (hasMenu ? setActiveId(cat.id) : setActiveId(null))}
               >
                 <Link
                   href={cat.href}

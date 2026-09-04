@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
@@ -25,17 +26,29 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const loadUser = useAuthStore((s) => s.loadUser);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   // null on both the server render and the client's first render (they must
   // match); filled in a tick later, client-only, to avoid a hydration
   // mismatch if the two renders land on opposite sides of midnight.
   const [today, setToday] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUser();
+    loadUser().finally(() => {
+      setHasCheckedAuth(true);
+    });
   }, [loadUser]);
+
+  useEffect(() => {
+    if (hasCheckedAuth && (!isAuthenticated || user?.role !== 'ADMIN')) {
+      router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
+    }
+  }, [hasCheckedAuth, isAuthenticated, user, router, pathname]);
 
   useEffect(() => {
     setToday(
@@ -46,6 +59,24 @@ export default function AdminLayout({
       }),
     );
   }, []);
+
+  if (hasCheckedAuth && (!isAuthenticated || user?.role !== 'ADMIN')) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAF8]">
+        <div className="text-center">
+          <p className="text-sm font-medium text-neutral-600 mb-2">
+            Admin authentication required. Redirecting to sign in…
+          </p>
+          <Link
+            href={`/login?returnTo=${encodeURIComponent(pathname)}`}
+            className="text-xs font-semibold text-[#CC0000] hover:underline"
+          >
+            Click here if not redirected automatically
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // Warm canvas (#FAFAF8), not a cool grey. A cool background under a warm

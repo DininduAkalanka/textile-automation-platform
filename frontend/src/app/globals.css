@@ -823,27 +823,38 @@
 /* ════════════════════════════════════════════════════════════════
    TRUST STRIP
 ════════════════════════════════════════════════════════════════ */
-/* Exactly 4 items, always — repeat(auto-fit, minmax(...)) doesn't know
-   that, and around 860–980px it fits exactly 3 per row, stranding the
-   4th alone on its own row. Fixing the count at 2 or 4 keeps every
-   row full. */
+/* Trust strip: on mobile (< 640px) 1 column so icons & descriptions breathe properly.
+   640px+ 2 columns, 1024px+ 4 columns */
 .trust-grid {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
 }
-@media (min-width: 992px) {
+@media (min-width: 640px) {
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+@media (min-width: 1024px) {
   .trust-grid {
     grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
   }
 }
 .trust-item {
   display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 1.5rem;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
   background: var(--clr-surface);
   border: 1px solid var(--clr-border-2);
   border-radius: var(--r-md);
   transition: all var(--dur-base) var(--ease-in-out);
+}
+@media (min-width: 640px) {
+  .trust-item {
+    padding: 1.35rem 1.5rem;
+  }
 }
 .trust-item:hover {
   border-color: var(--clr-brand);
@@ -851,8 +862,8 @@
   transform: translateY(-2px);
 }
 .trust-icon {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--r-sm);
   background: var(--clr-brand-tint);
   border: 1px solid rgba(204,0,0,0.12);
@@ -1229,11 +1240,51 @@
     height: 13px;
   }
 
-  /* The Add to Bag button only reveals on :hover, which never fires on a
-     touch screen — without this it's invisible and unreachable on mobile. */
+  /* Mobile product card: sleek frosted dark glass pill instead of a harsh flat red wall */
   .product-card-actions {
     opacity: 1 !important;
     transform: none !important;
+    bottom: 0.5rem !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
   }
+  .product-card-actions button {
+    background: rgba(18, 18, 18, 0.86) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 9999px !important;
+    padding: 0.45rem 0.65rem !important;
+    font-size: 0.65rem !important;
+    letter-spacing: 0.08em !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  }
+  .product-card-actions button:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ACCESSIBILITY: WCAG 2.3.3 PREFERS-REDUCED-MOTION
+   Respects user device preferences by collapsing animation durations
+   and transition loops to near-instantaneous changes.
+════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 

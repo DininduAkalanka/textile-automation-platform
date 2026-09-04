@@ -2,6 +2,7 @@ import { ProductType } from '@prisma/client';
 import {
   IsString,
   IsNumber,
+  IsInt,
   IsOptional,
   IsBoolean,
   IsArray,
@@ -31,7 +32,7 @@ export class CreateProductDto {
   @IsOptional()
   compareAtPrice?: number;
 
-  @IsNumber()
+  @IsInt({ message: 'Stock quantity must be an integer' })
   @Min(0)
   stockQuantity: number;
 

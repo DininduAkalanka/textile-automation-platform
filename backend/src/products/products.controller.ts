@@ -164,6 +164,7 @@ export class ProductsController {
 export class CategoriesController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Public()
   @Get()
   findAll() {
     return this.productsService.findAllCategories();

@@ -53,11 +53,12 @@ export function useOrder(id: string | null) {
   });
 }
 
-export function useAdminOrders(filters: AdminOrdersFilters) {
+export function useAdminOrders(filters: AdminOrdersFilters, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: orderKeys.adminList(filters),
     queryFn: () => ordersService.listAll(filters),
     placeholderData: (previous) => previous, // no flicker when paging/filtering
+    enabled: options?.enabled ?? true,
   });
 }
 

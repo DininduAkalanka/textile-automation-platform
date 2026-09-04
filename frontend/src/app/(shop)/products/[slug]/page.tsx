@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -27,6 +27,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const buyBoxRef = useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
   const router = useRouter();
   const { toggleItem, isWishlisted } = useWishlistStore();
@@ -107,6 +109,20 @@ export default function ProductDetailPage() {
       router.push('/checkout');
     }
   };
+
+  useEffect(() => {
+    if (loading || !product) return;
+    const el = buyBoxRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyBar(!entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [product, loading]);
 
   if (loading) {
     return (
@@ -434,7 +450,7 @@ export default function ProductDetailPage() {
 
           {/* Add to Cart */}
           {product.stockQuantity > 0 && (
-            <div className="product-actions-row">
+            <div ref={buyBoxRef} className="product-actions-row">
               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--color-border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -675,6 +691,40 @@ export default function ProductDetailPage() {
           </>
         );
       })()}
+
+      {/* Mobile Sticky Add to Bag Bar */}
+      {product && product.stockQuantity > 0 && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.08)] transition-transform duration-300 ${
+            showStickyBar ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {product.images && product.images[0] && (
+                <img
+                  src={product.images[0]}
+                  alt=""
+                  className="w-10 h-10 object-cover rounded-md bg-neutral-100 shrink-0"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-neutral-900 truncate">{product.name}</p>
+                <p className="text-xs font-bold text-[var(--clr-brand)]">
+                  Rs. {Number(product.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              className="btn btn-primary btn-sm shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wider"
+            >
+              {added ? '✓ Added' : 'Add to Bag'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

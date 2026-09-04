@@ -4,6 +4,7 @@ import { MovementType, OrderStatus, UserRole } from '@prisma/client';
 
 import { AppModule } from '../src/app.module';
 import { OrdersService } from '../src/orders/orders.service';
+import { InventoryService } from '../src/inventory/inventory.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CreateOrderDto } from '../src/orders/dto/create-order.dto';
 
@@ -51,7 +52,9 @@ describe('Stock reservation race (D3 / BR4)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let orders: OrdersService;
+  let inventory: InventoryService;
   let userId: string;
+  let adminId: string;
 
   const address = {
     fullName: 'Race Tester',
@@ -77,6 +80,7 @@ describe('Stock reservation race (D3 / BR4)', () => {
 
     prisma = app.get(PrismaService);
     orders = app.get(OrdersService);
+    inventory = app.get(InventoryService);
 
     const user = await prisma.user.create({
       data: {
@@ -89,6 +93,18 @@ describe('Stock reservation race (D3 / BR4)', () => {
       },
     });
     userId = user.id;
+
+    const admin = await prisma.user.create({
+      data: {
+        email: `${TAG}-admin@example.test`,
+        passwordHash: 'not-a-real-hash',
+        emailVerified: true,
+        firstName: 'Admin',
+        lastName: 'Tester',
+        role: UserRole.ADMIN,
+      },
+    });
+    adminId = admin.id;
   });
 
   afterAll(async () => {
@@ -106,7 +122,7 @@ describe('Stock reservation race (D3 / BR4)', () => {
     });
     await prisma.order.deleteMany({ where: { userId } });
     await prisma.product.deleteMany({ where: { sku: { startsWith: TAG } } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: { in: [userId, adminId] } } });
     await app.close();
   });
 
@@ -287,4 +303,52 @@ describe('Stock reservation race (D3 / BR4)', () => {
     expect(history[0].fromStatus).toBeNull();
     expect(history[0].toStatus).toBe(OrderStatus.PENDING);
   });
+
+  /**
+   * [QA-2.5a] Admin inventory adjustment race vs in-flight checkout.
+   * Tests concurrent execution of an admin stock write-off (DAMAGE) vs an in-flight
+   * checkout when there is insufficient stock for BOTH to succeed.
+   * Asserts that exactly one succeeds, the other fails with a clean BadRequestException,
+   * quantity_reserved never exceeds quantity_available, and the ledger strictly balances.
+   */
+  it('[QA-2.5a] handles concurrent admin inventory adjustment vs in-flight checkout without ledger violation', async () => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const stock = 5;
+      const productId = await seedProduct(stock, `admin-race-${attempt}`);
+
+      // Contender 1: In-flight customer order for 4 units
+      // Contender 2: Admin damages and writes off 4 units
+      // Stock available is 5: only 1 operation can legally succeed (4+4 > 5).
+      const results = await Promise.allSettled([
+        orders.create(userId, orderFor(productId, 4)),
+        inventory.adjust(
+          productId,
+          -4,
+          MovementType.DAMAGE,
+          adminId,
+          'Damage writeoff',
+        ),
+      ]);
+
+      const won = results.filter((r) => r.status === 'fulfilled').length;
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      expect({ attempt, won }).toEqual({ attempt, won: 1 });
+      expect(rejected).toHaveLength(1);
+
+      // Loser must be rejected cleanly with BadRequestException
+      const reason = (rejected[0] as PromiseRejectedResult).reason;
+      expect(reason).toBeInstanceOf(BadRequestException);
+
+      const ledger = await ledgerOf(productId);
+
+      // Invariant: reserved must never exceed available
+      expect(ledger.reserved).toBeLessThanOrEqual(ledger.available);
+      expect(ledger.available).toBeGreaterThanOrEqual(0);
+
+      // Ledger balances strictly with zero drift
+      expect(ledger.available).toBe(ledger.availableLedger);
+      expect(ledger.reserved).toBe(ledger.reservedLedger);
+    }
+  }, 60_000);
 });

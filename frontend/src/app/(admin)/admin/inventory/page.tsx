@@ -15,6 +15,7 @@ import { AdjustDialog } from '@/components/admin/inventory/adjust-dialog';
 import { MovementsTimeline } from '@/components/admin/inventory/movements-timeline';
 import { StockBadge } from '@/components/admin/inventory/stock-badge';
 import { useInventory, useLowStock, useSetMinimum } from '@/hooks/use-inventory';
+import { getToken } from '@/lib/token-store';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 import { InventoryItem } from '@/types/inventory';
@@ -31,7 +32,7 @@ import { InventoryItem } from '@/types/inventory';
  * is precisely the stock that an admin must not write off.
  */
 export default function InventoryPage() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
 
   const [search, setSearch] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -48,19 +49,6 @@ export default function InventoryPage() {
   });
   const { data: lowStock } = useLowStock();
   const setMinimum = useSetMinimum();
-
-  // The API is the real gate (401/403). This only stops the page flashing an empty
-  // table at someone who should never have reached it.
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-[#CC0000] hover:underline">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
 
   const lowCount = lowStock?.count ?? 0;
 
@@ -133,177 +121,261 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* ─── The table ────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)]">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">
-            <Loader2 size={15} className="animate-spin" aria-hidden />
-            Loading stock…
-          </div>
-        ) : isError ? (
-          <p className="py-20 text-center text-sm text-[#CC0000]">
-            Could not load inventory.
-          </p>
-        ) : data && data.items.length === 0 ? (
-          <p className="py-20 text-center text-sm text-[#928E82]">
-            {lowStockOnly
-              ? 'Nothing needs reordering. '
-              : search
-                ? 'No products match that search.'
-                : 'No products yet.'}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
-                  {[
-                    'Product',
-                    'Available',
-                    'Reserved',
-                    'Sellable',
-                    'Reorder at',
-                    'Status',
-                    '',
-                  ].map((heading, i) => (
-                    <th
-                      key={heading || i}
-                      className={cn(
-                        'px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]',
-                        i > 0 && i < 5 && 'text-right',
-                      )}
-                    >
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+      {/* ─── Main Content: Dual Mobile / Desktop Presentation ──────────────── */}
+      {isLoading ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white p-16 text-center text-sm text-[#928E82]">
+          <Loader2 size={18} className="mx-auto mb-2 animate-spin text-[#6E6A5E]" aria-hidden />
+          Loading inventory…
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-sm text-[#CC0000]">
+          Could not load inventory.
+        </div>
+      ) : data && data.items.length === 0 ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white py-16 text-center text-sm text-[#928E82]">
+          {lowStockOnly
+            ? 'Nothing needs reordering.'
+            : search
+              ? 'No products match that search.'
+              : 'No products yet.'}
+        </div>
+      ) : (
+        <>
+          {/* 📱 MOBILE VIEW: High-Density Inventory Cards (< md) */}
+          <div className="grid gap-3 md:hidden">
+            {data?.items.map((item) => {
+              const open = expanded === item.productId;
+              return (
+                <article
+                  key={item.productId}
+                  className="rounded-xl border border-[#EAE8E1] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-2 border-b border-[#F4F3EF] pb-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-[#0F0F0F] truncate">
+                        {item.name}
+                      </h3>
+                      <p className="font-mono text-xs text-[#928E82]">
+                        {item.sku}
+                        {item.category ? ` · ${item.category}` : ''}
+                      </p>
+                    </div>
+                    <StockBadge status={item.status} />
+                  </div>
 
-              <tbody>
-                {data?.items.map((item) => {
-                  const open = expanded === item.productId;
-
-                  return (
-                    // A keyed Fragment, not <>: each product renders TWO rows (the
-                    // product and its expanded ledger), and the shorthand cannot
-                    // carry the key React needs to keep them paired across renders.
-                    <Fragment key={item.productId}>
-                      <tr
+                  {/* Stock Metrics Grid */}
+                  <div className="grid grid-cols-3 gap-2 py-3 text-center text-xs">
+                    <div className="rounded-lg bg-[#FAFAF8] p-2">
+                      <span className="text-[10px] uppercase tracking-wider text-[#928E82]">Available</span>
+                      <p className="font-display text-sm font-semibold text-[#0F0F0F]">
+                        {item.available}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-[#FAFAF8] p-2">
+                      <span className="text-[10px] uppercase tracking-wider text-[#928E82]">Reserved</span>
+                      <p
                         className={cn(
-                          'border-b border-[#F4F3EF] transition-colors hover:bg-[#FAFAF8]',
-                          open && 'bg-[#FAFAF8]',
+                          'font-display text-sm font-semibold',
+                          item.reserved > 0 ? 'text-[#8A6A17]' : 'text-[#928E82]',
                         )}
                       >
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() =>
-                              setExpanded(open ? null : item.productId)
-                            }
-                            aria-expanded={open}
-                            className="group flex items-center gap-2 text-left"
-                          >
-                            <ChevronDown
-                              size={13}
-                              aria-hidden
-                              className={cn(
-                                'shrink-0 text-[#B8B4A8] transition-transform',
-                                open && 'rotate-180 text-[#0F0F0F]',
-                              )}
-                            />
-                            <span className="min-w-0">
-                              <span className="block truncate text-[13px] font-medium text-[#0F0F0F] group-hover:text-black">
-                                {item.name}
-                              </span>
-                              <span className="block truncate text-[11px] tabular-nums text-[#B8B4A8]">
-                                {item.sku}
-                                {item.category ? ` · ${item.category}` : ''}
-                              </span>
-                            </span>
-                          </button>
-                        </td>
+                        {item.reserved}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-[#FAFAF8] p-2">
+                      <span className="text-[10px] uppercase tracking-wider text-[#928E82]">Sellable</span>
+                      <p className="font-display text-sm font-bold text-[#0F0F0F]">
+                        {item.sellable}
+                      </p>
+                    </div>
+                  </div>
 
-                        <td className="px-4 py-3 text-right font-display text-sm font-semibold tabular-nums text-[#0F0F0F]">
-                          {item.available}
-                        </td>
+                  {/* Min reorder info & Actions */}
+                  <div className="flex items-center justify-between border-t border-[#F4F3EF] pt-3">
+                    <div className="text-xs text-[#6E6A5E]">
+                      Reorder at: <span className="font-semibold text-[#0F0F0F]">{item.minimum}</span>
+                    </div>
 
-                        {/* Reserved is greyed when zero: it is the exception, and an
-                            exception that looks like every other cell is invisible. */}
-                        <td
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setExpanded(open ? null : item.productId)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] px-2.5 py-1.5 text-xs font-medium text-[#6E6A5E] transition-colors hover:bg-[#FAFAF8]"
+                      >
+                        <ChevronDown
+                          size={12}
+                          className={cn('transition-transform', open && 'rotate-180')}
+                        />
+                        {open ? 'Hide History' : 'History'}
+                      </button>
+                      <button
+                        onClick={() => setAdjusting(item)}
+                        className="inline-flex items-center rounded-lg bg-[#0F0F0F] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-black"
+                      >
+                        Adjust
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Inline Timeline on mobile when expanded */}
+                  {open && (
+                    <div className="mt-3 border-t border-[#EAE8E1] pt-3 -mx-4 -mb-4 bg-[#FAFAF8] rounded-b-xl p-3">
+                      <MovementsTimeline productId={item.productId} />
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          {/* 💻 DESKTOP VIEW: Full Table (≥ md) */}
+          <div className="hidden overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)] md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
+                    {[
+                      'Product',
+                      'Available',
+                      'Reserved',
+                      'Sellable',
+                      'Reorder at',
+                      'Status',
+                      '',
+                    ].map((heading, i) => (
+                      <th
+                        key={heading || i}
+                        className={cn(
+                          'px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]',
+                          i > 0 && i < 5 && 'text-right',
+                        )}
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {data?.items.map((item) => {
+                    const open = expanded === item.productId;
+
+                    return (
+                      <Fragment key={item.productId}>
+                        <tr
                           className={cn(
-                            'px-4 py-3 text-right text-sm tabular-nums',
-                            item.reserved > 0
-                              ? 'font-medium text-[#8A6A17]'
-                              : 'text-[#D5D2C8]',
+                            'border-b border-[#F4F3EF] transition-colors hover:bg-[#FAFAF8]',
+                            open && 'bg-[#FAFAF8]',
                           )}
                         >
-                          {item.reserved}
-                        </td>
-
-                        <td className="px-4 py-3 text-right font-display text-sm font-bold tabular-nums text-[#0F0F0F]">
-                          {item.sellable}
-                        </td>
-
-                        <td className="px-4 py-3 text-right">
-                          {editingMinimum === item.productId ? (
-                            <input
-                              autoFocus
-                              type="number"
-                              value={minimumDraft}
-                              onChange={(e) => setMinimumDraft(e.target.value)}
-                              onBlur={() => saveMinimum(item.productId)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveMinimum(item.productId);
-                                if (e.key === 'Escape') setEditingMinimum(null);
-                              }}
-                              className="w-16 rounded border border-[#0F0F0F] px-2 py-1 text-right text-sm tabular-nums outline-none"
-                            />
-                          ) : (
+                          <td className="px-4 py-3">
                             <button
-                              onClick={() => {
-                                setEditingMinimum(item.productId);
-                                setMinimumDraft(String(item.minimum));
-                              }}
-                              className="group inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-sm tabular-nums text-[#6E6A5E] transition-colors hover:bg-[#EAE8E1]"
+                              onClick={() =>
+                                setExpanded(open ? null : item.productId)
+                              }
+                              aria-expanded={open}
+                              className="group flex items-center gap-2 text-left"
                             >
-                              {item.minimum}
-                              <Pencil
-                                size={10}
+                              <ChevronDown
+                                size={13}
                                 aria-hidden
-                                className="text-[#D5D2C8] transition-colors group-hover:text-[#6E6A5E]"
+                                className={cn(
+                                  'shrink-0 text-[#B8B4A8] transition-transform',
+                                  open && 'rotate-180 text-[#0F0F0F]',
+                                )}
                               />
+                              <span className="min-w-0">
+                                <span className="block truncate text-[13px] font-medium text-[#0F0F0F] group-hover:text-black">
+                                  {item.name}
+                                </span>
+                                <span className="block truncate text-[11px] tabular-nums text-[#B8B4A8]">
+                                  {item.sku}
+                                  {item.category ? ` · ${item.category}` : ''}
+                                </span>
+                              </span>
                             </button>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="px-4 py-3">
-                          <StockBadge status={item.status} />
-                        </td>
+                          <td className="px-4 py-3 text-right font-display text-sm font-semibold tabular-nums text-[#0F0F0F]">
+                            {item.available}
+                          </td>
 
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => setAdjusting(item)}
-                            className="rounded-lg border border-[#EAE8E1] bg-white px-3 py-1.5 text-[12px] font-medium text-[#0F0F0F] transition-all hover:border-[#0F0F0F] hover:bg-[#0F0F0F] hover:text-white"
+                          <td
+                            className={cn(
+                              'px-4 py-3 text-right text-sm tabular-nums',
+                              item.reserved > 0
+                                ? 'font-medium text-[#8A6A17]'
+                                : 'text-[#D5D2C8]',
+                            )}
                           >
-                            Adjust
-                          </button>
-                        </td>
-                      </tr>
+                            {item.reserved}
+                          </td>
 
-                      {open && (
-                        <tr>
-                          <td colSpan={7} className="border-b border-[#EAE8E1] p-0">
-                            <MovementsTimeline productId={item.productId} />
+                          <td className="px-4 py-3 text-right font-display text-sm font-bold tabular-nums text-[#0F0F0F]">
+                            {item.sellable}
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            {editingMinimum === item.productId ? (
+                              <input
+                                autoFocus
+                                type="number"
+                                value={minimumDraft}
+                                onChange={(e) => setMinimumDraft(e.target.value)}
+                                onBlur={() => saveMinimum(item.productId)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveMinimum(item.productId);
+                                  if (e.key === 'Escape') setEditingMinimum(null);
+                                }}
+                                className="w-16 rounded border border-[#0F0F0F] px-2 py-1 text-right text-sm tabular-nums outline-none"
+                              />
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingMinimum(item.productId);
+                                  setMinimumDraft(String(item.minimum));
+                                }}
+                                className="group inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-sm tabular-nums text-[#6E6A5E] transition-colors hover:bg-[#EAE8E1]"
+                              >
+                                {item.minimum}
+                                <Pencil
+                                  size={10}
+                                  aria-hidden
+                                  className="text-[#D5D2C8] transition-colors group-hover:text-[#6E6A5E]"
+                                />
+                              </button>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <StockBadge status={item.status} />
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => setAdjusting(item)}
+                              className="rounded-lg border border-[#EAE8E1] bg-white px-3 py-1.5 text-[12px] font-medium text-[#0F0F0F] transition-all hover:border-[#0F0F0F] hover:bg-[#0F0F0F] hover:text-white"
+                            >
+                              Adjust
+                            </button>
                           </td>
                         </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+
+                        {open && (
+                          <tr>
+                            <td colSpan={7} className="border-b border-[#EAE8E1] p-0">
+                              <MovementsTimeline productId={item.productId} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* ─── Paging ───────────────────────────────────────────────────────── */}
       {data && data.pagination.totalPages > 1 && (

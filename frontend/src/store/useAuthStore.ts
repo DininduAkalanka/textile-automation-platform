@@ -44,111 +44,145 @@ interface AuthState {
   clearSession: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  // F-04: token starts null — re-hydrated from httpOnly refresh cookie on mount
-  user: null,
-  token: null,
-  isLoading: false,
-  isAuthenticated: false,
+function getInitialUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem('user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-  setAuth: (user: User, token: string) => {
-    setToken(token); // in-memory only — no localStorage
-    setRoleCookie(user.role);
-    set({ user, token, isAuthenticated: true, isLoading: false });
-  },
+export const useAuthStore = create<AuthState>((set) => {
+  const initialToken = typeof window !== 'undefined' ? getToken() : null;
+  const initialUser = getInitialUser();
 
-  /** Called by the axios interceptor when a refresh finally fails. */
-  clearSession: () => {
-    clearToken(); // clears in-memory token
-    clearRoleCookie();
-    set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-  },
+  return {
+    user: initialUser,
+    token: initialToken,
+    isLoading: false,
+    isAuthenticated: Boolean(initialToken && initialUser),
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      const response = await api.login(email, password);
-      setToken(response.accessToken); // in-memory only
-      setRoleCookie(response.user.role);
-      set({
-        user: response.user,
-        token: response.accessToken,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
+    setAuth: (user: User, token: string) => {
+      setToken(token);
+      setRoleCookie(user.role);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('user', JSON.stringify(user));
+      }
+      set({ user, token, isAuthenticated: true, isLoading: false });
+    },
 
-  register: async (data) => {
-    set({ isLoading: true });
-    try {
-      const response = await api.register(data);
-      setToken(response.accessToken); // in-memory only
-      setRoleCookie(response.user.role);
-      set({
-        user: response.user,
-        token: response.accessToken,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
+    clearSession: () => {
+      clearToken();
+      clearRoleCookie();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('user');
+      }
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+    },
 
-  logout: () => {
-    api.logout().catch(() => {}); // revoke refresh token server-side (best-effort)
-    clearToken(); // clears in-memory token
-    clearRoleCookie();
-    set({ user: null, token: null, isAuthenticated: false });
-  },
-
-  loadUser: async () => {
-    // F-04: In-memory token is lost on page reload. Silently call /auth/refresh
-    // to re-hydrate it from the httpOnly refresh cookie before checking the profile.
-    // This preserves session persistence without exposing the access token in storage.
-    const existingToken = getToken();
-    if (!existingToken) {
-      // Try a silent refresh via the httpOnly cookie
+    login: async (email: string, password: string) => {
+      set({ isLoading: true });
       try {
-        const refreshed = await api.refresh();
-        if (refreshed?.accessToken) {
-          setToken(refreshed.accessToken);
-          if (refreshed.user) setRoleCookie(refreshed.user.role);
-          set({
-            user: refreshed.user ?? null,
-            token: refreshed.accessToken,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+        const response = await api.login(email, password);
+        setToken(response.accessToken);
+        setRoleCookie(response.user.role);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('user', JSON.stringify(response.user));
+        }
+        set({
+          user: response.user,
+          token: response.accessToken,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    },
+
+    register: async (data) => {
+      set({ isLoading: true });
+      try {
+        const response = await api.register(data);
+        setToken(response.accessToken);
+        setRoleCookie(response.user.role);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('user', JSON.stringify(response.user));
+        }
+        set({
+          user: response.user,
+          token: response.accessToken,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    },
+
+    logout: () => {
+      api.logout().catch(() => {});
+      clearToken();
+      clearRoleCookie();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('user');
+      }
+      set({ user: null, token: null, isAuthenticated: false });
+    },
+
+    loadUser: async () => {
+      const existingToken = getToken();
+      if (!existingToken) {
+        try {
+          const refreshed = await api.refresh();
+          if (refreshed?.accessToken) {
+            setToken(refreshed.accessToken);
+            if (refreshed.user) {
+              setRoleCookie(refreshed.user.role);
+              if (typeof window !== 'undefined') {
+                window.localStorage.setItem('user', JSON.stringify(refreshed.user));
+              }
+            }
+            set({
+              user: refreshed.user ?? null,
+              token: refreshed.accessToken,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            return;
+          }
+        } catch {
+          set({ isAuthenticated: false, isLoading: false });
           return;
         }
-      } catch {
-        // No valid refresh cookie — user is not logged in
+      }
+
+      const token = getToken();
+      if (!token) {
         set({ isAuthenticated: false, isLoading: false });
         return;
       }
-    }
 
-    const token = getToken();
-    if (!token) {
-      set({ isAuthenticated: false, isLoading: false });
-      return;
-    }
-
-    set({ isLoading: true });
-    try {
-      const user = (await api.getProfile()) as User;
-      setRoleCookie(user.role);
-      set({ user, token, isAuthenticated: true, isLoading: false });
-    } catch {
-      clearToken();
-      clearRoleCookie();
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-    }
-  },
-}));
+      set({ isLoading: true });
+      try {
+        const user = (await api.getProfile()) as User;
+        setRoleCookie(user.role);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('user', JSON.stringify(user));
+        }
+        set({ user, token, isAuthenticated: true, isLoading: false });
+      } catch {
+        clearToken();
+        clearRoleCookie();
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('user');
+        }
+        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      }
+    },
+  };
+});

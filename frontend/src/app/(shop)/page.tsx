@@ -214,7 +214,7 @@ export default function HomePage() {
         style={{
           position: 'relative',
           overflow: 'hidden',
-          minHeight: 'min(92vh, 720px)',
+          minHeight: 'clamp(560px, 88vh, 740px)',
           display: 'flex',
           alignItems: 'center',
           background: 'var(--obsidian-950)',
@@ -234,7 +234,7 @@ export default function HomePage() {
         <div
           style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
+            background: 'linear-gradient(to right, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)',
             zIndex: 1,
             pointerEvents: 'none',
           }}
@@ -260,7 +260,7 @@ export default function HomePage() {
           }}
         />
 
-        <div className="container" style={{ position: 'relative', zIndex: 2, padding: '6rem 2rem 5rem' }}>
+        <div className="container" style={{ position: 'relative', zIndex: 2, padding: '4.5rem 1.25rem 4rem' }}>
           <div style={{ maxWidth: '680px' }}>
 
             {/* Eyebrow */}
@@ -270,14 +270,14 @@ export default function HomePage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                marginBottom: '2rem',
+                marginBottom: '1rem',
                 animation: 'fadeInUp 0.5s var(--ease-out-expo) both',
               }}
             >
               <span
                 style={{
                   display: 'block',
-                  width: '28px',
+                  width: '24px',
                   height: '1.5px',
                   background: current.accentColor,
                 }}
@@ -285,8 +285,8 @@ export default function HomePage() {
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '0.65rem',
-                  fontWeight: 400,
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
                   letterSpacing: '0.18em',
                   textTransform: 'uppercase',
                   color: current.accentColor,
@@ -301,12 +301,12 @@ export default function HomePage() {
               key={`h1-${current.id}`}
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: 'clamp(2.4rem, 5.5vw, 4.25rem)',
+                fontSize: 'clamp(1.85rem, 5.2vw, 4.25rem)',
                 fontWeight: 600,
-                lineHeight: 1.08,
+                lineHeight: 1.1,
                 letterSpacing: '-0.015em',
                 color: '#fff',
-                marginBottom: '1.5rem',
+                marginBottom: '1rem',
                 animation: 'fadeInUp 0.55s 0.08s var(--ease-out-expo) both',
               }}
             >
@@ -317,10 +317,10 @@ export default function HomePage() {
             <p
               key={`body-${current.id}`}
               style={{
-                fontSize: '1rem',
-                lineHeight: 1.8,
-                color: 'rgba(255,255,255,0.55)',
-                marginBottom: '2.5rem',
+                fontSize: 'clamp(0.85rem, 2vw, 1rem)',
+                lineHeight: 1.65,
+                color: 'rgba(255,255,255,0.65)',
+                marginBottom: '1.75rem',
                 maxWidth: '520px',
                 animation: 'fadeInUp 0.55s 0.16s var(--ease-out-expo) both',
               }}
@@ -333,38 +333,40 @@ export default function HomePage() {
               key={`ctas-${current.id}`}
               style={{
                 display: 'flex',
-                gap: '0.875rem',
+                gap: '0.75rem',
                 flexWrap: 'wrap',
                 animation: 'fadeInUp 0.55s 0.24s var(--ease-out-expo) both',
               }}
             >
-              <Link href={current.primaryCta.href} id={`hero-primary-${current.id}`} className="btn btn-brand btn-lg">
+              <Link href={current.primaryCta.href} id={`hero-primary-${current.id}`} className="btn btn-brand btn-md sm:btn-lg">
                 {current.primaryCta.label}
                 <IconArrow />
               </Link>
-              <Link href={current.secondaryCta.href} className="btn btn-ghost-white btn-lg">
+              <Link href={current.secondaryCta.href} className="btn btn-ghost-white btn-md sm:btn-lg">
                 {current.secondaryCta.label}
               </Link>
             </div>
 
-            {/* Stats row */}
+            {/* Stats row: clean horizontal 3-column grid that never wraps awkwardly */}
             <div
               style={{
-                display: 'flex',
-                gap: '2.5rem',
-                marginTop: '4rem',
-                paddingTop: '2rem',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '0.75rem',
+                paddingTop: '1.25rem',
+                borderTop: '1px solid rgba(255,255,255,0.12)',
+                marginTop: '1.75rem',
+                marginBottom: '2.5rem',
+                maxWidth: '480px',
                 animation: 'fadeInUp 0.55s 0.32s var(--ease-out-expo) both',
-                flexWrap: 'wrap',
               }}
             >
               {WHY_US.slice(0, 3).map(s => (
                 <div key={s.id}>
-                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', fontWeight: 600, color: current.accentColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(1.35rem, 3.5vw, 2.25rem)', fontWeight: 700, color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.6)', lineHeight: 1, letterSpacing: '-0.02em' }}>
                     {s.num}
                   </p>
-                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginTop: '0.25rem' }}>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(0.55rem, 1.4vw, 0.65rem)', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: '0.35rem', lineHeight: 1.25 }}>
                     {s.label}
                   </p>
                 </div>
@@ -377,12 +379,12 @@ export default function HomePage() {
         <div
           style={{
             position: 'absolute',
-            bottom: '2.5rem',
+            bottom: '1.25rem',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
             alignItems: 'center',
-            gap: '1.5rem',
+            gap: '1rem',
             zIndex: 5,
           }}
         >
@@ -391,15 +393,15 @@ export default function HomePage() {
             aria-label="Previous slide"
             onClick={() => goToSlide((slide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
             style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.6)',
+              width: '30px', height: '30px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.8)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'all 200ms ease',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--clr-brand)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--clr-brand)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)'; }}
           >
             <IconChevronLeft />
           </button>
@@ -412,13 +414,13 @@ export default function HomePage() {
                 aria-label={`Go to slide ${i + 1}`}
                 onClick={() => goToSlide(i)}
                 style={{
-                  height: '2px',
-                  width: i === slide ? '32px' : '16px',
-                  background: i === slide ? 'var(--clr-brand)' : 'rgba(255,255,255,0.25)',
+                  height: '3px',
+                  width: i === slide ? '28px' : '14px',
+                  background: i === slide ? 'var(--clr-brand)' : 'rgba(255,255,255,0.3)',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 300ms var(--ease-out-expo)',
-                  borderRadius: '1px',
+                  borderRadius: '2px',
                 }}
               />
             ))}

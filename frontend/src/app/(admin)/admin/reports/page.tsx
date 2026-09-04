@@ -150,21 +150,23 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="rounded-2xl border border-[#EAE8E1] bg-white p-6">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F4F3EF] text-[#6E6A5E]">
-            <LineChart size={17} />
-          </span>
-          <div>
-            <h2 className="text-[13px] font-semibold text-[#0F0F0F]">
-              Looking for forecasts?
-            </h2>
-            <p className="text-[11px] text-[#928E82]">
-              Demand predictions, trends and dead-stock live on the Analytics page.
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F4F3EF] text-[#6E6A5E]">
+              <LineChart size={17} />
+            </span>
+            <div>
+              <h2 className="text-[13px] font-semibold text-[#0F0F0F]">
+                Looking for forecasts?
+              </h2>
+              <p className="text-[11px] text-[#928E82]">
+                Demand predictions, trends and dead-stock live on the Analytics page.
+              </p>
+            </div>
           </div>
           <Link
             href="/admin/analytics"
-            className="ml-auto rounded-lg border border-[#EAE8E1] px-3 py-1.5 text-[12px] font-medium text-[#0F0F0F] hover:bg-[#FAF9F6]"
+            className="w-full sm:w-auto text-center rounded-lg border border-[#EAE8E1] px-3 py-2 text-[12px] font-medium text-[#0F0F0F] transition-colors hover:bg-[#FAF9F6]"
           >
             Open Analytics
           </Link>
