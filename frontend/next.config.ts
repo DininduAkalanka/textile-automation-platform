@@ -37,7 +37,16 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
-    const backendUrl = process.env.INTERNAL_BACKEND_URL || 'http://backend:3001';
+    let backendUrl =
+      process.env.INTERNAL_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') ||
+      'http://backend:3001';
+
+    backendUrl = backendUrl.trim().replace(/\/+$/, '');
+    if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+      backendUrl = `https://${backendUrl}`;
+    }
+
     return [
       {
         source: '/uploads/:path*',
