@@ -68,16 +68,7 @@ export default function AdminProductsPage() {
   const restoreProduct = useRestoreProduct();
   const deleteProduct = useDeleteProduct();
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-[#CC0000] hover:underline">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
+
 
   const hasFilters = Boolean(search || categoryId || productType || archivedOnly || lowStockOnly);
 
@@ -105,6 +96,7 @@ export default function AdminProductsPage() {
         </div>
 
         <button
+          data-testid="new-product-btn"
           onClick={() => setFormTarget(null)}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F0F0F] px-3.5 py-2 text-[13px] font-semibold text-white transition-all hover:bg-black"
         >
@@ -114,8 +106,8 @@ export default function AdminProductsPage() {
       </div>
 
       {/* ─── Filters ──────────────────────────────────────────────────────── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
+      <div className="mb-4 space-y-2">
+        <div className="relative w-full">
           <Search
             size={14}
             aria-hidden
@@ -132,177 +124,279 @@ export default function AdminProductsPage() {
           />
         </div>
 
-        <select
-          value={categoryId}
-          onChange={(e) => {
-            setCategoryId(e.target.value);
-            setPage(1);
-          }}
-          className="h-[38px] rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
-        >
-          <option value="">Any category</option>
-          {categoryOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={productType}
-          onChange={(e) => {
-            setProductType(e.target.value as ProductType | '');
-            setPage(1);
-          }}
-          className="h-[38px] rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
-        >
-          {TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-
-        <button
-          onClick={() => {
-            setLowStockOnly((v) => !v);
-            setPage(1);
-          }}
-          className={cn(
-            'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
-            lowStockOnly
-              ? 'border-[#CC0000] bg-[#CC0000] text-white'
-              : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
-          )}
-        >
-          <TriangleAlert size={13} aria-hidden />
-          Low stock
-        </button>
-
-        <button
-          onClick={() => {
-            setArchivedOnly((v) => !v);
-            setPage(1);
-          }}
-          className={cn(
-            'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
-            archivedOnly
-              ? 'border-[#0F0F0F] bg-[#0F0F0F] text-white'
-              : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
-          )}
-        >
-          <Archive size={13} aria-hidden />
-          Archived
-        </button>
-
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-2.5 py-2 text-[12px] font-medium text-[#928E82] transition-colors hover:border-[#D5D2C8] hover:text-[#0F0F0F]"
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setPage(1);
+            }}
+            className="h-[38px] flex-1 sm:flex-none rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
           >
-            <X size={12} aria-hidden />
-            Clear
+            <option value="">Any category</option>
+            {categoryOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={productType}
+            onChange={(e) => {
+              setProductType(e.target.value as ProductType | '');
+              setPage(1);
+            }}
+            className="h-[38px] flex-1 sm:flex-none rounded-lg border border-[#EAE8E1] bg-white px-2.5 text-[13px] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
+          >
+            {TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => {
+              setLowStockOnly((v) => !v);
+              setPage(1);
+            }}
+            className={cn(
+              'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
+              lowStockOnly
+                ? 'border-[#CC0000] bg-[#CC0000] text-white'
+                : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
+            )}
+          >
+            <TriangleAlert size={13} aria-hidden />
+            Low stock
           </button>
-        )}
+
+          <button
+            onClick={() => {
+              setArchivedOnly((v) => !v);
+              setPage(1);
+            }}
+            className={cn(
+              'inline-flex h-[38px] items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-all',
+              archivedOnly
+                ? 'border-[#0F0F0F] bg-[#0F0F0F] text-white'
+                : 'border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8]',
+            )}
+          >
+            <Archive size={13} aria-hidden />
+            Archived
+          </button>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] bg-white px-2.5 py-2 text-[12px] font-medium text-[#928E82] transition-colors hover:border-[#D5D2C8] hover:text-[#0F0F0F]"
+            >
+              <X size={12} aria-hidden />
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ─── The table ────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)]">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">
-            <Loader2 size={15} className="animate-spin" aria-hidden />
-            Loading products…
-          </div>
-        ) : isError ? (
-          <p className="py-20 text-center text-sm text-[#CC0000]">Could not load products.</p>
-        ) : !data || data.products.length === 0 ? (
-          <p className="py-20 text-center text-sm text-[#928E82]">
-            {hasFilters ? 'No products match these filters.' : 'No products yet.'}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
-                  {['Product', 'Category', 'Type', 'Price', 'Stock', 'Status', ''].map((h) => (
-                    <th
-                      key={h || 'actions'}
-                      className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]"
+      {/* ─── Main Display: Dual Mobile / Desktop Presentation ──────────────── */}
+      {isLoading ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white p-16 text-center text-sm text-[#928E82]">
+          <Loader2 size={18} className="mx-auto mb-2 animate-spin text-[#6E6A5E]" aria-hidden />
+          Loading products…
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-sm text-[#CC0000]">
+          Could not load products.
+        </div>
+      ) : !data || data.products.length === 0 ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white py-16 text-center text-sm text-[#928E82]">
+          {hasFilters ? 'No products match these filters.' : 'No products yet.'}
+        </div>
+      ) : (
+        <>
+          {/* 📱 MOBILE VIEW: High-Density Product Cards (< md) */}
+          <div className="grid gap-3 md:hidden">
+            {data.products.map((product) => (
+              <article
+                key={product.id}
+                className="rounded-xl border border-[#EAE8E1] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-[#F4F3EF] pb-3">
+                  <div className="min-w-0 flex-1">
+                    <button
+                      onClick={() => setFormTarget(product)}
+                      className="text-left"
                     >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.products.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="border-b border-[#F4F3EF] transition-colors hover:bg-[#FAFAF8]"
+                      <h3 className="text-sm font-semibold text-[#0F0F0F] hover:underline">
+                        {product.name}
+                      </h3>
+                      <p className="font-mono text-xs text-[#928E82]">
+                        {product.sku}
+                      </p>
+                    </button>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {product.category && (
+                        <span className="rounded bg-[#F4F3EF] px-1.5 py-0.5 text-[10px] font-medium text-[#6E6A5E]">
+                          {product.category.name}
+                        </span>
+                      )}
+                      {product.productType && (
+                        <span className="rounded bg-[#F4F3EF] px-1.5 py-0.5 text-[10px] text-[#928E82]">
+                          {product.productType.replace('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                      product.isActive
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-neutral-100 text-neutral-600',
+                    )}
                   >
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => setFormTarget(product)}
-                        className="text-left"
-                      >
-                        <span className="block truncate text-[13px] font-medium text-[#0F0F0F] hover:underline">
-                          {product.name}
-                        </span>
-                        <span className="block truncate font-mono text-[11px] text-[#B8B4A8]">
-                          {product.sku}
-                        </span>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-[13px] text-[#6E6A5E]">
-                      {product.category?.name ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-[12px] text-[#928E82]">
-                      {product.productType?.replace('_', ' ') ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 font-display text-[13px] font-semibold tabular-nums text-[#0F0F0F]">
+                    {product.isActive ? 'Active' : 'Archived'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#928E82]">Price</span>
+                    <p className="font-display text-sm font-bold text-[#0F0F0F]">
                       {formatLKR(product.price)}
-                    </td>
-                    <td className="px-4 py-3 text-[13px] tabular-nums text-[#4A4740]">
-                      {product.stockQuantity}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]',
-                          product.isActive
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-[#F4F3EF] text-[#6E6A5E]',
-                        )}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase tracking-wider text-[#928E82]">Stock</span>
+                    <p
+                      className={cn(
+                        'text-xs font-semibold tabular-nums',
+                        product.stockQuantity <= 5 ? 'text-[#CC0000]' : 'text-[#2F6B49]',
+                      )}
+                    >
+                      {product.stockQuantity} in stock
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-[#F4F3EF] pt-3">
+                  <button
+                    onClick={() => setFormTarget(product)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] px-3 py-1.5 text-xs font-medium text-[#0F0F0F] transition-colors hover:bg-[#FAFAF8]"
+                  >
+                    <Pencil size={12} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setShareTarget(product)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#EAE8E1] px-3 py-1.5 text-xs font-medium text-[#6E6A5E] transition-colors hover:bg-[#FAFAF8]"
+                  >
+                    <Share2 size={12} />
+                    Share
+                  </button>
+                  <RowActionsMenu
+                    isActive={product.isActive}
+                    busy={archiveProduct.isPending || restoreProduct.isPending}
+                    onShare={() => setShareTarget(product)}
+                    onArchive={() => archiveProduct.mutate(product.id)}
+                    onRestore={() => restoreProduct.mutate(product.id)}
+                    onDelete={() => setDeleteTarget(product)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* 💻 DESKTOP VIEW: Full Data Table (≥ md) */}
+          <div className="hidden overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)] md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
+                    {['Product', 'Category', 'Type', 'Price', 'Stock', 'Status', ''].map((h) => (
+                      <th
+                        key={h || 'actions'}
+                        className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]"
                       >
-                        {product.isActive ? 'Active' : 'Archived'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.products.map((product) => (
+                    <tr
+                      key={product.id}
+                      className="border-b border-[#F4F3EF] transition-colors hover:bg-[#FAFAF8]"
+                    >
+                      <td className="px-4 py-3">
                         <button
                           onClick={() => setFormTarget(product)}
-                          aria-label="Edit"
-                          className="rounded-lg border border-[#EAE8E1] bg-white p-1.5 text-[#6E6A5E] transition-colors hover:border-[#0F0F0F] hover:text-[#0F0F0F]"
+                          className="text-left"
                         >
-                          <Pencil size={13} aria-hidden />
+                          <span className="block truncate text-[13px] font-medium text-[#0F0F0F] hover:underline">
+                            {product.name}
+                          </span>
+                          <span className="block truncate font-mono text-[11px] text-[#B8B4A8]">
+                            {product.sku}
+                          </span>
                         </button>
-                        <RowActionsMenu
-                          isActive={product.isActive}
-                          busy={archiveProduct.isPending || restoreProduct.isPending}
-                          onShare={() => setShareTarget(product)}
-                          onArchive={() => archiveProduct.mutate(product.id)}
-                          onRestore={() => restoreProduct.mutate(product.id)}
-                          onDelete={() => setDeleteTarget(product)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                      <td className="px-4 py-3 text-[13px] text-[#6E6A5E]">
+                        {product.category?.name ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-[#928E82]">
+                        {product.productType?.replace('_', ' ') ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 font-display text-[13px] font-semibold tabular-nums text-[#0F0F0F]">
+                        {formatLKR(product.price)}
+                      </td>
+                      <td className="px-4 py-3 text-[13px] tabular-nums text-[#4A4740]">
+                        {product.stockQuantity}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]',
+                            product.isActive
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-[#F4F3EF] text-[#6E6A5E]',
+                          )}
+                        >
+                          {product.isActive ? 'Active' : 'Archived'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setFormTarget(product)}
+                            aria-label="Edit"
+                            className="rounded-lg border border-[#EAE8E1] bg-white p-1.5 text-[#6E6A5E] transition-colors hover:border-[#0F0F0F] hover:text-[#0F0F0F]"
+                          >
+                            <Pencil size={13} aria-hidden />
+                          </button>
+                          <RowActionsMenu
+                            isActive={product.isActive}
+                            busy={archiveProduct.isPending || restoreProduct.isPending}
+                            onShare={() => setShareTarget(product)}
+                            onArchive={() => archiveProduct.mutate(product.id)}
+                            onRestore={() => restoreProduct.mutate(product.id)}
+                            onDelete={() => setDeleteTarget(product)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* ─── Paging ───────────────────────────────────────────────────────── */}
       {data && data.pagination.totalPages > 1 && (

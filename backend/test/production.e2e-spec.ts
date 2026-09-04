@@ -47,6 +47,7 @@ describe('Production pipeline (Phase 6)', () => {
 
   let uniformId: string;
   let uniform2Id: string;
+  let uniform3Id: string;
   let retailId: string;
 
   const address = {
@@ -175,6 +176,7 @@ describe('Production pipeline (Phase 6)', () => {
 
     uniformId = await seedProduct('uniform', ProductType.UNIFORM, true);
     uniform2Id = await seedProduct('uniform2', ProductType.UNIFORM, true);
+    uniform3Id = await seedProduct('uniform3', ProductType.UNIFORM, true);
     retailId = await seedProduct('retail', ProductType.READY_MADE, false);
   });
 
@@ -545,6 +547,129 @@ describe('Production pipeline (Phase 6)', () => {
       expect(reworked.note).toBe('Left sleeve is 2cm short');
     });
 
+    /**
+     * [QA-2.1a] Multi-item order, 2/3 production tasks pass QC, 1 fails.
+     * Asserts order stays IN_PRODUCTION (pulled back from QUALITY_CHECK) and
+     * does NOT falsely advance to QUALITY_CHECK or COMPLETED.
+     */
+    it('[QA-2.1a] 3-item order with 2 tasks passing QC and 1 failing stays IN_PRODUCTION', async () => {
+      const orderId = await placeAndConfirm([
+        { productId: uniformId, quantity: 1, measurements },
+        { productId: uniform2Id, quantity: 1, measurements },
+        { productId: uniform3Id, quantity: 1, measurements },
+      ]);
+
+      const tasks = await tasksOf(orderId);
+      expect(tasks).toHaveLength(3);
+
+      for (const task of tasks) await production.assign(task.id, workerId);
+
+      // Advance all 3 tasks to QC
+      for (const task of tasks) await workToQc(task.id);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // Task 1 passes QC
+      await production.act(tasks[0].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[0].id, 'qc_pass', adminId, UserRole.ADMIN);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // Task 2 passes QC
+      await production.act(tasks[1].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[1].id, 'qc_pass', adminId, UserRole.ADMIN);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // Task 3 FAILS QC
+      await production.act(tasks[2].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(
+        tasks[2].id,
+        'qc_fail',
+        adminId,
+        UserRole.ADMIN,
+        'Collar asymmetry defect',
+      );
+
+      // Order must be pulled back to IN_PRODUCTION, NOT falsely in QUALITY_CHECK or COMPLETED
+      expect(await statusOf(orderId)).toBe(OrderStatus.IN_PRODUCTION);
+
+      // Verify task 3 was rejected back to FINISHING/PENDING
+      const task3Rework = await production.findOne(tasks[2].id);
+      expect(task3Rework.stage).toBe(ProductionStage.FINISHING);
+      expect(task3Rework.status).toBe(TaskStatus.PENDING);
+
+      // Verify tasks 1 and 2 remain completed at QC
+      const task1Check = await production.findOne(tasks[0].id);
+      const task2Check = await production.findOne(tasks[1].id);
+      expect(task1Check.stage).toBe(ProductionStage.QUALITY_CHECK);
+      expect(task1Check.status).toBe(TaskStatus.DONE);
+      expect(task2Check.stage).toBe(ProductionStage.QUALITY_CHECK);
+      expect(task2Check.status).toBe(TaskStatus.DONE);
+
+      // Rework task 3 and pass QC — now all 3 are passed, order should advance to COMPLETED
+      await production.act(tasks[2].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[2].id, 'complete', adminId, UserRole.ADMIN);
+      await production.act(tasks[2].id, 'advance', adminId, UserRole.ADMIN); // -> QUALITY_CHECK
+      // With task 3 back at QC/PENDING, all 3 are at QC -> order is QUALITY_CHECK
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      await production.act(tasks[2].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[2].id, 'qc_pass', adminId, UserRole.ADMIN);
+
+      // Finally COMPLETED
+      expect(await statusOf(orderId)).toBe(OrderStatus.COMPLETED);
+    });
+
+    /**
+     * [QA-2.1b] Multi-item order, 3 production tasks complete QC out of sequence
+     * (task-2-then-0-then-1): assert the order only advances to COMPLETED once
+     * the final task lands, regardless of completion sequence.
+     */
+    it('[QA-2.1b] 3-item order completing QC out of sequence only advances to COMPLETED when final task lands', async () => {
+      const orderId = await placeAndConfirm([
+        { productId: uniformId, quantity: 1, measurements },
+        { productId: uniform2Id, quantity: 1, measurements },
+        { productId: uniform3Id, quantity: 1, measurements },
+      ]);
+
+      const tasks = await tasksOf(orderId);
+      expect(tasks).toHaveLength(3);
+
+      for (const task of tasks) await production.assign(task.id, workerId);
+
+      // Advance all 3 tasks to QC
+      for (const task of tasks) await workToQc(task.id);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // 1. Task index 2 finishes and passes QC FIRST
+      await production.act(tasks[2].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[2].id, 'qc_pass', adminId, UserRole.ADMIN);
+      // Order must REMAIN in QUALITY_CHECK because tasks 0 and 1 are not done
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // 2. Task index 0 finishes and passes QC SECOND
+      await production.act(tasks[0].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[0].id, 'qc_pass', adminId, UserRole.ADMIN);
+      // Order must STILL remain in QUALITY_CHECK because task 1 is not done
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // 3. Task index 1 finishes and passes QC LAST
+      await production.act(tasks[1].id, 'start', adminId, UserRole.ADMIN);
+      await production.act(tasks[1].id, 'qc_pass', adminId, UserRole.ADMIN);
+
+      // ONLY NOW with all 3 tasks DONE at QC does the order advance to COMPLETED
+      expect(await statusOf(orderId)).toBe(OrderStatus.COMPLETED);
+
+      // Verify all tasks are stamped with endTime
+      const finalTasks = await tasksOf(orderId);
+      expect(finalTasks.every((t) => t.endTime !== null)).toBe(true);
+      expect(
+        finalTasks.every(
+          (t) =>
+            t.stage === ProductionStage.QUALITY_CHECK &&
+            t.status === TaskStatus.DONE,
+        ),
+      ).toBe(true);
+    });
+
     it('demands a note when QC rejects a garment', async () => {
       const orderId = await placeAndConfirm([
         { productId: uniformId, quantity: 1, measurements },
@@ -584,6 +709,77 @@ describe('Production pipeline (Phase 6)', () => {
         OrderStatus.QUALITY_CHECK,
         OrderStatus.COMPLETED,
       ]);
+    });
+
+    /**
+     * [QA-2.1c] A task fails QC (customer notified of pullback to production),
+     * is reworked, and passes on re-inspection: assert a "good news" notification
+     * fires on recovery ('Order ... is ready'), not just the failure pullback.
+     */
+    it('[QA-2.1c] QC failure notifies pullback, rework and pass fires recovery notification', async () => {
+      const order = await orders.create(customerId, {
+        items: [{ productId: uniformId, quantity: 1, measurements }],
+        shippingAddress: address,
+      });
+      await orders.confirmOrder(order.id, adminId);
+      const orderId = order.id;
+
+      const [task] = await tasksOf(orderId);
+      await production.assign(task.id, workerId);
+
+      // Advance to QC
+      await workToQc(task.id);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // Fail QC
+      await production.act(task.id, 'start', adminId, UserRole.ADMIN);
+      await production.act(
+        task.id,
+        'qc_fail',
+        adminId,
+        UserRole.ADMIN,
+        'Hemline misaligned by 1.5 inches',
+      );
+      expect(await statusOf(orderId)).toBe(OrderStatus.IN_PRODUCTION);
+
+      // Rework: start -> complete -> advance (back to QC)
+      await production.act(task.id, 'start', adminId, UserRole.ADMIN);
+      await production.act(task.id, 'complete', adminId, UserRole.ADMIN);
+      await production.act(task.id, 'advance', adminId, UserRole.ADMIN);
+      expect(await statusOf(orderId)).toBe(OrderStatus.QUALITY_CHECK);
+
+      // Re-inspection: start -> qc_pass
+      await production.act(task.id, 'start', adminId, UserRole.ADMIN);
+      await production.act(task.id, 'qc_pass', adminId, UserRole.ADMIN);
+      expect(await statusOf(orderId)).toBe(OrderStatus.COMPLETED);
+
+      // Query customer's notifications for this order
+      const notes = await prisma.notification.findMany({
+        where: {
+          userId: customerId,
+          type: 'order.status_changed',
+          title: { contains: order.orderNumber },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const titles = notes.map((n) => n.title);
+
+      // Must include the initial confirmed notification
+      expect(titles).toContain(`Order ${order.orderNumber} confirmed`);
+
+      // Must include the pullback to production notification from the failure
+      expect(titles).toContain(`Order ${order.orderNumber} is in production`);
+
+      // Must include the re-inspection notification
+      expect(titles).toContain(`Order ${order.orderNumber} is being inspected`);
+
+      // Must include the "good news" recovery notification that the order is completed and ready!
+      expect(titles).toContain(`Order ${order.orderNumber} is ready`);
+
+      // Final notification on recovery must explicitly be the "ready" good news
+      expect(titles[titles.length - 1]).toBe(`Order ${order.orderNumber} is ready`);
+      expect(notes[notes.length - 1].body).toMatch(/ready for delivery/i);
     });
   });
 

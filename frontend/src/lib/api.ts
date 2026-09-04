@@ -86,10 +86,21 @@ class ApiClient {
   }
 
   /** Explicit public refresh — called by useAuthStore.loadUser() on page mount
-   *  to re-hydrate the in-memory access token from the httpOnly refresh cookie. */
+   *  to re-hydrate the in-memory access token from the httpOnly refresh cookie.
+   *  Must use direct fetch so unauthenticated visitors (who naturally have no cookie)
+   *  silently return null instead of throwing an Error through this.request(). */
   async refresh(): Promise<AuthResponse | null> {
     try {
-      return await this.request<AuthResponse>('/auth/refresh', { method: 'POST' }, false);
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      const payload = json?.data !== undefined ? json.data : json;
+      const token: string | null = payload?.accessToken ?? null;
+      if (token) setToken(token);
+      return payload as AuthResponse;
     } catch {
       return null;
     }

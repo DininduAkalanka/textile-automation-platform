@@ -196,48 +196,82 @@ export default function AdminAnalyticsPage() {
             4 weeks.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-150 text-[13px]">
-              <thead>
-                <tr className="border-b border-[#EAE8E1] text-left text-[11px] uppercase tracking-wide text-[#928E82]">
-                  <th className="pb-2 font-medium">Product</th>
-                  <th className="pb-2 text-right font-medium">Likely to sell (4 wks)</th>
-                  <th className="pb-2 text-right font-medium">In stock</th>
-                  <th className="pb-2 text-right font-medium">Reorder</th>
-                  <th className="pb-2 text-right font-medium">Cover</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reorder.data.items.map((r) => (
-                  <tr key={r.product} className="border-b border-[#F4F3EF] last:border-0">
-                    <td className="py-2.5 text-[#0F0F0F]">{r.product}</td>
-                    <td className="py-2.5 text-right tabular-nums text-[#0F0F0F]">
-                      {r.predicted}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums text-[#928E82]">
-                      {r.in_stock}
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <span className="font-semibold tabular-nums text-[#0F0F0F]">
-                        +{r.suggested_reorder}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${COVER_STYLE(r.weeks_of_cover)}`}
-                      >
-                        {r.weeks_of_cover}w
-                      </span>
-                    </td>
+          <>
+            {/* 📱 MOBILE VIEW: Reorder Cards (< md) */}
+            <div className="divide-y divide-[#F4F3EF] md:hidden">
+              {reorder.data.items.map((r) => (
+                <div key={r.product} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0F0F0F]">{r.product}</p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${COVER_STYLE(r.weeks_of_cover)}`}
+                    >
+                      {r.weeks_of_cover}w cover
+                    </span>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="rounded bg-[#FAFAF8] p-1.5">
+                      <span className="text-[10px] text-[#928E82]">Est. Sales</span>
+                      <p className="font-semibold text-[#0F0F0F]">{r.predicted}</p>
+                    </div>
+                    <div className="rounded bg-[#FAFAF8] p-1.5">
+                      <span className="text-[10px] text-[#928E82]">In Stock</span>
+                      <p className="font-semibold text-[#6E6A5E]">{r.in_stock}</p>
+                    </div>
+                    <div className="rounded bg-[#FAFAF8] p-1.5">
+                      <span className="text-[10px] text-[#928E82]">Reorder</span>
+                      <p className="font-bold text-[#CC0000]">+{r.suggested_reorder}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 💻 DESKTOP VIEW: Table (≥ md) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[580px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EAE8E1] text-left text-[11px] uppercase tracking-wide text-[#928E82]">
+                    <th className="pb-2 font-medium">Product</th>
+                    <th className="pb-2 text-right font-medium">Likely to sell (4 wks)</th>
+                    <th className="pb-2 text-right font-medium">In stock</th>
+                    <th className="pb-2 text-right font-medium">Reorder</th>
+                    <th className="pb-2 text-right font-medium">Cover</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[11px] text-[#928E82]">
-              &quot;Cover&quot; is how many weeks the current stock lasts at the
-              expected selling rate. Lower = more urgent.
-            </p>
-          </div>
+                </thead>
+                <tbody>
+                  {reorder.data.items.map((r) => (
+                    <tr key={r.product} className="border-b border-[#F4F3EF] last:border-0">
+                      <td className="py-2.5 text-[#0F0F0F]">{r.product}</td>
+                      <td className="py-2.5 text-right tabular-nums text-[#0F0F0F]">
+                        {r.predicted}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums text-[#928E82]">
+                        {r.in_stock}
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="font-semibold tabular-nums text-[#0F0F0F]">
+                          +{r.suggested_reorder}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${COVER_STYLE(r.weeks_of_cover)}`}
+                        >
+                          {r.weeks_of_cover}w
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-3 text-[11px] text-[#928E82]">
+                &quot;Cover&quot; is how many weeks the current stock lasts at the
+                expected selling rate. Lower = more urgent.
+              </p>
+            </div>
+          </>
         )}
       </Panel>
 
@@ -338,7 +372,7 @@ export default function AdminAnalyticsPage() {
 
       {/* ── Sales outlook (drill-down) ── */}
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-[13px] font-semibold text-[#0F0F0F]">
               Sales outlook
@@ -348,7 +382,7 @@ export default function AdminAnalyticsPage() {
             </p>
           </div>
           {products.length > 1 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 overflow-x-auto no-scrollbar pb-1">
               {products.map((p, i) => (
                 <button
                   key={p.product}

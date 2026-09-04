@@ -4,7 +4,7 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
-  IsNumber,
+  IsInt,
   Min,
   IsUUID,
 } from 'class-validator';
@@ -14,7 +14,7 @@ export class OrderItemDto {
   @IsUUID()
   productId: string;
 
-  @IsNumber()
+  @IsInt({ message: 'Quantity must be an integer' })
   @Min(1)
   quantity: number;
 

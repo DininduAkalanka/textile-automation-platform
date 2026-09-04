@@ -3,12 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useModalStore } from '@/store/useModalStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { needsMeasurements } from '@/lib/measurements';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 export default function QuickViewModal() {
   const { quickViewProduct, closeQuickView } = useModalStore();
+  const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const wishlistItems = useWishlistStore((s) => s.items);
@@ -60,7 +64,7 @@ export default function QuickViewModal() {
     : 0;
 
   const images = product.images && product.images.length > 0
-    ? product.images
+    ? product.images.map((img) => normalizeImageUrl(img))
     : [`/images/prod1.png`]; // Fallback
 
   const handleAddToCart = () => {
@@ -222,7 +226,6 @@ export default function QuickViewModal() {
               fill
               style={{ objectFit: 'cover' }}
               sizes="(max-width: 960px) 50vw, 400px"
-              unoptimized
             />
 
             {/* Hover Magnifying Zoom */}
@@ -294,7 +297,6 @@ export default function QuickViewModal() {
                     fill
                     style={{ objectFit: 'cover' }}
                     sizes="50px"
-                    unoptimized
                   />
                 </button>
               ))}
@@ -530,61 +532,97 @@ export default function QuickViewModal() {
                 </button>
               </div>
 
-              {/* Add to Bag Button */}
-              <button
-                onClick={handleAddToCart}
-                disabled={cartState === 'adding' || product.stockQuantity <= 0}
-                className="w-full sm:w-auto"
-                style={{
-                  flex: 1,
-                  height: '2.75rem',
-                  background: cartState === 'added' ? '#16a34a' : 'var(--clr-brand)',
-                  color: 'white',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  cursor: product.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  transition: 'background 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (cartState === 'idle' && product.stockQuantity > 0) {
+              {/* Add to Bag or Custom Tailoring Action */}
+              {needsMeasurements(product) ? (
+                <button
+                  onClick={() => {
+                    closeQuickView();
+                    router.push(`/products/${product.slug}`);
+                  }}
+                  className="w-full sm:w-auto"
+                  style={{
+                    flex: 1,
+                    height: '2.75rem',
+                    background: 'var(--clr-brand)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--clr-brand-dark)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (cartState === 'idle' && product.stockQuantity > 0) {
+                  }}
+                  onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'var(--clr-brand)';
-                  }
-                }}
-              >
-                {product.stockQuantity <= 0 ? (
-                  'Out of Stock'
-                ) : cartState === 'adding' ? (
-                  <>
-                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                      <path d="M12 2a10 10 0 0 1 10 10" />
-                    </svg>
-                    Adding...
-                  </>
-                ) : cartState === 'added' ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Added to Bag
-                  </>
-                ) : (
-                  'Add to Bag'
-                )}
-              </button>
+                  }}
+                >
+                  <span>Customize Sizing &amp; Measurements →</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={cartState === 'adding' || product.stockQuantity <= 0}
+                  className="w-full sm:w-auto"
+                  style={{
+                    flex: 1,
+                    height: '2.75rem',
+                    background: cartState === 'added' ? '#16a34a' : 'var(--clr-brand)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    cursor: product.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (cartState === 'idle' && product.stockQuantity > 0) {
+                      e.currentTarget.style.background = 'var(--clr-brand-dark)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (cartState === 'idle' && product.stockQuantity > 0) {
+                      e.currentTarget.style.background = 'var(--clr-brand)';
+                    }
+                  }}
+                >
+                  {product.stockQuantity <= 0 ? (
+                    'Out of Stock'
+                  ) : cartState === 'adding' ? (
+                    <>
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                        <path d="M12 2a10 10 0 0 1 10 10" />
+                      </svg>
+                      Adding...
+                    </>
+                  ) : cartState === 'added' ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Added to Bag
+                    </>
+                  ) : (
+                    'Add to Bag'
+                  )}
+                </button>
+              )}
 
               {/* Wishlist Button */}
               <button

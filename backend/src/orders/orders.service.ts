@@ -20,6 +20,7 @@ import {
   UserRole,
   PaymentStatus,
   PaymentMethod,
+  PaymentPlan,
   VerificationChannel,
 } from '@prisma/client';
 import {
@@ -252,7 +253,9 @@ export class OrdersService {
   }
 
   async findUserOrders(userId: string, page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 10));
+    const skip = (safePage - 1) * safeLimit;
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -265,7 +268,7 @@ export class OrdersService {
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: safeLimit,
       }),
       this.prisma.order.count({ where: { userId } }),
     ]);
@@ -273,10 +276,10 @@ export class OrdersService {
     return {
       orders,
       pagination: {
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }
@@ -385,7 +388,11 @@ export class OrdersService {
 
     const order = await this.prisma.order.findFirst({
       where: isAdmin ? { id: orderId } : { id: orderId, userId: actor.id },
-      include: { payment: true },
+      include: {
+        payment: {
+          include: { installments: true },
+        },
+      },
     });
     if (!order) {
       throw new NotFoundException('Order not found');
@@ -403,19 +410,22 @@ export class OrdersService {
       );
     }
 
-    if (
-      order.payment?.status === PaymentStatus.COMPLETED &&
-      !options.acknowledgeRefund
-    ) {
+    const hasPaidInstallments =
+      order.payment?.installments?.some(
+        (inst) => inst.status === PaymentStatus.COMPLETED,
+      ) ?? false;
+    const isPaidOrPartiallyPaid =
+      order.payment?.status === PaymentStatus.COMPLETED || hasPaidInstallments;
+
+    if (isPaidOrPartiallyPaid && !options.acknowledgeRefund) {
       throw new BadRequestException(
-        'This order is paid in full. Cancelling requires acknowledging that a refund must be issued manually — cancelling does not refund the customer automatically.',
+        'This order has collected payments. Cancelling requires acknowledging that a refund must be issued manually — cancelling does not refund the customer automatically.',
       );
     }
 
-    const refundDetail =
-      order.payment?.status === PaymentStatus.COMPLETED
-        ? 'A refund will be processed manually.'
-        : undefined;
+    const refundDetail = isPaidOrPartiallyPaid
+      ? 'A refund will be processed manually.'
+      : undefined;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const items = await tx.orderItem.findMany({ where: { orderId } });
@@ -453,18 +463,38 @@ export class OrdersService {
         },
       });
 
-      if (order.payment?.status === PaymentStatus.COMPLETED) {
-        await tx.payment.update({
-          where: { orderId },
-          data: { status: PaymentStatus.REFUNDED },
-        });
-      } else if (order.payment?.status === PaymentStatus.PENDING) {
-        // Nothing was ever collected — there is nothing to refund, only a
-        // promise that will now never be honoured.
-        await tx.payment.update({
-          where: { orderId },
-          data: { status: PaymentStatus.FAILED },
-        });
+      if (order.payment) {
+        if (order.payment.paymentPlan === PaymentPlan.INSTALLMENT) {
+          // Void any uncollected installments so no phantom debts remain on cancelled order
+          await tx.installment.updateMany({
+            where: {
+              paymentId: order.payment.id,
+              status: PaymentStatus.PENDING,
+            },
+            data: { status: PaymentStatus.FAILED },
+          });
+
+          await tx.payment.update({
+            where: { orderId },
+            data: {
+              status: hasPaidInstallments
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.FAILED,
+            },
+          });
+        } else if (order.payment.status === PaymentStatus.COMPLETED) {
+          await tx.payment.update({
+            where: { orderId },
+            data: { status: PaymentStatus.REFUNDED },
+          });
+        } else if (order.payment.status === PaymentStatus.PENDING) {
+          // Nothing was ever collected — there is nothing to refund, only a
+          // promise that will now never be honoured.
+          await tx.payment.update({
+            where: { orderId },
+            data: { status: PaymentStatus.FAILED },
+          });
+        }
       }
 
       const copy = orderStatusNotification(
@@ -692,8 +722,8 @@ export class OrdersService {
     to?: string;
     search?: string;
   }) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const skip = (page - 1) * limit;
 
     const where: Prisma.OrderWhereInput = {

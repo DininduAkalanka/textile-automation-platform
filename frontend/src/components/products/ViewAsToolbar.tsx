@@ -85,6 +85,7 @@ export default function ViewAsToolbar({ currentMode, onModeChange }: ViewAsToolb
       </span>
       {modes.map((mode) => {
         const isActive = currentMode === mode.id;
+        const isDenseGrid = mode.id === 'grid-3' || mode.id === 'grid-4';
         return (
           <button
             key={mode.id}
@@ -93,8 +94,8 @@ export default function ViewAsToolbar({ currentMode, onModeChange }: ViewAsToolb
             title={mode.label}
             aria-label={mode.label}
             aria-pressed={isActive}
+            className={isDenseGrid ? 'hidden sm:inline-flex' : 'inline-flex'}
             style={{
-              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               width: '2.25rem',

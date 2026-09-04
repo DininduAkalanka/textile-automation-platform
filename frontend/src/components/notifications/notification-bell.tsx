@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
 
 import {
@@ -27,12 +27,17 @@ import { Notification } from '@/types';
  * half-fits either surface would be worse than two smaller ones.
  */
 export function NotificationBell({ signedIn }: { signedIn: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [open, setOpen] = useState(false);
-  const { data } = useNotifications(signedIn);
+  const { data } = useNotifications(mounted && signedIn);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
-  if (!signedIn) return null;
+  if (!mounted || !signedIn) return null;
 
   const unreadCount = data?.unreadCount ?? 0;
   const items = data?.items ?? [];

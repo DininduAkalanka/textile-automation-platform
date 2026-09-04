@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useModalStore } from '@/store/useModalStore';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 interface DemoItem {
   id: string;
@@ -36,6 +37,13 @@ export default function VisualSearchModal() {
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+  };
 
   // Close and clean up stream
   const handleClose = () => {
@@ -86,13 +94,6 @@ export default function VisualSearchModal() {
     } catch (err) {
       console.error('Camera access failed:', err);
       setCameraError('Unable to access device camera. Please upload an image instead.');
-    }
-  };
-
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
     }
   };
 
@@ -506,7 +507,6 @@ export default function VisualSearchModal() {
                           fill
                           style={{ objectFit: 'cover' }}
                           sizes="100px"
-                          unoptimized
                         />
                       </div>
                       <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--clr-text-2)', fontFamily: 'var(--font-sans)' }}>
@@ -531,7 +531,13 @@ export default function VisualSearchModal() {
                     border: '1px solid var(--clr-border)',
                   }}
                 >
-                  <Image src={selectedImage} alt="Search Query" fill style={{ objectFit: 'cover' }} unoptimized />
+                  <Image
+                    src={selectedImage}
+                    alt="Search Query"
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    unoptimized={selectedImage.startsWith('data:') || selectedImage.startsWith('blob:')}
+                  />
 
                   {/* Horizontal scanner beam */}
                   {analyzing && (
@@ -687,12 +693,11 @@ export default function VisualSearchModal() {
                             >
                               <div style={{ position: 'relative', width: '55px', height: '75px', flexShrink: 0 }}>
                                 <Image
-                                  src={product.images && product.images.length > 0 ? product.images[0] : '/images/prod1.png'}
+                                  src={normalizeImageUrl(product.images?.[0])}
                                   alt={product.name}
                                   fill
                                   style={{ objectFit: 'cover' }}
                                   sizes="55px"
-                                  unoptimized
                                 />
                               </div>
                               <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>

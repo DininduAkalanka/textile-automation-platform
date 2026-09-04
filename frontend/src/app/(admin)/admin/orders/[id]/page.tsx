@@ -101,17 +101,6 @@ export default function AdminOrderDetailPage({
 
   const busy = orderAction.isPending || markPaid.isPending;
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="py-20 text-center">
-        <h2 className="mb-2 text-xl font-semibold">Admin access required</h2>
-        <Link href="/login" className="text-[#CC0000] hover:underline">
-          Sign in
-        </Link>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#928E82]">

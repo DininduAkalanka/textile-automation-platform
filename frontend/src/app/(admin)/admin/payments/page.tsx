@@ -2,16 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { CreditCard, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AdminPayment } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatLKR } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const statusBadge: Record<string, string> = {
-  PENDING: 'badge-warning',
-  COMPLETED: 'badge-success',
-  FAILED: 'badge-danger',
-  REFUNDED: 'badge-info',
+  PENDING: 'bg-[#FDF6E7] text-[#8A6A17] ring-1 ring-inset ring-[#D4AF37]/35',
+  COMPLETED: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+  FAILED: 'bg-[#FFF0F0] text-[#A80000] ring-1 ring-inset ring-[#CC0000]/25',
+  REFUNDED: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
 };
 
 const methodIcon: Record<string, string> = {
@@ -61,11 +63,20 @@ export default function AdminPaymentsPage() {
 
   if (!isAuthenticated || user?.role !== 'ADMIN') {
     return (
-      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center' }}>
-        <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</p>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Admin Access Required</h2>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>Please sign in with an admin account</p>
-        <Link href="/login" className="btn btn-primary">Sign In</Link>
+      <div className="py-20 text-center">
+        <p className="mb-4 text-4xl">🔒</p>
+        <h2 className="mb-2 font-display text-xl font-semibold text-[#0F0F0F]">
+          Admin Access Required
+        </h2>
+        <p className="mb-6 text-sm text-[#928E82]">
+          Please sign in with an administrator account to view payments.
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex rounded-lg bg-[#0F0F0F] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+        >
+          Sign In
+        </Link>
       </div>
     );
   }
@@ -86,141 +97,347 @@ export default function AdminPaymentsPage() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
-      <div className="flex flex-wrap items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
+    <div className="space-y-6">
+      {/* ─── Header ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700 }}>Payments</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-            Monitor full payments, track customer installment schedules, and verify bank collections
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-[#0F0F0F]">
+              Payments
+            </h1>
+            <span className="rounded-full bg-[#F4F3EF] px-2.5 py-0.5 text-xs font-semibold text-[#6E6A5E]">
+              {loading ? '…' : `${payments.length} records`}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-[#928E82]">
+            Monitor full settlements, customer installment schedules, and verify bank collections.
           </p>
         </div>
-        <Link href="/admin" className="btn btn-outline btn-sm">← Dashboard</Link>
+
+        <button
+          onClick={load}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-xs font-medium text-[#6E6A5E] shadow-sm transition-all hover:bg-[#FAFAF8] active:scale-95 disabled:opacity-50"
+        >
+          <RefreshCw size={13} className={cn(loading && 'animate-spin')} />
+          Refresh
+        </button>
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca' }}>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm font-medium text-red-800">
           {error}
         </div>
       )}
 
-      {/* Status filter chips */}
-      <div className="flex flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
-        {STATUS_FILTERS.map((s) => (
-          <button
-            key={s.value || 'ALL'}
-            onClick={() => setActiveFilter(s.value)}
-            className={`btn btn-sm ${activeFilter === s.value ? 'btn-primary' : 'btn-outline'}`}
-          >
-            {s.label}
-          </button>
-        ))}
+      {/* ─── Filter Strip (Horizontally Scrollable on Mobile) ───────────────── */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {STATUS_FILTERS.map((s) => {
+          const active = activeFilter === s.value;
+          return (
+            <button
+              key={s.value || 'ALL'}
+              onClick={() => setActiveFilter(s.value)}
+              className={cn(
+                'shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all',
+                active
+                  ? 'bg-[#0F0F0F] text-white shadow-sm'
+                  : 'border border-[#EAE8E1] bg-white text-[#6E6A5E] hover:border-[#D5D2C8] hover:text-[#0F0F0F]',
+              )}
+            >
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="card" style={{ overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: '2rem' }}><div className="skeleton" style={{ height: '240px' }} /></div>
-        ) : payments.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No payments found</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="min-w-225" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                  {['Order', 'Customer', 'Method / Plan', 'Amount & Collection', 'Payment Status', 'Order Status', 'Actions'].map((h) => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((p) => {
-                  const isInstallment = p.paymentPlan === 'INSTALLMENT' || (p.installments && p.installments.length > 0);
-                  const instList = p.installments || [];
-                  const paidList = instList.filter((i) => i.status === 'COMPLETED');
-                  const paidSum = paidList.reduce((sum, i) => sum + Number(i.amount), 0);
+      {/* ─── Main Content: Dual Mobile/Desktop Presentation ────────────────── */}
+      {loading ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white p-12 text-center text-sm text-[#928E82]">
+          <Loader2 size={18} className="mx-auto mb-2 animate-spin text-[#6E6A5E]" />
+          Loading payment records…
+        </div>
+      ) : payments.length === 0 ? (
+        <div className="rounded-2xl border border-[#EAE8E1] bg-white py-16 text-center">
+          <CreditCard size={28} className="mx-auto mb-2 text-[#D5D2C8]" />
+          <p className="text-sm font-medium text-[#0F0F0F]">No payments found</p>
+          <p className="mt-0.5 text-xs text-[#928E82]">Try selecting a different filter above.</p>
+        </div>
+      ) : (
+        <>
+          {/* 📱 MOBILE VIEW: High-Density Responsive Cards (< md) */}
+          <div className="grid gap-3.5 md:hidden">
+            {payments.map((p) => {
+              const isInstallment =
+                p.paymentPlan === 'INSTALLMENT' || (p.installments && p.installments.length > 0);
+              const instList = p.installments || [];
+              const paidList = instList.filter((i) => i.status === 'COMPLETED');
+              const paidSum = paidList.reduce((sum, i) => sum + Number(i.amount), 0);
 
-                  return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>
-                        <Link href={`/admin/orders/${p.orderId}`} style={{ color: 'var(--color-accent)' }}>#{p.order.orderNumber}</Link>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        {p.order.user ? `${p.order.user.firstName} ${p.order.user.lastName}` : '—'}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
+              return (
+                <article
+                  key={p.id}
+                  className="rounded-xl border border-[#EAE8E1] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md"
+                >
+                  {/* Card Header: Order Number + Status Badges */}
+                  <div className="flex items-start justify-between gap-2 border-b border-[#F4F3EF] pb-3">
+                    <div>
+                      <Link
+                        href={`/admin/orders/${p.orderId}`}
+                        className="font-mono text-xs font-semibold text-[#CC0000] hover:underline"
+                      >
+                        #{p.order.orderNumber}
+                      </Link>
+                      <p className="mt-0.5 text-[13px] font-medium text-[#0F0F0F]">
+                        {p.order.user ? `${p.order.user.firstName} ${p.order.user.lastName}` : 'Guest / Customer'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                          statusBadge[p.status] || 'bg-neutral-100 text-neutral-600',
+                        )}
+                      >
+                        {p.status}
+                      </span>
+                      <span className="rounded bg-[#F4F3EF] px-1.5 py-0.5 text-[10px] font-medium text-[#6E6A5E]">
+                        Order: {p.order.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Details: Grid */}
+                  <div className="grid grid-cols-2 gap-3 py-3 text-xs">
+                    <div>
+                      <span className="text-[11px] uppercase tracking-wider text-[#928E82]">Method</span>
+                      <div className="mt-0.5 font-medium text-[#0F0F0F]">
                         {isInstallment ? (
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>
-                              📅 INSTALLMENT ({instList.length || 3}x)
-                            </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                              {paidList.length} of {instList.length} settled
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center gap-1 font-semibold text-[#3A5F87]">
+                            📅 Installments ({instList.length || 3}x)
+                          </span>
                         ) : (
-                          <span>{methodIcon[p.method] || ''} {p.method}</span>
+                          <span>{methodIcon[p.method] || '💳'} {p.method}</span>
                         )}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <p style={{ fontWeight: 600, margin: 0 }}>{formatLKR(p.amount)}</p>
-                        {isInstallment && (
-                          <p style={{ fontSize: '0.75rem', color: paidList.length === instList.length ? '#059669' : '#d97706', margin: 0 }}>
-                            Paid: {formatLKR(paidSum)}
+                      </div>
+                      {isInstallment && (
+                        <p className="mt-0.5 text-[11px] text-[#6E6A5E]">
+                          {paidList.length} of {instList.length} settled
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[11px] uppercase tracking-wider text-[#928E82]">Total Amount</span>
+                      <div className="mt-0.5 font-display text-sm font-bold text-[#0F0F0F]">
+                        {formatLKR(p.amount)}
+                      </div>
+                      {isInstallment && (
+                        <p
+                          className={cn(
+                            'mt-0.5 text-[11px] font-medium',
+                            paidList.length === instList.length ? 'text-emerald-700' : 'text-amber-700',
+                          )}
+                        >
+                          Paid: {formatLKR(paidSum)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Actions Footer */}
+                  <div className="flex items-center justify-end gap-2 border-t border-[#F4F3EF] pt-3">
+                    {isInstallment ? (
+                      <Link
+                        href={`/account/orders/${p.orderId}/installments`}
+                        target="_blank"
+                        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-[#EAE8E1] bg-[#FAFAF8] text-xs font-semibold text-[#0F0F0F] transition-colors hover:bg-[#F4F3EF]"
+                      >
+                        <ExternalLink size={12} />
+                        View Installment Schedule
+                      </Link>
+                    ) : p.status === 'COMPLETED' ? (
+                      <span className="text-xs font-medium text-emerald-700">
+                        ✓ Payment Settled
+                      </span>
+                    ) : (
+                      <div className="flex w-full items-center gap-2">
+                        <button
+                          disabled={busy === p.orderId + 'mark-paid'}
+                          onClick={() => act(p.orderId, 'mark-paid')}
+                          className="flex-1 rounded-lg bg-[#0F0F0F] py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-black disabled:opacity-50"
+                        >
+                          {busy === p.orderId + 'mark-paid'
+                            ? 'Processing…'
+                            : p.method === 'COD'
+                              ? 'Mark Collected'
+                              : 'Mark Paid'}
+                        </button>
+                        {p.status !== 'FAILED' && (
+                          <button
+                            disabled={busy === p.orderId + 'reject'}
+                            onClick={() => act(p.orderId, 'reject')}
+                            className="rounded-lg border border-[#CC0000]/30 px-3 py-2 text-xs font-semibold text-[#CC0000] transition-colors hover:bg-red-50 disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* 💻 DESKTOP VIEW: Full Data Table (≥ md) */}
+          <div className="hidden overflow-hidden rounded-2xl border border-[#EAE8E1] bg-white shadow-[0_1px_2px_rgba(74,71,64,0.04)] md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[880px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[#EAE8E1] bg-[#FAFAF8]">
+                    {['Order', 'Customer', 'Method / Plan', 'Amount & Collection', 'Payment Status', 'Order Status', 'Actions'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#928E82]"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F4F3EF]">
+                  {payments.map((p) => {
+                    const isInstallment =
+                      p.paymentPlan === 'INSTALLMENT' || (p.installments && p.installments.length > 0);
+                    const instList = p.installments || [];
+                    const paidList = instList.filter((i) => i.status === 'COMPLETED');
+                    const paidSum = paidList.reduce((sum, i) => sum + Number(i.amount), 0);
+
+                    return (
+                      <tr
+                        key={p.id}
+                        className="transition-colors hover:bg-[#FAFAF8]"
+                      >
+                        <td className="whitespace-nowrap px-4 py-3.5">
+                          <Link
+                            href={`/admin/orders/${p.orderId}`}
+                            className="font-mono text-xs font-semibold text-[#CC0000] hover:underline"
+                          >
+                            #{p.order.orderNumber}
+                          </Link>
+                        </td>
+
+                        <td className="px-4 py-3.5 text-[13px] text-[#4A4740]">
+                          {p.order.user ? (
+                            <div>
+                              <p className="font-medium text-[#0F0F0F]">
+                                {p.order.user.firstName} {p.order.user.lastName}
+                              </p>
+                              <p className="text-[11px] text-[#928E82]">{p.order.user.email}</p>
+                            </div>
+                          ) : (
+                            <span className="text-[#928E82]">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3.5 text-[13px]">
+                          {isInstallment ? (
+                            <div>
+                              <span className="font-semibold text-[#0F0F0F]">
+                                📅 INSTALLMENT ({instList.length || 3}x)
+                              </span>
+                              <p className="text-[11px] text-[#928E82]">
+                                {paidList.length} of {instList.length} settled
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="font-medium text-[#4A4740]">
+                              {methodIcon[p.method] || ''} {p.method}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          <p className="font-display font-bold tabular-nums text-[#0F0F0F]">
+                            {formatLKR(p.amount)}
                           </p>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className={`badge ${statusBadge[p.status] || 'badge-info'}`}>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge badge-info">{p.order.status}</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        {isInstallment ? (
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          {isInstallment && (
+                            <p
+                              className={cn(
+                                'text-[11px] font-medium',
+                                paidList.length === instList.length ? 'text-emerald-700' : 'text-amber-700',
+                              )}
+                            >
+                              Paid: {formatLKR(paidSum)}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={cn(
+                              'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                              statusBadge[p.status] || 'bg-neutral-100 text-neutral-600',
+                            )}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex rounded bg-[#F4F3EF] px-2 py-0.5 text-[10px] font-medium text-[#6E6A5E]">
+                            {p.order.status}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          {isInstallment ? (
                             <Link
                               href={`/account/orders/${p.orderId}/installments`}
                               target="_blank"
-                              className="btn btn-sm btn-outline"
-                              style={{ fontSize: '0.75rem' }}
+                              className="inline-flex items-center gap-1 rounded-md border border-[#EAE8E1] px-2.5 py-1 text-xs font-medium text-[#0F0F0F] transition-colors hover:bg-[#F4F3EF]"
                             >
-                              Schedule ↗
+                              Schedule
+                              <ExternalLink size={11} />
                             </Link>
-                          </div>
-                        ) : p.status === 'COMPLETED' ? (
-                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>—</span>
-                        ) : (
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                              className="btn btn-sm btn-primary"
-                              disabled={busy === p.orderId + 'mark-paid'}
-                              onClick={() => act(p.orderId, 'mark-paid')}
-                            >
-                              {busy === p.orderId + 'mark-paid' ? '…' : p.method === 'COD' ? 'Mark Collected' : 'Mark Paid'}
-                            </button>
-                            {p.status !== 'FAILED' && (
+                          ) : p.status === 'COMPLETED' ? (
+                            <span className="text-xs text-[#928E82]">—</span>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
                               <button
-                                className="btn btn-sm btn-outline"
-                                disabled={busy === p.orderId + 'reject'}
-                                onClick={() => act(p.orderId, 'reject')}
+                                disabled={busy === p.orderId + 'mark-paid'}
+                                onClick={() => act(p.orderId, 'mark-paid')}
+                                className="rounded-md bg-[#0F0F0F] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-black disabled:opacity-50"
                               >
-                                {busy === p.orderId + 'reject' ? '…' : 'Reject'}
+                                {busy === p.orderId + 'mark-paid'
+                                  ? '…'
+                                  : p.method === 'COD'
+                                    ? 'Mark Collected'
+                                    : 'Mark Paid'}
                               </button>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                              {p.status !== 'FAILED' && (
+                                <button
+                                  disabled={busy === p.orderId + 'reject'}
+                                  onClick={() => act(p.orderId, 'reject')}
+                                  className="rounded-md border border-[#CC0000]/30 px-2 py-1 text-xs font-medium text-[#CC0000] hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

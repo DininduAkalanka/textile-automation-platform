@@ -93,6 +93,8 @@ describe('Customer Journey E2E Flow', () => {
 
   it('4. Completes Guest Express Checkout without prior account creation', () => {
     // Ensure no session
+    Cypress.env('token', null);
+    Cypress.env('user', null);
     cy.clearLocalStorage();
     cy.clearCookies();
 

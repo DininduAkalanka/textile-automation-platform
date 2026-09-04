@@ -30,7 +30,12 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     }),
     // Default API rate limit: 100 requests/min/IP (doc 09 §5.1).
     // Auth endpoints tighten this to 20/min via @Throttle.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // In test/CI mode, raise limits to prevent 429s from automated test suites
+    // where every spec's beforeEach fires a login request (29 tests × retries).
+    ThrottlerModule.forRoot([{
+      ttl: 60_000,
+      limit: process.env.NODE_ENV === 'test' ? 10_000 : 100,
+    }]),
     PrismaModule,
     AuthModule,
     ProductsModule,

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { useMyOrders } from '@/hooks/use-orders';
@@ -31,8 +32,28 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 
 /** Plan Session 7.1, task 3 — "Customer /account/orders: list w/ status pills." */
 export default function AccountOrdersPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { isAuthenticated } = useAuthStore();
   const { data, isLoading, isError } = useMyOrders(1, 20);
+
+  if (!mounted) {
+    return (
+      <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+        <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
+          My Orders
+        </h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton" style={{ height: '120px' }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

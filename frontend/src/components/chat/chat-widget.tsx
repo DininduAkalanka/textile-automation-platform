@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, Send, Sparkles, X } from 'lucide-react';
 
 import { ChatProductCard } from './chat-product-card';
@@ -27,6 +28,8 @@ const SUGGESTIONS = [
  * products back from Postgres. A hallucinated product cannot reach this component.
  */
 export function ChatWidget() {
+  const pathname = usePathname();
+  const isCheckout = pathname === '/checkout' || pathname?.startsWith('/checkout/');
   const { open, toggle, setOpen, messages, unread } = useChatStore();
   const send = useSendMessage();
 
@@ -50,24 +53,26 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Launcher — never obscures the page, only itself. */}
-      <button
-        type="button"
-        data-testid="ai-chat-toggle"
-        onClick={toggle}
-        aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
-        className={cn(
-          'fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-          open ? 'bg-neutral-800 text-white' : 'bg-indigo-600 text-white',
-        )}
-      >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
-        {/* A reply arrived while it was shut. A dot, not a popup. */}
-        {unread && !open && (
-          <span className="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
-        )}
-      </button>
+      {/* Launcher — never obscures the page; suppressed during checkout to avoid button collision */}
+      {(!isCheckout || open) && (
+        <button
+          type="button"
+          data-testid="ai-chat-toggle"
+          onClick={toggle}
+          aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
+          className={cn(
+            'fixed bottom-4 right-4 z-40 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:right-6 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
+            open ? 'bg-neutral-800 text-white' : 'bg-indigo-600 text-white',
+          )}
+        >
+          {open ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
+          {/* A reply arrived while it was shut. A dot, not a popup. */}
+          {unread && !open && (
+            <span className="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
+          )}
+        </button>
+      )}
 
       {open && (
         <div

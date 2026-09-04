@@ -1,6 +1,6 @@
 import { BadRequestException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MovementType, ProductType, UserRole } from '@prisma/client';
+import { MovementType, PaymentMethod, ProductType, UserRole } from '@prisma/client';
 
 import { AppModule } from '../src/app.module';
 import { OrdersService } from '../src/orders/orders.service';
@@ -23,6 +23,7 @@ describe('BR3 measurements at checkout', () => {
   const TAG = `br3-${Date.now()}`;
   let userId: string;
   let uniformId: string;
+  let customId: string;
   let readyMadeId: string;
 
   const address = {
@@ -113,6 +114,7 @@ describe('BR3 measurements at checkout', () => {
     userId = user.id;
 
     uniformId = await seedProduct('uniform', ProductType.UNIFORM, true);
+    customId = await seedProduct('custom', ProductType.CUSTOM, true);
     readyMadeId = await seedProduct('readymade', ProductType.READY_MADE, false);
   });
 
@@ -215,6 +217,229 @@ describe('BR3 measurements at checkout', () => {
           },
         ],
         shippingAddress: address,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  /**
+   * [QA-2.3a] Order a CUSTOM/UNIFORM product with an empty measurements object
+   * asserts 400 BadRequestException, not silent acceptance.
+   */
+  it('[QA-2.3a] refuses CUSTOM/UNIFORM products ordered with empty measurements', async () => {
+    // 1. Uniform with completely empty object
+    await expect(
+      orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: {} as any,
+          },
+        ],
+        shippingAddress: address,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    // 2. Uniform with personName but empty values
+    await expect(
+      orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: { personName: 'Nimal', values: {} } as any,
+          },
+        ],
+        shippingAddress: address,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    // 3. Custom product with empty measurements
+    await expect(
+      orders.create(userId, {
+        items: [
+          {
+            productId: customId,
+            quantity: 1,
+            measurements: {} as any,
+          },
+        ],
+        shippingAddress: address,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  /**
+   * [QA-2.3b] One required field missing for specific garment type rejects
+   * with a field-specific error message.
+   */
+  it('[QA-2.3b] rejects with a field-specific error when a required measurement is omitted', async () => {
+    // Custom garment requires SHIRT fields (chest, waist, shoulder, sleeveLength, shirtLength)
+    // Omit 'chest'
+    try {
+      await orders.create(userId, {
+        items: [
+          {
+            productId: customId,
+            quantity: 1,
+            measurements: {
+              personName: 'Nimal',
+              values: {
+                waist: 66,
+                shoulder: 36,
+                sleeveLength: 46,
+                shirtLength: 60,
+              },
+            },
+          },
+        ],
+        shippingAddress: address,
+      });
+      fail('Expected BadRequestException');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      const res = (err as BadRequestException).getResponse() as any;
+      const message = JSON.stringify(res);
+      expect(message).toMatch(/Chest is required/i);
+    }
+
+    // Uniform requires SHIRT + TROUSER fields. Omit 'trouserLength'
+    const { trouserLength: _omitted, ...missingTrouserLengthValues } =
+      measurements.values;
+    try {
+      await orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: {
+              personName: 'Nimal',
+              values: missingTrouserLengthValues,
+            },
+          },
+        ],
+        shippingAddress: address,
+      });
+      fail('Expected BadRequestException');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      const res = (err as BadRequestException).getResponse() as any;
+      const message = JSON.stringify(res);
+      expect(message).toMatch(/Trouser length is required/i);
+    }
+  });
+
+  /**
+   * [QA-2.3c] A measurement value outside sane physical range (negative, zero,
+   * or absurdly large) rejects with field-specific bounds.
+   */
+  it('[QA-2.3c] rejects out-of-range measurement values (negative, zero, or absurdly large)', async () => {
+    // 1. Negative measurement
+    try {
+      await orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: {
+              personName: 'Nimal',
+              values: { ...measurements.values, chest: -10 },
+            },
+          },
+        ],
+        shippingAddress: address,
+      });
+      fail('Expected BadRequestException for negative chest');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      const res = (err as BadRequestException).getResponse() as any;
+      expect(JSON.stringify(res)).toMatch(/Chest must be between 20 and 200 cm/i);
+    }
+
+    // 2. Zero measurement
+    try {
+      await orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: {
+              personName: 'Nimal',
+              values: { ...measurements.values, waist: 0 },
+            },
+          },
+        ],
+        shippingAddress: address,
+      });
+      fail('Expected BadRequestException for zero waist');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      const res = (err as BadRequestException).getResponse() as any;
+      expect(JSON.stringify(res)).toMatch(/Waist must be between 20 and 200 cm/i);
+    }
+
+    // 3. Absurdly large measurement
+    try {
+      await orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: {
+              personName: 'Nimal',
+              values: { ...measurements.values, sleeveLength: 5000 },
+            },
+          },
+        ],
+        shippingAddress: address,
+      });
+      fail('Expected BadRequestException for absurd sleeve length');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BadRequestException);
+      const res = (err as BadRequestException).getResponse() as any;
+      expect(JSON.stringify(res)).toMatch(
+        /Sleeve length must be between 10 and 100 cm/i,
+      );
+    }
+  });
+
+  /**
+   * [QA-2.3d] Enumerate all order-creation entry points in the codebase and
+   * confirm measurement validation runs on each:
+   * Entry Point 1: POST /orders (authenticated customer checkout via OrdersService.create)
+   * Entry Point 2: POST /orders/guest-checkout (guest checkout via OrdersService.guestCheckout)
+   * Note: No admin-create-order endpoint exists in this codebase (confirmed by inspecting OrdersController).
+   */
+  it('[QA-2.3d] measurement validation runs across all order entry points (standard AND guest)', async () => {
+    // 1. Standard checkout: invalid measurement is rejected
+    await expect(
+      orders.create(userId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: { personName: 'Nimal', values: {} } as any,
+          },
+        ],
+        shippingAddress: address,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    // 2. Guest checkout: invalid measurement is rejected with same validation
+    await expect(
+      orders.guestCheckout({
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: { personName: 'Nimal', values: {} } as any,
+          },
+        ],
+        shippingAddress: address,
+        email: `${TAG}-guest-entry@example.test`,
+        phone: '+94770001122',
+        fullName: 'Guest Entry Test',
+        paymentMethod: PaymentMethod.STRIPE,
       }),
     ).rejects.toThrow(BadRequestException);
   });

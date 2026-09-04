@@ -108,8 +108,8 @@ export class ProductsService {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }) {
-    const page = query.page || 1;
-    const limit = query.limit || 12;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 12));
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -169,13 +169,16 @@ export class ProductsService {
       if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
     }
 
-    // Sorting
+    // Sorting (with strict allowed field whitelist to prevent Prisma crashes)
     const orderBy: any = {};
     if (query.subCategory === 'trending-now' || query.sortBy === 'trending') {
       orderBy['stockQuantity'] = 'desc';
     } else {
-      const sortBy = query.sortBy || 'createdAt';
-      const sortOrder = query.sortOrder || 'desc';
+      const allowedSortFields = ['createdAt', 'price', 'name', 'stockQuantity'];
+      const sortBy = allowedSortFields.includes(query.sortBy as any)
+        ? query.sortBy!
+        : 'createdAt';
+      const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
       orderBy[sortBy] = sortOrder;
     }
 

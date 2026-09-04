@@ -104,6 +104,13 @@ http.interceptors.response.use(
     ) {
       original._retried = true;
 
+      // Only attempt refresh and clear session if this request had an Authorization header.
+      // If sent unauthenticated, a 401 is normal and must not wipe local session state.
+      const hadAuth = Boolean(original.headers?.Authorization);
+      if (!hadAuth) {
+        return Promise.reject(error);
+      }
+
       const token = await refreshAccessToken();
       if (token) {
         original.headers.Authorization = `Bearer ${token}`;

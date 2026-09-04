@@ -150,10 +150,13 @@ function ProductsContent() {
       <div className="container">
         {/* Header */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <h1 className="font-display" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '-0.01em', color: '#111827' }}>
-            {getPageHeading()}
+          <h1 className="font-display flex items-baseline gap-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '-0.01em', color: '#111827' }}>
+            <span>{getPageHeading()}</span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 sm:hidden">
+              {pagination.total}
+            </span>
           </h1>
-          <p style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+          <p className="hidden sm:block" style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
             {pagination.total} articles available
           </p>
         </div>
@@ -635,32 +638,38 @@ function ProductsContent() {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div className="mt-14 flex flex-wrap items-center justify-center gap-2">
+                  <div className="mt-12 flex items-center justify-center gap-1 sm:gap-2">
                     <button
-                      className="btn btn-outline btn-sm"
+                      className="btn btn-outline btn-sm px-2.5 sm:px-3.5 h-9"
                       disabled={page <= 1}
                       onClick={() => updateFilters({ page: page - 1 })}
+                      aria-label="Previous page"
                       style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                     >
-                      Previous
+                      <span className="sm:hidden text-sm">&larr;</span>
+                      <span className="hidden sm:inline">Previous</span>
                     </button>
-                    {Array.from({ length: pagination.totalPages }, (_, i) => (
-                      <button
-                        key={i + 1}
-                        className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-outline'}`}
-                        onClick={() => updateFilters({ page: i + 1 })}
-                        style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
+                    <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-[220px] sm:max-w-none py-1">
+                      {Array.from({ length: pagination.totalPages }, (_, i) => (
+                        <button
+                          key={i + 1}
+                          className={`btn btn-sm w-8 h-8 sm:w-9 sm:h-9 p-0 flex items-center justify-center shrink-0 ${page === i + 1 ? 'btn-primary' : 'btn-outline'}`}
+                          onClick={() => updateFilters({ page: i + 1 })}
+                          style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
                     <button
-                      className="btn btn-outline btn-sm"
+                      className="btn btn-outline btn-sm px-2.5 sm:px-3.5 h-9"
                       disabled={page >= pagination.totalPages}
                       onClick={() => updateFilters({ page: page + 1 })}
+                      aria-label="Next page"
                       style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                     >
-                      Next
+                      <span className="hidden sm:inline">Next</span>
+                      <span className="sm:hidden text-sm">&rarr;</span>
                     </button>
                   </div>
                 )}

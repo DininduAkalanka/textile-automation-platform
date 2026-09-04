@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ReviewStatus, UserRole } from '@prisma/client';
 
+import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -29,6 +30,7 @@ export class ReviewsController {
 
   // ─── Public ──────────────────────────────────────────────
 
+  @Public()
   @Get('product/:productId')
   findForProduct(
     @Param('productId', ParseUUIDPipe) productId: string,

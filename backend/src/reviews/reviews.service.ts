@@ -299,8 +299,8 @@ export class ReviewsService {
     page?: number;
     limit?: number;
   }) {
-    const page = filters.page || 1;
-    const limit = filters.limit || 20;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(filters.limit) || 20));
     const skip = (page - 1) * limit;
 
     const where: Prisma.ReviewWhereInput = {};

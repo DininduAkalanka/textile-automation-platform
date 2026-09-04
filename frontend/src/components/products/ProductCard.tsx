@@ -7,6 +7,7 @@ import { Product } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 /* ── Color palette for placeholder backgrounds ─────────────── */
 const PLATE_BG = [
@@ -43,19 +44,13 @@ export default function ProductCard({ product, index = 0 }: Props) {
   const wishlisted     = mounted && wishlistItems.some(i => i.id === product.id);
   const [cartState,  setCartState]  = useState<'idle' | 'added'>('idle');
 
-  console.log('ProductCard Render:', {
-    id: product.id,
-    name: product.name,
-    mounted,
-    wishlistItemsCount: wishlistItems.length,
-    wishlisted,
-  });
-
-  const initialImg = product.images && product.images.length > 0 ? product.images[0] : `/images/prod${(index % 3) + 1}.png`;
+  const rawImg = product.images && product.images.length > 0 ? product.images[0] : null;
+  const initialImg = normalizeImageUrl(rawImg, `/images/prod${(index % 3) + 1}.png`);
   const [imgSrc, setImgSrc] = useState<string>(initialImg);
 
   useEffect(() => {
-    setImgSrc(product.images && product.images.length > 0 ? product.images[0] : `/images/prod${(index % 3) + 1}.png`);
+    const raw = product.images && product.images.length > 0 ? product.images[0] : null;
+    setImgSrc(normalizeImageUrl(raw, `/images/prod${(index % 3) + 1}.png`));
   }, [product.images, index]);
 
   const discount = product.compareAtPrice
@@ -76,35 +71,14 @@ export default function ProductCard({ product, index = 0 }: Props) {
   function handleWishlist(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('handleWishlist Clicked:', {
-      productId: product.id,
-      alreadyWishlisted: wishlisted,
-    });
     toggleItem(product);
   }
 
   return (
     <article
-      className="product-card animate-fade-in-up"
+      className="product-card group relative flex flex-col overflow-hidden bg-[var(--clr-surface)] shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 animate-fade-in-up"
       style={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--clr-surface)',
-        border: 'none',
-        borderRadius: '0px', // More modern fashion editorial look
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-        overflow: 'hidden',
         animationDelay: `${index * 0.055}s`,
-        transition: 'border-color 240ms ease, box-shadow 240ms ease',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow  = '0 12px 30px rgba(0,0,0,0.08)';
-        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow  = '0 4px 20px rgba(0,0,0,0.04)';
-        (e.currentTarget as HTMLElement).style.transform = 'none';
       }}
     >
       {/* ── Image Wrapper ────────────────────────────────────── */}
@@ -130,7 +104,6 @@ export default function ProductCard({ product, index = 0 }: Props) {
               src={imgSrc}
               alt={product.name}
               fill
-              unoptimized
               onError={() => setImgSrc(`/images/prod${(index % 3) + 1}.png`)}
               style={{ objectFit: 'cover' }}
               sizes="(max-width: 768px) 50vw, 25vw"
@@ -144,25 +117,11 @@ export default function ProductCard({ product, index = 0 }: Props) {
             onClick={handleCart}
             id={`add-cart-${product.id}`}
             disabled={cartState === 'added'}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              padding: '0.625rem 1rem',
-              background: cartState === 'added' ? '#16a34a' : 'var(--clr-brand)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--r-xs)',
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              cursor: cartState === 'added' ? 'default' : 'pointer',
-              transition: 'background 200ms ease',
-            }}
+            className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 text-[11px] font-semibold tracking-wider uppercase transition-all duration-200 shadow-md ${
+              cartState === 'added'
+                ? 'bg-emerald-600 text-white rounded-full cursor-default'
+                : 'bg-neutral-950/85 hover:bg-neutral-900 text-white backdrop-blur-md border border-white/25 rounded-full sm:rounded-sm sm:bg-[var(--clr-brand)] sm:hover:bg-[var(--crimson-700)] cursor-pointer'
+            }`}
           >
             {cartState === 'added' ? (
               <>
@@ -265,19 +224,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
         {/* Name */}
         <Link
           href={`/products/${product.slug}`}
-          className="line-clamp-2"
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            lineHeight: 1.45,
-            color: 'var(--clr-text)',
-            textDecoration: 'none',
-            marginBottom: '0.5rem',
-            transition: 'color 150ms ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--clr-brand)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--clr-text)')}
+          className="line-clamp-2 text-[0.875rem] font-semibold leading-[1.45] text-[var(--clr-text)] transition-colors duration-150 hover:text-[var(--clr-brand)] no-underline mb-2"
         >
           {product.name}
         </Link>

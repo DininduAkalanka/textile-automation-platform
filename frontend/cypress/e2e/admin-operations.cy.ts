@@ -72,9 +72,9 @@ describe('Admin Dashboard & Production Operations E2E', () => {
   });
 
   it('2. Navigates to Orders management table and filters orders', () => {
+    cy.intercept('GET', '**/orders/admin/all*').as('getAdminOrders');
     cy.visit('/admin/orders');
-    cy.contains('Orders').should('be.visible');
-    cy.getByTestId('admin-orders-loading').should('not.exist', { timeout: 10000 });
+    cy.wait('@getAdminOrders');
     cy.getByTestId('admin-orders-table').should('be.visible');
     cy.getByTestId('admin-order-row').should('have.length.at.least', 1);
   });
@@ -86,7 +86,8 @@ describe('Admin Dashboard & Production Operations E2E', () => {
 
   it('4. Views Inventory real-time stock and ledger', () => {
     cy.visit('/admin/inventory');
-    cy.contains(/Inventory/i).should('be.visible');
-    cy.contains(/Stock|SKU|Quantity/i).should('be.visible');
+    cy.contains('h1', /Inventory/i).should('be.visible');
+    cy.get('table').should('be.visible');
+    cy.get('table').contains(/Available|Reserved|Sellable|Status/i).should('be.visible');
   });
 });

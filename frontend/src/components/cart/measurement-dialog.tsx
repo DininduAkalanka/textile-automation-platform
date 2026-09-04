@@ -105,9 +105,9 @@ export function MeasurementDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <div>
-          <DialogTitle>Measurements — {product.name}</DialogTitle>
-          <DialogDescription className="mt-1">
+        <div className="pr-8">
+          <DialogTitle className="text-base sm:text-lg">Measurements — {product.name}</DialogTitle>
+          <DialogDescription className="mt-1 text-xs sm:text-sm">
             All measurements in centimetres. We stitch to these exactly, so please
             double-check them.
           </DialogDescription>

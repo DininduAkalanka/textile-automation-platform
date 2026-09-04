@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -87,6 +88,11 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Polled, so the badge appears while the owner is sitting on the dashboard —
   // the moment a sale takes something under its reorder level, without them
@@ -234,13 +240,15 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
 
         <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-white">
-            {user?.firstName?.[0]?.toUpperCase() ?? 'A'}
+            {mounted ? (user?.firstName?.[0]?.toUpperCase() ?? 'A') : 'A'}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-xs font-medium text-white">
-              {user?.firstName ?? 'Admin'}
+              {mounted ? (user?.firstName ?? 'Admin') : 'Admin'}
             </p>
-            <p className="truncate text-[10px] text-white/40">{user?.email}</p>
+            <p className="truncate text-[10px] text-white/40" suppressHydrationWarning>
+              {mounted ? (user?.email ?? '') : ''}
+            </p>
           </div>
           <button
             onClick={logout}

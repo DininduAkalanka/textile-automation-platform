@@ -103,16 +103,16 @@ export default function Footer() {
         <div
           className="container flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10"
         >
-          <div>
+          <div className="max-w-md">
             <p
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.6rem',
-                fontWeight: 400,
+                fontSize: '0.625rem',
+                fontWeight: 500,
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: 'var(--clr-brand)',
-                marginBottom: '0.625rem',
+                marginBottom: '0.5rem',
               }}
             >
               Newsletter
@@ -120,15 +120,15 @@ export default function Footer() {
             <h3
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: '1.5rem',
+                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
                 fontWeight: 600,
                 color: '#fff',
-                lineHeight: 1.2,
+                lineHeight: 1.25,
               }}
             >
               Stay Updated with Nandana Textile
             </h3>
-            <p style={{ fontSize: '0.8125rem', marginTop: '0.375rem', lineHeight: 1.65 }}>
+            <p style={{ fontSize: '0.8125rem', marginTop: '0.375rem', lineHeight: 1.65, color: 'rgba(255,255,255,0.65)' }}>
               New arrivals, school season alerts, and exclusive offers delivered to your inbox.
             </p>
           </div>
@@ -288,8 +288,9 @@ export default function Footer() {
             ))}
           </div>
 
-          {/* Bottom bar */}
+          {/* Bottom bar with mobile clearance for floating action buttons */}
           <div
+            className="pb-16 sm:pb-0"
             style={{
               paddingTop: '2rem',
               borderTop: '1px solid rgba(255,255,255,0.07)',

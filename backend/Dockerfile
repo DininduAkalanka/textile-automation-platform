@@ -35,7 +35,9 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3001
 
-RUN apk add --no-cache openssl dumb-init
+RUN apk add --no-cache openssl dumb-init && \
+    mkdir -p /app/uploads && \
+    chown -R node:node /app/uploads
 
 # Run as non-root built-in node user (uid 1000)
 USER node
