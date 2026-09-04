@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone output is for Docker only; Vercel requires native serverless output.
+  output: process.env.VERCEL ? undefined : "standalone",
   images: {
     dangerouslyAllowLocalIP: true,
     formats: ["image/avif", "image/webp"],
