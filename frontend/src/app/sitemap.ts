@@ -27,8 +27,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Dynamic product routes
+  // During Vercel builds, if NEXT_PUBLIC_API_URL is missing or points to localhost, safely skip dynamic fetch
+  const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+  if (process.env.VERCEL && isLocalhost) {
+    return staticRoutes;
+  }
+
   try {
-    const res = await fetch(`${apiUrl}/products?limit=100`, { next: { revalidate: 3600 } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${apiUrl}/products?limit=100`, {
+      signal: controller.signal,
+      next: { revalidate: 3600 },
+    });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const data = await res.json();
       const products = data.data?.products || data.products || [];
@@ -42,8 +55,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       return [...staticRoutes, ...productRoutes];
     }
-  } catch (error) {
-    console.error('Failed to fetch dynamic products for sitemap:', error);
+  } catch {
+    console.warn('Sitemap notice: dynamic products not fetched during build, using static routes.');
   }
 
   return staticRoutes;
