@@ -39,6 +39,13 @@ export class EnvironmentVariables {
   @IsString()
   ALLOW_DEV_OTP_BYPASS?: string;
 
+  /**
+   * Swagger OpenAPI docs toggle. Defaults to enabled unless explicitly set to 'false'.
+   */
+  @IsOptional()
+  @IsString()
+  SWAGGER_ENABLED?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

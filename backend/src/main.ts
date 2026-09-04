@@ -3,6 +3,7 @@ import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -66,9 +67,20 @@ async function bootstrap() {
   // Global response transform
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // Swagger OpenAPI Documentation — dev/staging ONLY (never in production).
-  // In production, /api/v1/docs returns 404 — no API map exposed to attackers.
-  if (process.env.NODE_ENV !== 'production') {
+  // Root route greeting so visiting the base domain directly does not return 404
+  app.getHttpAdapter().get('/', (_req: Request, res: Response) => {
+    res.json({
+      message: 'Welcome to the Smart Textile E-Commerce API',
+      status: 'online',
+      version: '1.0.0',
+      docs: '/api/v1/docs',
+      health: '/api/v1/health',
+    });
+  });
+
+  // Swagger OpenAPI Documentation
+  // Enabled by default; can be disabled with SWAGGER_ENABLED=false
+  if (process.env.SWAGGER_ENABLED !== 'false') {
     const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
     const config = new DocumentBuilder()
       .setTitle('Nandana Textile Platform API')
@@ -88,7 +100,7 @@ async function bootstrap() {
   await app.listen(port);
 
   Logger.log(
-    `Backend listening on http://localhost:${String(port)}/api/v1 (Docs: http://localhost:${String(port)}/api/v1/docs)`,
+    `Backend listening on http://localhost:${String(port)}/api/v1 | Docs: http://localhost:${String(port)}/api/v1/docs`,
     'Bootstrap',
   );
 }
