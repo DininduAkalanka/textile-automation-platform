@@ -79,6 +79,20 @@ def require_internal_key(
         )
 
 
+@app.get("/")
+async def root() -> dict:
+    settings: Settings = _state.get("settings", get_settings())
+    return {
+        "service": "Textile AI Service",
+        "status": "online",
+        "version": "1.0.0",
+        "llm_enabled": settings.llm_enabled,
+        "llm_provider": settings.llm_provider,
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 async def health() -> dict:
     """
