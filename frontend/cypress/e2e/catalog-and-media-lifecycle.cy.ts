@@ -29,6 +29,7 @@ describe('Catalog Lifecycle, Dynamic Navigation & Media Upload E2E', () => {
     // Assert the new category appears in the top red category bar
     cy.get('nav[aria-label="Main Store Categories"]')
       .contains(categoryName.toUpperCase())
+      .scrollIntoView()
       .should('be.visible');
   });
 

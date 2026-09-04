@@ -34,7 +34,11 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     // where every spec's beforeEach fires a login request (29 tests × retries).
     ThrottlerModule.forRoot([{
       ttl: 60_000,
-      limit: process.env.NODE_ENV === 'test' ? 10_000 : 100,
+      limit: process.env.THROTTLE_LIMIT
+        ? parseInt(process.env.THROTTLE_LIMIT, 10)
+        : process.env.NODE_ENV === 'test'
+        ? 10_000
+        : 100,
     }]),
     PrismaModule,
     AuthModule,

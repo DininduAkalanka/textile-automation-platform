@@ -39,6 +39,11 @@ export class EnvironmentVariables {
   @IsString()
   ALLOW_DEV_OTP_BYPASS?: string;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  THROTTLE_LIMIT?: number;
+
   // process.env values are always strings ("3001"), so the target type must be
   // stated explicitly for the coercion to happen.
   @IsOptional()

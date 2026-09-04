@@ -28,7 +28,11 @@ const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 // In test/CI mode, raise to match global limit so E2E suites don't 429.
 const AUTH_THROTTLE = {
   default: {
-    limit: process.env.NODE_ENV === 'test' ? 10_000 : 20,
+    limit: process.env.THROTTLE_LIMIT
+      ? parseInt(process.env.THROTTLE_LIMIT, 10)
+      : process.env.NODE_ENV === 'test'
+      ? 10_000
+      : 20,
     ttl: 60_000,
   },
 };
