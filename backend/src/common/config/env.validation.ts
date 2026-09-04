@@ -31,6 +31,14 @@ export class EnvironmentVariables {
   @IsEnum(NodeEnv)
   NODE_ENV: NodeEnv = NodeEnv.Development;
 
+  /**
+   * Explicit opt-in flag for testing OTP bypass in non-production environments.
+   * Defaults to undefined/false. Must NEVER be set to 'true' in production.
+   */
+  @IsOptional()
+  @IsString()
+  ALLOW_DEV_OTP_BYPASS?: string;
+
   // process.env values are always strings ("3001"), so the target type must be
   // stated explicitly for the coercion to happen.
   @IsOptional()

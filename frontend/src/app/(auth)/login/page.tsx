@@ -101,11 +101,13 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <div className="mt-8 rounded-xl border border-white/10 border-l-2 border-l-[#CC0000] bg-white/[0.04] p-4 text-xs text-white/50">
-        <p className="mb-1.5 font-semibold text-white/70">Demo credentials</p>
-        <p>Admin: admin@textileshop.com / Admin@123456</p>
-        <p>Customer: customer@example.com / Customer@123456</p>
-      </div>
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="mt-8 rounded-xl border border-white/10 border-l-2 border-l-[#CC0000] bg-white/[0.04] p-4 text-xs text-white/50">
+          <p className="mb-1.5 font-semibold text-white/70">Demo credentials</p>
+          <p>Admin: admin@textileshop.com / Admin@123456</p>
+          <p>Customer: customer@example.com / Customer@123456</p>
+        </div>
+      )}
     </AuthShell>
   );
 }

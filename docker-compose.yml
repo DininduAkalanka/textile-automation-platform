@@ -65,6 +65,7 @@ services:
       - AI_SERVICE_URL=http://ai:8000
       - INTERNAL_API_KEY=local-dev-internal-key
       - AI_TIMEOUT_MS=12000
+      - ALLOW_DEV_OTP_BYPASS=true
     volumes:
       # Product images uploaded by the admin (served at /uploads).
       - backend_uploads:/app/uploads
