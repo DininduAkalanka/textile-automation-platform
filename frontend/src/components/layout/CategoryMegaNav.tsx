@@ -231,13 +231,11 @@ export const CATEGORIES_DATA: CategoryItem[] = [
   },
 ];
 
-/* ── Fashion Bug Style Category Navigation Bar Component ──── */
-export function CategoryMegaNav() {
+/* ── Hook to retrieve combined static + dynamic categories ──── */
+export function useNavCategories(): CategoryItem[] {
   const { data: dbCategories } = useCategories();
-  const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Dynamically merge DB categories with rich template mega-menu structures
-  const categories = useMemo(() => {
+  return useMemo(() => {
     // Fixed initial items
     const navItems: CategoryItem[] = [
       CATEGORIES_DATA[0], // HOME
@@ -294,12 +292,22 @@ export function CategoryMegaNav() {
 
     return CATEGORIES_DATA;
   }, [dbCategories]);
+}
 
-  const activeCategory = categories.find((c) => c.id === activeId);
+/* ── Fashion Bug Style Category Navigation Bar Component ──── */
+export function CategoryMegaNav() {
+  const categories = useNavCategories();
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Active category object
+  const activeCategory = useMemo(
+    () => categories.find((c) => c.id === activeId) || null,
+    [categories, activeId],
+  );
 
   return (
     <div
-      className="relative z-40 w-full select-none"
+      className="relative z-40 w-full select-none hide-mobile"
       onMouseLeave={() => setActiveId(null)}
       style={{
         background: '#CC0000',

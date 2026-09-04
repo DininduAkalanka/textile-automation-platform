@@ -9,7 +9,7 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { BrandMark } from '@/components/brand/brand-mark';
-import { CategoryMegaNav, CATEGORIES_DATA } from '@/components/layout/CategoryMegaNav';
+import { CategoryMegaNav, CATEGORIES_DATA, useNavCategories } from '@/components/layout/CategoryMegaNav';
 
 /* ── SVG Icon Components ──────────────────────────────────── */
 const IconSearch = ({ size = 18 }: { size?: number }) => (
@@ -269,6 +269,7 @@ function NavLink({ item }: { item: typeof NAV[0] }) {
 /* ── Main Export ──────────────────────────────────────────── */
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const navCategories   = useNavCategories();
   const items           = useCartStore(s => s.items) || [];
   const cartCount       = items.length;
   const wishlistCount   = useWishlistStore(s => s.items.length);
@@ -754,10 +755,12 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Thin brand accent line */}
-        <div style={{ height: '2px', background: 'var(--clr-brand)', opacity: 0.9 }} />
-        {/* ── Signature Red Category Navigation Bar (Fashion Bug Style) ── */}
-        <CategoryMegaNav />
+        {/* Thin brand accent line (desktop only) */}
+        <div className="hide-mobile" style={{ height: '2px', background: 'var(--clr-brand)', opacity: 0.9 }} />
+        {/* ── Signature Red Category Navigation Bar (Desktop Only) ── */}
+        <div className="hide-mobile">
+          <CategoryMegaNav />
+        </div>
       </header>
 
       {/* ── Search Overlay ────────────────────────────────── */}
@@ -865,37 +868,40 @@ export default function Header() {
       <div
         id="mobile-drawer"
         style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, left: 'auto',
-          width: 'min(88vw, 360px)', background: '#ffffff', zIndex: 491,
-          transform: mobileOpen ? 'translateX(0)' : 'translateX(100%)',
+          position: 'fixed', top: 0, left: 0, bottom: 0, right: 'auto',
+          width: 'min(86vw, 350px)', background: '#ffffff', zIndex: 491,
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
           display: 'flex', flexDirection: 'column',
           boxShadow: 'var(--shadow-xl)', overflowY: 'auto',
         }}
       >
-        {/* Drawer Header (Pure Black with Menu Title & Close) */}
+        {/* Drawer Header (Pure Black with Brand Monogram, Menu Title & Close) */}
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '1rem 1.25rem', background: '#000000', color: '#ffffff',
           }}
         >
-          <span style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '0.02em', color: '#ffffff' }}>
-            Menu
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <BrandMark size={28} />
+            <span style={{ fontSize: '1.05rem', fontWeight: 700, letterSpacing: '0.02em', color: '#ffffff' }}>
+              Navigation Menu
+            </span>
+          </div>
           <button
             onClick={closeMobile}
             className="btn-icon"
             aria-label="Close menu"
-            style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
+            style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px' }}
           >
             <IconClose size={20} />
           </button>
         </div>
 
         {/* Drawer Nav (Categories with Circular Thumbnails & Chevron) */}
-        <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {CATEGORIES_DATA.map(item => {
+        <nav aria-label="Mobile Navigation Categories" style={{ flex: 1, overflowY: 'auto' }}>
+          {navCategories.map(item => {
             const hasChildren = Boolean(item.columns && item.columns.length > 0);
             const isExpanded  = mobileExpanded === item.label;
             return (
