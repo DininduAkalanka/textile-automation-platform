@@ -120,7 +120,9 @@ export class VerificationService {
     }
 
     const isDevMatch =
-      process.env.NODE_ENV !== 'production' && code === '123456';
+      process.env.NODE_ENV !== 'production' &&
+      process.env.ALLOW_DEV_OTP_BYPASS === 'true' &&
+      code === '123456';
     if (!isDevMatch && this.sha256(code) !== record.codeHash) {
       await this.prisma.verificationCode.update({
         where: { id: record.id },
