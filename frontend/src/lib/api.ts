@@ -1,7 +1,20 @@
 import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
 import { getToken, setToken, clearToken } from '@/lib/token-store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+function getResolvedApiUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ) {
+    return 'https://textile-automation-platform.onrender.com/api/v1';
+  }
+  return 'http://localhost:3001/api/v1';
+}
+
+const API_URL = getResolvedApiUrl();
 
 class ApiClient {
   private getToken(): string | null {
@@ -25,7 +38,8 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const currentApiUrl = getResolvedApiUrl();
+    const response = await fetch(`${currentApiUrl}${endpoint}`, {
       ...options,
       headers,
       credentials: 'include', // send/receive the httpOnly refresh cookie

@@ -28,8 +28,20 @@ import { getToken, setToken, clearToken } from '@/lib/token-store';
  * gone, so we clear it and let the caller redirect.
  */
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+function getResolvedApiUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ) {
+    return 'https://textile-automation-platform.onrender.com/api/v1';
+  }
+  return 'http://localhost:3001/api/v1';
+}
+
+const API_URL = getResolvedApiUrl();
 
 /** Set by the auth store. Kept out of module state so tests can reset it. */
 let onSessionExpired: (() => void) | null = null;
@@ -49,6 +61,17 @@ export const http: AxiosInstance = axios.create({
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Ensure production browsers never hit loopback address space
+  if (
+    typeof window !== 'undefined' &&
+    !['localhost', '127.0.0.1'].includes(window.location.hostname) &&
+    config.baseURL &&
+    (config.baseURL.includes('localhost') || config.baseURL.includes('127.0.0.1'))
+  ) {
+    config.baseURL = 'https://textile-automation-platform.onrender.com/api/v1';
+  }
+
   return config;
 });
 
@@ -58,10 +81,11 @@ let refreshing: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   refreshing ??= (async () => {
     try {
+      const currentApiUrl = getResolvedApiUrl();
       // Bare axios, not `http`: going through the instance would re-enter this
       // interceptor on failure and recurse.
       const { data } = await axios.post<{ data?: { accessToken?: string } }>(
-        `${API_URL}/auth/refresh`,
+        `${currentApiUrl}/auth/refresh`,
         {},
         { withCredentials: true },
       );
