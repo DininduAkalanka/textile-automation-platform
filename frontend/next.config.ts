@@ -41,7 +41,9 @@ const nextConfig: NextConfig = {
     let backendUrl =
       process.env.INTERNAL_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') ||
-      'http://backend:3001';
+      (process.env.VERCEL || process.env.NODE_ENV === 'production'
+        ? 'https://textile-automation-platform.onrender.com'
+        : 'http://backend:3001');
 
     backendUrl = backendUrl.trim().replace(/\/+$/, '');
     if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {

@@ -1,20 +1,25 @@
 import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
 import { getToken, setToken, clearToken } from '@/lib/token-store';
 
-function getResolvedApiUrl(): string {
+const PRODUCTION_API_URL = 'https://textile-automation-platform.onrender.com/api/v1';
+const LOCAL_API_URL = 'http://localhost:3001/api/v1';
+
+export function getResolvedApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  if (
-    typeof window !== 'undefined' &&
-    !['localhost', '127.0.0.1'].includes(window.location.hostname)
-  ) {
-    return 'https://textile-automation-platform.onrender.com/api/v1';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return LOCAL_API_URL;
+    }
+    return PRODUCTION_API_URL;
   }
-  return 'http://localhost:3001/api/v1';
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return PRODUCTION_API_URL;
+  }
+  return LOCAL_API_URL;
 }
-
-const API_URL = getResolvedApiUrl();
 
 class ApiClient {
   private getToken(): string | null {
@@ -82,7 +87,8 @@ class ApiClient {
 
   private async doRefresh(): Promise<string | null> {
     try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const currentApiUrl = getResolvedApiUrl();
+      const res = await fetch(`${currentApiUrl}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -105,7 +111,8 @@ class ApiClient {
    *  silently return null instead of throwing an Error through this.request(). */
   async refresh(): Promise<AuthResponse | null> {
     try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const currentApiUrl = getResolvedApiUrl();
+      const res = await fetch(`${currentApiUrl}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -356,7 +363,8 @@ class ApiClient {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const currentApiUrl = getResolvedApiUrl();
+    const response = await fetch(`${currentApiUrl}${endpoint}`, {
       headers,
       credentials: 'include',
     });

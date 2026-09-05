@@ -175,13 +175,30 @@ export const useAuthStore = create<AuthState>((set) => {
           window.localStorage.setItem('user', JSON.stringify(user));
         }
         set({ user, token, isAuthenticated: true, isLoading: false });
-      } catch {
-        clearToken();
-        clearRoleCookie();
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('user');
+      } catch (error: any) {
+        const isAuthError =
+          error?.status === 401 ||
+          error?.status === 403 ||
+          error?.response?.status === 401 ||
+          error?.response?.status === 403 ||
+          error?.message?.includes('401') ||
+          error?.message?.includes('Unauthorized');
+
+        if (isAuthError) {
+          clearToken();
+          clearRoleCookie();
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('user');
+          }
+          set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+        } else {
+          const cachedUser = getInitialUser();
+          set({
+            user: cachedUser,
+            isAuthenticated: Boolean(token && cachedUser),
+            isLoading: false,
+          });
         }
-        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
       }
     },
   };

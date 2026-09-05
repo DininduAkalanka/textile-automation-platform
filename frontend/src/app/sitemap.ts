@@ -2,7 +2,11 @@ import { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nandanatextile.lk';
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.VERCEL || process.env.NODE_ENV === 'production'
+      ? 'https://textile-automation-platform.onrender.com/api/v1'
+      : 'http://localhost:3001/api/v1');
 
   // Base static routes
   const staticRoutes: MetadataRoute.Sitemap = [

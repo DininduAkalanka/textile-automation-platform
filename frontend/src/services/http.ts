@@ -28,17 +28,24 @@ import { getToken, setToken, clearToken } from '@/lib/token-store';
  * gone, so we clear it and let the caller redirect.
  */
 
-function getResolvedApiUrl(): string {
+const PRODUCTION_API_URL = 'https://textile-automation-platform.onrender.com/api/v1';
+const LOCAL_API_URL = 'http://localhost:3001/api/v1';
+
+export function getResolvedApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  if (
-    typeof window !== 'undefined' &&
-    !['localhost', '127.0.0.1'].includes(window.location.hostname)
-  ) {
-    return 'https://textile-automation-platform.onrender.com/api/v1';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return LOCAL_API_URL;
+    }
+    return PRODUCTION_API_URL;
   }
-  return 'http://localhost:3001/api/v1';
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return PRODUCTION_API_URL;
+  }
+  return LOCAL_API_URL;
 }
 
 const API_URL = getResolvedApiUrl();

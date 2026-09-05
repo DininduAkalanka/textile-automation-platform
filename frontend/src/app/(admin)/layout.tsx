@@ -38,6 +38,21 @@ export default function AdminLayout({
   // mismatch if the two renders land on opposite sides of midnight.
   const [today, setToday] = useState<string | null>(null);
 
+  const effectiveAuthed =
+    isAuthenticated ||
+    (typeof window !== 'undefined' && Boolean(window.localStorage.getItem('token')));
+  const effectiveRole =
+    user?.role ||
+    (typeof window !== 'undefined'
+      ? (() => {
+          try {
+            return JSON.parse(window.localStorage.getItem('user') || '{}')?.role;
+          } catch {
+            return null;
+          }
+        })()
+      : null);
+
   useEffect(() => {
     loadUser().finally(() => {
       setHasCheckedAuth(true);
@@ -45,10 +60,10 @@ export default function AdminLayout({
   }, [loadUser]);
 
   useEffect(() => {
-    if (hasCheckedAuth && (!isAuthenticated || user?.role !== 'ADMIN')) {
+    if (hasCheckedAuth && (!effectiveAuthed || effectiveRole !== 'ADMIN')) {
       router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
     }
-  }, [hasCheckedAuth, isAuthenticated, user, router, pathname]);
+  }, [hasCheckedAuth, effectiveAuthed, effectiveRole, router, pathname]);
 
   useEffect(() => {
     setToday(
@@ -60,7 +75,7 @@ export default function AdminLayout({
     );
   }, []);
 
-  if (hasCheckedAuth && (!isAuthenticated || user?.role !== 'ADMIN')) {
+  if (hasCheckedAuth && (!effectiveAuthed || effectiveRole !== 'ADMIN')) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FAFAF8]">
         <div className="text-center">
