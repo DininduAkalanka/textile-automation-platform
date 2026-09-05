@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // Standalone output is for Docker only; Vercel requires native serverless output.
   output: process.env.VERCEL ? undefined : "standalone",
   images: {
+    unoptimized: true,
     dangerouslyAllowLocalIP: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
@@ -14,6 +15,14 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+      },
+      {
+        protocol: "https",
+        hostname: "thilakawardhana.com",
       },
       {
         protocol: "https",

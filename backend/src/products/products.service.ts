@@ -125,11 +125,21 @@ export class ProductsService {
       ];
     }
 
-    // Category filter
+    // Category filter (includes products in child categories if parent category is selected)
     if (query.categoryId) {
-      where.categoryId = query.categoryId;
+      where.category = {
+        OR: [
+          { id: query.categoryId },
+          { parentId: query.categoryId },
+        ],
+      };
     } else if (query.categorySlug && query.categorySlug !== 'new-arrivals') {
-      where.category = { slug: query.categorySlug };
+      where.category = {
+        OR: [
+          { slug: query.categorySlug },
+          { parent: { slug: query.categorySlug } },
+        ],
+      };
     }
 
     // Subcategory & Virtual Collection filters
