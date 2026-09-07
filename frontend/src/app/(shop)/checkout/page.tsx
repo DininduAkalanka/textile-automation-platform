@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { normalizeImageUrl } from '@/lib/image-url';
 import { ShieldCheck, Lock, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 type PaymentMethod = 'payhere' | 'cod' | 'installment';
@@ -54,15 +55,9 @@ function MethodCard({
     <div
       data-testid={testId}
       onClick={onSelect}
-      style={{
-        border: selected ? '2px solid var(--clr-brand)' : '1.5px solid var(--clr-border)',
-        borderRadius: 'var(--r-lg)',
-        padding: '1.5rem',
-        marginBottom: '1rem',
-        cursor: 'pointer',
-        transition: 'all 0.25s ease',
-        background: selected ? 'var(--clr-brand-tint)' : 'var(--clr-surface)',
-      }}
+      className={`p-3.5 sm:p-5 mb-3.5 rounded-xl cursor-pointer transition-all duration-200 ${
+        selected ? 'border-2 border-[var(--clr-brand)] bg-[var(--clr-brand-tint)]' : 'border border-[var(--clr-border)] bg-[var(--clr-surface)] hover:border-neutral-400'
+      }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -101,6 +96,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Address & Contact, 2: Payment, 3: Confirm
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
 
   const [method, setMethod] = useState<PaymentMethod>('payhere');
 
@@ -325,8 +321,27 @@ export default function CheckoutPage() {
         )}
       </div>
 
-      {/* Progress Steps */}
-      <div className="mb-8 flex flex-wrap items-center gap-2">
+      {/* Responsive Progress Stepper */}
+      {/* Mobile Stepper (<640px) */}
+      <div className="sm:hidden mb-6 p-4 rounded-xl bg-[var(--clr-surface-2)] border border-[var(--clr-border)] shadow-xs">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--clr-brand)]">
+            Step {step} of 3
+          </span>
+          <span className="text-xs font-semibold text-[var(--clr-text)]">
+            {stepLabels[step - 1].label}
+          </span>
+        </div>
+        <div className="w-full bg-[var(--clr-border)] h-2 rounded-full overflow-hidden">
+          <div
+            className="bg-[var(--clr-brand)] h-full transition-all duration-300 rounded-full"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Desktop Stepper (>=640px) */}
+      <div className="hidden sm:flex mb-8 flex-wrap items-center gap-2">
         {stepLabels.map((s, i) => (
           <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
@@ -348,6 +363,64 @@ export default function CheckoutPage() {
         ))}
       </div>
 
+      {/* Mobile Top Collapsible Order Summary Banner (<1024px) */}
+      <div className="lg:hidden mb-6 rounded-xl border border-[var(--clr-border)] bg-[var(--clr-surface)] shadow-xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowMobileSummary(!showMobileSummary)}
+          className="w-full flex items-center justify-between p-4 text-left text-sm font-semibold text-[var(--clr-text)] cursor-pointer hover:bg-neutral-50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-base">🛍️</span>
+            <span>{showMobileSummary ? 'Hide order summary' : 'Show order summary'}</span>
+            <span className="text-xs font-normal text-[var(--clr-text-2)]">({items.length} {items.length === 1 ? 'item' : 'items'})</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className={`transition-transform duration-200 ${showMobileSummary ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+          <span className="font-bold text-[var(--clr-brand)]">{fmt(totalValue)}</span>
+        </button>
+
+        {showMobileSummary && (
+          <div className="p-4 border-t border-[var(--clr-border)] bg-[var(--clr-surface-2)] space-y-3 animate-fade-in">
+            {items.map((item) => (
+              <div key={item.product.id} className="flex justify-between items-center text-xs">
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
+                    {item.product.images && item.product.images[0] ? (
+                      <img
+                        src={normalizeImageUrl(item.product.images[0])}
+                        alt=""
+                        className="w-full height-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs">🧵</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[var(--clr-text)] font-semibold text-xs">{item.product.name}</p>
+                    <p className="text-[11px] text-[var(--clr-text-3)] font-mono">Qty: {item.quantity}</p>
+                  </div>
+                </div>
+                <span className="shrink-0 font-bold text-xs">{fmt(Number(item.product.price) * item.quantity)}</span>
+              </div>
+            ))}
+            <div className="border-t border-[var(--clr-border)] pt-2.5 flex justify-between text-xs font-medium text-[var(--clr-text-2)]">
+              <span>Islandwide Delivery</span>
+              <span className="text-emerald-700 font-semibold">FREE</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div style={{ background: '#fef2f2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca' }}>
           {error}
@@ -359,7 +432,7 @@ export default function CheckoutPage() {
         <div>
           {/* STEP 1: Shipping Address & Contact */}
           {step === 1 && (
-            <div className="card" style={{ padding: '2rem' }}>
+            <div className="card p-4 sm:p-7">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>📦</span> Shipping Address & Contact Info
               </h2>
@@ -516,8 +589,8 @@ export default function CheckoutPage() {
 
                 <button
                   data-testid="checkout-continue-to-payment-btn"
-                  className="btn btn-primary btn-lg"
-                  style={{ marginTop: '0.5rem' }}
+                  className="btn btn-primary btn-lg w-full sm:w-auto mt-2"
+                  style={{ minHeight: '48px' }}
                   onClick={() => setStep(2)}
                   disabled={!isAddressValid}
                 >
@@ -583,9 +656,9 @@ export default function CheckoutPage() {
               </MethodCard>
 
               {/* Navigation Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button className="btn btn-outline btn-lg" onClick={() => setStep(1)}>← Back</button>
-                <button data-testid="checkout-continue-to-review-btn" className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={() => setStep(3)}>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
+                <button className="btn btn-outline btn-lg w-full sm:w-auto" style={{ minHeight: '48px' }} onClick={() => setStep(1)}>← Back</button>
+                <button data-testid="checkout-continue-to-review-btn" className="btn btn-primary btn-lg w-full sm:flex-1" style={{ minHeight: '48px' }} onClick={() => setStep(3)}>
                   Continue to Review →
                 </button>
               </div>
@@ -596,7 +669,7 @@ export default function CheckoutPage() {
           {step === 3 && (
             <div>
               {/* Address Review */}
-              <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div className="card p-4 sm:p-6 mb-4">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Shipping & Contact Info</h3>
                   <button onClick={() => setStep(1)} className="btn btn-outline btn-sm">Edit</button>
@@ -610,7 +683,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Payment Method Review */}
-              <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div className="card p-4 sm:p-6 mb-4">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Payment Method</h3>
                   <button onClick={() => setStep(2)} className="btn btn-outline btn-sm">Change</button>
@@ -631,28 +704,41 @@ export default function CheckoutPage() {
               </div>
 
               {/* Items Review */}
-              <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div className="card p-4 sm:p-6 mb-4">
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
                   Order Items ({items.length} {items.length === 1 ? 'item' : 'items'})
                 </h3>
                 {items.map((item) => (
-                  <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--clr-border)' }}>
-                    <div>
-                      <p style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{item.product.name}</p>
-                      <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>Qty: {item.quantity} × {fmt(Number(item.product.price))}</p>
+                  <div key={item.product.id} className="flex justify-between items-center py-2.5 border-b border-[var(--clr-border)] last:border-b-0">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
+                        {item.product.images && item.product.images[0] ? (
+                          <img
+                            src={normalizeImageUrl(item.product.images[0])}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs">🧵</div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p style={{ fontWeight: 500, fontSize: '0.9375rem' }} className="truncate">{item.product.name}</p>
+                        <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>Qty: {item.quantity} × {fmt(Number(item.product.price))}</p>
+                      </div>
                     </div>
-                    <p style={{ fontWeight: 600 }}>{fmt(Number(item.product.price) * item.quantity)}</p>
+                    <p style={{ fontWeight: 600 }} className="shrink-0">{fmt(Number(item.product.price) * item.quantity)}</p>
                   </div>
                 ))}
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button className="btn btn-outline btn-lg" onClick={() => setStep(2)}>← Back</button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
+                <button className="btn btn-outline btn-lg w-full sm:w-auto" style={{ minHeight: '48px' }} onClick={() => setStep(2)}>← Back</button>
                 <button
                   data-testid="checkout-place-order-btn"
-                  className="btn btn-primary btn-lg"
-                  style={{ flex: 1 }}
+                  className="btn btn-primary btn-lg w-full sm:flex-1"
+                  style={{ minHeight: '48px' }}
                   onClick={handlePlaceOrder}
                   disabled={loading}
                 >

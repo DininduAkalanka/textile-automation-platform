@@ -69,63 +69,111 @@ function PaymentSuccessContent() {
   }, [orderId]);
 
   return (
-    <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', textAlign: 'center', maxWidth: '480px', margin: '0 auto' }}>
-      {state === 'missing-order' && (
-        <>
-          <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</p>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Missing order reference</h1>
-          <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
-            This page needs an order to check on. If you just paid, check your orders list instead.
-          </p>
-          <Link href="/account/orders" className="btn btn-primary btn-lg">View my orders</Link>
-        </>
-      )}
+    <div className="container" style={{ paddingTop: '3.5rem', paddingBottom: '5rem', maxWidth: '540px', margin: '0 auto' }}>
+      <div className="card p-6 sm:p-10 text-center shadow-lg border border-[var(--clr-border)] rounded-2xl bg-[var(--clr-surface)]">
+        {state === 'missing-order' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-200">
+              ⚠️
+            </div>
+            <h1 className="font-display text-2xl font-bold mb-2 text-[var(--clr-text)]">Missing Order Reference</h1>
+            <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
+              This page requires an order reference. If you just completed a payment, check your orders dashboard.
+            </p>
+            <Link href="/account/orders" className="btn btn-primary btn-lg w-full" style={{ minHeight: '48px' }}>
+              View My Orders
+            </Link>
+          </>
+        )}
 
-      {state === 'polling' && (
-        <>
-          <div className="skeleton" style={{ width: '3rem', height: '3rem', borderRadius: '50%', margin: '0 auto 1.5rem' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Confirming your payment…</h1>
-          <p style={{ color: 'var(--clr-text-2)' }}>
-            PayHere is finalizing the transaction. This usually takes a few seconds — please don&apos;t close this page.
-          </p>
-        </>
-      )}
+        {state === 'polling' && (
+          <>
+            <div className="skeleton w-16 h-16 rounded-full mx-auto mb-5" />
+            <h1 className="font-display text-2xl font-bold mb-2 text-[var(--clr-text)]">Verifying Your Payment…</h1>
+            <p className="text-sm text-[var(--clr-text-2)] leading-relaxed">
+              PayHere is finalizing the transaction with your banking provider. This usually takes just a few moments — please don&apos;t close this page.
+            </p>
+          </>
+        )}
 
-      {state === 'completed' && (
-        <>
-          <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</p>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#166534' }}>Payment confirmed!</h1>
-          <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
-            Your order is confirmed and on its way into production.
-          </p>
-          <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg">View order</Link>
-        </>
-      )}
+        {state === 'completed' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-emerald-200 shadow-sm">
+              ✓
+            </div>
+            <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full inline-block mb-3">
+              Payment Confirmed
+            </span>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2 text-neutral-900">
+              Thank You For Your Order!
+            </h1>
+            <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
+              Your order has been confirmed and routed directly to our production floor. A confirmation SMS and email have been dispatched.
+            </p>
 
-      {state === 'failed' && (
-        <>
-          <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</p>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#991b1b' }}>Payment didn&apos;t go through</h1>
-          <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
-            PayHere reported this payment as unsuccessful. Your order is still saved — you can try paying again from your orders page.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg">View order</Link>
-            <Link href="/cart" className="btn btn-outline btn-lg">Back to cart</Link>
-          </div>
-        </>
-      )}
+            {orderId && (
+              <div className="bg-[var(--clr-surface-2)] p-4 rounded-xl border border-[var(--clr-border)] mb-6 text-left space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[var(--clr-text-3)] font-mono uppercase tracking-wider">Order Reference</span>
+                  <span className="font-mono font-bold text-[var(--clr-text)] truncate max-w-[200px]">{orderId}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs border-t border-[var(--clr-border-2)] pt-2">
+                  <span className="text-[var(--clr-text-3)]">Estimated Delivery</span>
+                  <span className="font-semibold text-emerald-700">2–4 Business Days</span>
+                </div>
+              </div>
+            )}
 
-      {state === 'timeout' && (
-        <>
-          <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</p>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Still confirming</h1>
-          <p style={{ color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
-            This is taking longer than usual. Your order is saved as pending — it will update automatically as soon as the payment provider confirms it. Check your orders page in a moment.
-          </p>
-          <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg">View order</Link>
-        </>
-      )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {orderId && (
+                <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg flex-1" style={{ minHeight: '48px' }}>
+                  Track Order Status →
+                </Link>
+              )}
+              <Link href="/products" className="btn btn-outline btn-lg flex-1" style={{ minHeight: '48px' }}>
+                Continue Shopping
+              </Link>
+            </div>
+          </>
+        )}
+
+        {state === 'failed' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-200">
+              ✕
+            </div>
+            <h1 className="font-display text-2xl font-bold mb-2 text-rose-900">Payment Unsuccessful</h1>
+            <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
+              PayHere reported this transaction as incomplete or declined by your bank. Your cart and order items are securely preserved.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {orderId && (
+                <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg flex-1" style={{ minHeight: '48px' }}>
+                  Retry Payment
+                </Link>
+              )}
+              <Link href="/cart" className="btn btn-outline btn-lg flex-1" style={{ minHeight: '48px' }}>
+                Back to Cart
+              </Link>
+            </div>
+          </>
+        )}
+
+        {state === 'timeout' && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-200">
+              ⏳
+            </div>
+            <h1 className="font-display text-2xl font-bold mb-2 text-amber-900">Confirmation In Progress</h1>
+            <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
+              Your bank transaction is taking a bit longer to post. Your order is safely saved as pending and will update automatically once verified.
+            </p>
+            <Link href={orderId ? `/account/orders/${orderId}` : '/account/orders'} className="btn btn-primary btn-lg w-full" style={{ minHeight: '48px' }}>
+              Check Orders Dashboard →
+            </Link>
+          </>
+        )}
+      </div>
     </div>
   );
 }

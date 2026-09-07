@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
@@ -58,11 +59,11 @@ const HERO_SLIDES = [
 ];
 
 const CATEGORIES = [
-  { id: 'new-arrivals', label: 'New Arrivals',  subLabel: 'This Season',     href: '/products?sort=newest',          bg: 'linear-gradient(160deg, #0d0d0d 0%, #1f0000 100%)' },
-  { id: 'women',        label: 'Women',          subLabel: 'Sarees & More',   href: '/products?category=women',       bg: 'linear-gradient(160deg, #0d0005 0%, #1f0015 100%)' },
-  { id: 'men',          label: 'Men',            subLabel: 'Formal & Casual', href: '/products?category=men',         bg: 'linear-gradient(160deg, #000a0d 0%, #00151f 100%)' },
-  { id: 'teenagers',    label: 'Teenagers',      subLabel: 'Trending',        href: '/products?category=teenagers',   bg: 'linear-gradient(160deg, #050d00 0%, #0f1f00 100%)' },
-  { id: 'uniforms',     label: 'Uniforms',       subLabel: 'School & Office', href: '/products?category=uniforms',   bg: 'linear-gradient(160deg, #0d0500 0%, #1f0f00 100%)' },
+  { id: 'new-arrivals', label: 'New Arrivals',  subLabel: 'This Season',     href: '/products?sort=newest',          bg: 'linear-gradient(160deg, #0d0d0d 0%, #1f0000 100%)', image: '/images/categories/sale.jpg' },
+  { id: 'women',        label: 'Women',          subLabel: 'Sarees & More',   href: '/products?category=women',       bg: 'linear-gradient(160deg, #0d0005 0%, #1f0015 100%)', image: '/images/categories/women.jpg' },
+  { id: 'men',          label: 'Men',            subLabel: 'Formal & Casual', href: '/products?category=men',         bg: 'linear-gradient(160deg, #000a0d 0%, #00151f 100%)', image: '/images/categories/men.jpg' },
+  { id: 'teenagers',    label: 'Teenagers',      subLabel: 'Trending',        href: '/products?category=teenagers',   bg: 'linear-gradient(160deg, #050d00 0%, #0f1f00 100%)', image: '/images/categories/teenagers.jpg' },
+  { id: 'uniforms',     label: 'Uniforms',       subLabel: 'School & Office', href: '/products?category=uniforms',   bg: 'linear-gradient(160deg, #0d0500 0%, #1f0f00 100%)', image: '/images/categories/uniforms.jpg' },
 ];
 
 const UNIFORM_SEGMENTS = [
@@ -71,32 +72,36 @@ const UNIFORM_SEGMENTS = [
     label: 'Government School Uniforms',
     description: 'Standard-approved, durable uniforms meeting all government specifications for primary and secondary schools.',
     badge: 'Most Ordered',
-    href: '/products?category=uniforms&sub=government-school',
+    href: '/products?category=school-uniforms',
     bg: 'linear-gradient(155deg, #080808 0%, #1a0000 100%)',
+    image: '/images/uniforms/school-girls-pinafore.jpg',
   },
   {
     id: 'private-school',
     label: 'Private School Uniforms',
     description: 'Premium-grade fabrics crafted to the exact specifications of leading private schools across Sri Lanka.',
     badge: 'Premium',
-    href: '/products?category=uniforms&sub=private-school',
+    href: '/products?category=school-uniforms',
     bg: 'linear-gradient(155deg, #0a0000 0%, #280000 100%)',
+    image: '/images/uniforms/private-school-blazer.jpg',
   },
   {
     id: 'corporate',
     label: 'Corporate Office Uniforms',
     description: 'Polished, professional formal wear for corporate environments — tailored for comfort across long working hours.',
-    badge: '',
-    href: '/products?category=uniforms&sub=corporate',
+    badge: 'Executive',
+    href: '/products?category=corporate-uniforms',
     bg: 'linear-gradient(155deg, #00080d 0%, #00141f 100%)',
+    image: '/images/uniforms/corporate-executive-blazer.jpg',
   },
   {
     id: 'industrial',
     label: 'Workwear & Industrial',
     description: 'Heavy-duty fabrics engineered for industrial and workwear applications — built to last in demanding conditions.',
-    badge: '',
-    href: '/products?category=uniforms&sub=industrial',
+    badge: 'Heavy Duty',
+    href: '/products?category=industrial-uniforms',
     bg: 'linear-gradient(155deg, #060600 0%, #141400 100%)',
+    image: '/images/uniforms/hivis-safety-jacket.jpg',
   },
 ];
 
@@ -526,13 +531,13 @@ export default function HomePage() {
             <span className="section-rule" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {CATEGORIES.map((cat, idx) => (
               <Link
                 key={cat.id}
                 href={cat.href}
                 id={`cat-${cat.id}`}
-                className="cat-card animate-fade-in-up"
+                className={`cat-card group animate-fade-in-up ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
                 style={{
                   display: 'block',
                   textDecoration: 'none',
@@ -542,10 +547,9 @@ export default function HomePage() {
                 }}
               >
                 <div
-                  className="cat-card-inner"
+                  className={`cat-card-inner ${idx === 4 ? 'aspect-[16/9] sm:aspect-[3/4]' : 'aspect-[3/4]'}`}
                   style={{
                     background: cat.bg,
-                    aspectRatio: '3 / 4',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
@@ -553,6 +557,16 @@ export default function HomePage() {
                     position: 'relative',
                   }}
                 >
+                  {/* Authentic Category Image */}
+                  {cat.image && (
+                    <Image
+                      src={cat.image}
+                      alt={cat.label}
+                      fill
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    />
+                  )}
                   {/* Subtle texture */}
                   <div
                     style={{
@@ -560,23 +574,30 @@ export default function HomePage() {
                       backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0, rgba(255,255,255,0.012) 1px, transparent 0, transparent 50%)',
                       backgroundSize: '14px 14px',
                       pointerEvents: 'none',
+                      zIndex: 1,
                     }}
                   />
-                  {/* Gradient overlay */}
+                  {/* High contrast gradient overlay */}
                   <div
                     className="cat-card-overlay"
-                    style={{ position: 'absolute', inset: 0 }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.15) 100%)',
+                      zIndex: 1,
+                    }}
                   />
                   {/* Text */}
-                  <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ position: 'relative', zIndex: 2 }}>
                     <p
                       style={{
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '0.58rem',
+                        fontSize: '0.62rem',
                         letterSpacing: '0.14em',
                         textTransform: 'uppercase',
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(255,255,255,0.7)',
                         marginBottom: '0.3rem',
+                        fontWeight: 500,
                       }}
                     >
                       {cat.subLabel}
@@ -584,7 +605,7 @@ export default function HomePage() {
                     <h3
                       style={{
                         fontFamily: 'var(--font-serif)',
-                        fontSize: '1.2rem',
+                        fontSize: '1.35rem',
                         fontWeight: 600,
                         color: '#fff',
                         lineHeight: 1.2,
@@ -599,14 +620,15 @@ export default function HomePage() {
                         gap: '0.375rem',
                         marginTop: '0.625rem',
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '0.6rem',
+                        fontSize: '0.65rem',
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
-                        color: 'var(--clr-brand)',
+                        color: '#ff4d4d',
+                        fontWeight: 600,
                       }}
                     >
                       View All
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </div>
                   </div>
                 </div>
@@ -658,68 +680,88 @@ export default function HomePage() {
                 key={seg.id}
                 href={seg.href}
                 id={`uniform-${seg.id}`}
-                className="animate-fade-in-up"
+                className="group animate-fade-in-up"
                 style={{
                   display: 'block',
                   textDecoration: 'none',
                   background: seg.bg,
-                  padding: '2.25rem 1.75rem',
+                  padding: '2.5rem 1.75rem',
                   borderRight: idx % 2 === 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                   transition: 'background 300ms ease',
                   animationDelay: `${idx * 0.07}s`,
                   position: 'relative',
                   overflow: 'hidden',
+                  minHeight: '280px',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${seg.bg.slice(0, seg.bg.lastIndexOf(','))} , rgba(204,0,0,0.06))`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = seg.bg; }}
               >
-                {seg.badge && (
-                  <span
-                    className="badge badge-brand"
-                    style={{ marginBottom: '1.25rem', display: 'inline-flex' }}
-                  >
-                    {seg.badge}
-                  </span>
+                {/* Background Authentic Uniform Image */}
+                {seg.image && (
+                  <Image
+                    src={seg.image}
+                    alt={seg.label}
+                    fill
+                    className="object-cover opacity-25 transition-transform duration-700 ease-out group-hover:scale-105 group-hover:opacity-35"
+                    sizes="(max-width: 768px) 100vw, 25vw"
+                  />
                 )}
-                <h3
+                {/* Dark Vignette Overlay */}
+                <div
                   style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: '1.25rem',
-                    fontWeight: 600,
-                    color: '#fff',
-                    lineHeight: 1.25,
-                    marginBottom: '0.75rem',
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(to top, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.7) 50%, rgba(8,8,8,0.5) 100%)',
+                    zIndex: 1,
                   }}
-                >
-                  {seg.label}
-                </h3>
-                <p
-                  style={{
-                    fontSize: '0.8125rem',
-                    lineHeight: 1.75,
-                    color: 'rgba(255,255,255,0.45)',
-                    marginBottom: '1.5rem',
-                  }}
-                >
-                  {seg.description}
-                </p>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.65rem',
-                    fontWeight: 500,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--clr-brand)',
-                    transition: 'gap 200ms ease',
-                  }}
-                >
-                  Shop Now
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </span>
+                />
+                <div style={{ position: 'relative', zIndex: 2 }}>
+                  {seg.badge && (
+                    <span
+                      className="badge badge-brand"
+                      style={{ marginBottom: '1.25rem', display: 'inline-flex' }}
+                    >
+                      {seg.badge}
+                    </span>
+                  )}
+                  <h3
+                    style={{
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: '1.3rem',
+                      fontWeight: 600,
+                      color: '#fff',
+                      lineHeight: 1.25,
+                      marginBottom: '0.75rem',
+                    }}
+                  >
+                    {seg.label}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: '0.8125rem',
+                      lineHeight: 1.75,
+                      color: 'rgba(255,255,255,0.65)',
+                      marginBottom: '1.5rem',
+                    }}
+                  >
+                    {seg.description}
+                  </p>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: '#ff4d4d',
+                      transition: 'gap 200ms ease',
+                    }}
+                  >
+                    Shop Now
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

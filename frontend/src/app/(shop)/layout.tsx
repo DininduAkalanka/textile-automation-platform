@@ -9,6 +9,7 @@ import TopProgressBar from '@/components/layout/TopProgressBar';
 import QuickViewModal from '@/components/products/QuickViewModal';
 import VisualSearchModal from '@/components/products/VisualSearchModal';
 import { ChatWidget } from '@/components/chat/chat-widget';
+import WhatsAppButton from '@/components/layout/WhatsAppButton';
 
 export default function ShopLayout({
   children,
@@ -34,6 +35,8 @@ export default function ShopLayout({
       <VisualSearchModal />
       {/* The shopping assistant, on every shop page (doc 10 §5.5). */}
       <ChatWidget />
+      {/* Production WhatsApp customer engagement widget (+94 71 708 8445) */}
+      <WhatsAppButton />
     </div>
   );
 }

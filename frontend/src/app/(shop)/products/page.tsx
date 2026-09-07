@@ -51,6 +51,10 @@ function ProductsContent() {
     if (categorySlug === 'men') return "Men's Collection";
     if (categorySlug === 'teenagers') return "Teenagers Collection";
     if (categorySlug === 'uniforms') return 'Uniforms & Workwear';
+    if (categorySlug === 'school-uniforms') return 'School Uniforms';
+    if (categorySlug === 'corporate-uniforms') return 'Corporate Uniforms & Workwear';
+    if (categorySlug === 'healthcare-uniforms') return 'Healthcare & Hospitality Uniforms';
+    if (categorySlug === 'industrial-uniforms') return 'Industrial & Safety Workwear';
     const found = categories.find((c) => c.id === categoryId || c.slug === categorySlug);
     if (found) return found.name;
     if (search) return `Search results for "${search}"`;

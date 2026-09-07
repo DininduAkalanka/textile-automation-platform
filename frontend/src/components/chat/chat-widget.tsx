@@ -30,6 +30,7 @@ const SUGGESTIONS = [
 export function ChatWidget() {
   const pathname = usePathname();
   const isCheckout = pathname === '/checkout' || pathname?.startsWith('/checkout/');
+  const hasStickyBottomBar = pathname === '/cart' || pathname?.startsWith('/products/');
   const { open, toggle, setOpen, messages, unread } = useChatStore();
   const send = useSendMessage();
 
@@ -51,9 +52,22 @@ export function ChatWidget() {
     send.mutate(message);
   };
 
+  // Close WhatsApp drawer if AI chat is opened, and listen to close-ai-chat event
+  useEffect(() => {
+    if (open) {
+      window.dispatchEvent(new CustomEvent('close-whatsapp-chat'));
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handleClose = () => setOpen(false);
+    window.addEventListener('close-ai-chat', handleClose);
+    return () => window.removeEventListener('close-ai-chat', handleClose);
+  }, [setOpen]);
+
   return (
     <>
-      {/* Launcher — never obscures the page; suppressed during checkout to avoid button collision */}
+      {/* Launcher — never obscures the page; suppressed during checkout, elevated above mobile bottom bars */}
       {(!isCheckout || open) && (
         <button
           type="button"
@@ -61,7 +75,8 @@ export function ChatWidget() {
           onClick={toggle}
           aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
           className={cn(
-            'fixed bottom-4 right-4 z-40 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:right-6 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105',
+            'fixed z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105',
+            hasStickyBottomBar ? 'chat-launcher-elevated right-4 sm:right-6' : 'bottom-4 right-4 sm:bottom-6 sm:right-6',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
             open ? 'bg-neutral-800 text-white' : 'bg-indigo-600 text-white',
           )}
@@ -81,8 +96,8 @@ export function ChatWidget() {
           aria-label="Shopping assistant"
           className={cn(
             'fixed z-40 flex flex-col overflow-hidden bg-white shadow-2xl',
-            // Full-screen sheet on a phone, panel on a desktop (doc 10 §5.5).
-            'inset-0 sm:inset-auto sm:bottom-24 sm:right-5 sm:h-[560px] sm:w-[380px] sm:rounded-2xl sm:border sm:border-neutral-200',
+            // Full-screen sheet on a phone, responsive panel on desktop with safe max-height
+            'inset-0 sm:inset-auto sm:bottom-20 sm:right-6 sm:h-[min(540px,calc(100dvh-6.5rem))] sm:max-h-[calc(100dvh-6.5rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-neutral-200',
           )}
         >
           <header className="flex items-center justify-between border-b border-neutral-200 bg-indigo-600 px-4 py-3 text-white">

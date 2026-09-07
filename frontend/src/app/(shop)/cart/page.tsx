@@ -371,6 +371,36 @@ export default function CartPage() {
         </div>
       </div>
 
+      {/* Sticky Mobile Checkout CTA Bar (<640px) */}
+      {items.length > 0 && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.08)]"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--clr-text-3)] font-mono font-medium">Subtotal ({totalItems()} items)</p>
+              <p className="text-sm font-bold text-[var(--clr-brand)]">
+                Rs. {subtotal().toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            {checkoutAllowed ? (
+              <Link
+                href="/checkout"
+                className="btn btn-primary btn-sm shrink-0 px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
+                style={{ minHeight: '42px' }}
+              >
+                Checkout →
+              </Link>
+            ) : (
+              <Button size="sm" disabled className="shrink-0 text-xs uppercase tracking-wider" style={{ minHeight: '42px' }}>
+                Need Measurements
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       <MeasurementDialog
         product={measuring}
         existing={

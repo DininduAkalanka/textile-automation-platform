@@ -112,34 +112,38 @@ export class ProductsService {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 12));
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      isActive: true,
-    };
+    const andConditions: any[] = [{ isActive: true }];
 
     // Search filter
     if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { description: { contains: query.search, mode: 'insensitive' } },
-        { sku: { contains: query.search, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: query.search, mode: 'insensitive' } },
+          { description: { contains: query.search, mode: 'insensitive' } },
+          { sku: { contains: query.search, mode: 'insensitive' } },
+        ],
+      });
     }
 
     // Category filter (includes products in child categories if parent category is selected)
     if (query.categoryId) {
-      where.category = {
-        OR: [
-          { id: query.categoryId },
-          { parentId: query.categoryId },
-        ],
-      };
+      andConditions.push({
+        category: {
+          OR: [
+            { id: query.categoryId },
+            { parentId: query.categoryId },
+          ],
+        },
+      });
     } else if (query.categorySlug && query.categorySlug !== 'new-arrivals') {
-      where.category = {
-        OR: [
-          { slug: query.categorySlug },
-          { parent: { slug: query.categorySlug } },
-        ],
-      };
+      andConditions.push({
+        category: {
+          OR: [
+            { slug: query.categorySlug },
+            { parent: { slug: query.categorySlug } },
+          ],
+        },
+      });
     }
 
     // Subcategory & Virtual Collection filters
@@ -149,35 +153,108 @@ export class ProductsService {
         query.offers === '1' ||
         query.offers === 'true'
       ) {
-        where.compareAtPrice = { not: null };
+        andConditions.push({ compareAtPrice: { not: null } });
       } else if (
         query.subCategory === 'premium-collection' ||
         query.tier === 'premium'
       ) {
-        where.price = { gte: 5000 };
+        andConditions.push({ price: { gte: 5000 } });
       } else if (
         query.subCategory === 'latest-this-week' ||
         query.subCategory === 'trending-now'
       ) {
         // Handled via custom sorting below
+      } else if (
+        ['school-all', 'government-school', 'private-school', 'school-uniforms', 'school'].includes(query.subCategory)
+      ) {
+        andConditions.push({
+          OR: [
+            { category: { slug: 'school-uniforms' } },
+            { subCategory: { in: ['school-uniforms', 'school', 'government-school', 'private-school'] } },
+            { name: { contains: 'School', mode: 'insensitive' } },
+          ],
+        });
+      } else if (
+        ['corporate', 'corporate-wear', 'corporate-uniforms', 'office-all'].includes(query.subCategory)
+      ) {
+        andConditions.push({
+          OR: [
+            { category: { slug: 'corporate-uniforms' } },
+            { subCategory: { in: ['corporate-wear', 'corporate'] } },
+            { name: { contains: 'Blazer', mode: 'insensitive' } },
+            { name: { contains: 'Corporate', mode: 'insensitive' } },
+          ],
+        });
+      } else if (
+        ['healthcare', 'medical', 'healthcare-uniforms', 'hospitality'].includes(query.subCategory)
+      ) {
+        andConditions.push({
+          OR: [
+            { category: { slug: 'healthcare-uniforms' } },
+            { subCategory: { in: ['medical', 'hospitality', 'healthcare'] } },
+          ],
+        });
+      } else if (
+        ['industrial', 'workwear', 'industrial-uniforms', 'security'].includes(query.subCategory)
+      ) {
+        andConditions.push({
+          OR: [
+            { category: { slug: 'industrial-uniforms' } },
+            { subCategory: { in: ['workwear', 'industrial', 'security', 'cleaning'] } },
+          ],
+        });
+      } else if (['sarees', 'silk-sarees', 'cotton-sarees'].includes(query.subCategory)) {
+        andConditions.push({
+          OR: [
+            { subCategory: 'sarees' },
+            { name: { contains: 'Saree', mode: 'insensitive' } },
+          ],
+        });
+      } else if (['kurthas', 'tops', 'blouses', 'casual', 'evening', 'dress-materials'].includes(query.subCategory)) {
+        andConditions.push({
+          OR: [
+            { subCategory: { in: ['tops', 'dresses', 'bottoms', 'sarees'] } },
+            { name: { contains: 'Top', mode: 'insensitive' } },
+            { name: { contains: 'Kurtha', mode: 'insensitive' } },
+            { name: { contains: 'Shirt', mode: 'insensitive' } },
+          ],
+        });
+      } else if (['shirts', 'formal', 'casual-shirts'].includes(query.subCategory)) {
+        andConditions.push({
+          OR: [
+            { subCategory: 'shirts' },
+            { name: { contains: 'Shirt', mode: 'insensitive' } },
+          ],
+        });
+      } else if (['trousers', 'pants', 'chinos'].includes(query.subCategory)) {
+        andConditions.push({
+          OR: [
+            { subCategory: { in: ['trousers', 'bottoms'] } },
+            { name: { contains: 'Trouser', mode: 'insensitive' } },
+            { name: { contains: 'Pants', mode: 'insensitive' } },
+          ],
+        });
       } else {
-        where.subCategory = query.subCategory;
+        andConditions.push({ subCategory: query.subCategory });
       }
     } else {
       if (query.offers === '1' || query.offers === 'true') {
-        where.compareAtPrice = { not: null };
+        andConditions.push({ compareAtPrice: { not: null } });
       }
       if (query.tier === 'premium') {
-        where.price = { gte: 5000 };
+        andConditions.push({ price: { gte: 5000 } });
       }
     }
 
     // Price range filter
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
-      where.price = where.price || {};
-      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
-      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
+      const priceFilter: any = {};
+      if (query.minPrice !== undefined) priceFilter.gte = query.minPrice;
+      if (query.maxPrice !== undefined) priceFilter.lte = query.maxPrice;
+      andConditions.push({ price: priceFilter });
     }
+
+    const where: any = { AND: andConditions };
 
     // Sorting (with strict allowed field whitelist to prevent Prisma crashes)
     const orderBy: any = {};

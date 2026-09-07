@@ -251,7 +251,11 @@ export async function seedCatalog() {
       stockQuantity: 35,
       minimumStockLevel: 8,
       sku: 'WMN-TOP-002',
-      images: ['https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16685.jpg?v=1788579796'],
+      images: [
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16685.jpg?v=1788579796',
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16371.jpg?v=1781870990',
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16438.jpg?v=1782891271'
+      ],
       attributes: { color: 'Blue Pinstripe', material: '80% Cotton / 20% Poly', size: 'S, M, L, XL, XXL', fit: 'Tailored Fit' },
       categoryId: categories[0].id,
       subCategory: 'tops',
@@ -311,7 +315,11 @@ export async function seedCatalog() {
       stockQuantity: 30,
       minimumStockLevel: 8,
       sku: 'WMN-PNT-005',
-      images: ['https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16613.png?v=1786681807'],
+      images: [
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16613.png?v=1786681807',
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16053.2.jpg?v=1775494053',
+        'https://cdn.shopify.com/s/files/1/0884/9873/3368/files/TW16101.jpg?v=1775901236'
+      ],
       attributes: { color: 'Formal Charcoal', material: 'Stretch Poly-Crepe', size: 'Waist 26, 28, 30, 32, 34', fit: 'Tapered Ankle' },
       categoryId: categories[0].id,
       subCategory: 'bottoms',
