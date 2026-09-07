@@ -47,7 +47,7 @@ export function TaskDrawer({ task, open, onOpenChange }: TaskDrawerProps) {
             onChange={(event) =>
               assign.mutate({ taskId: task.id, workerId: event.target.value })
             }
-            className="flex h-10 w-full rounded-[10px] border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-[10px] border border-neutral-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="" disabled>
               Choose a worker…

@@ -98,7 +98,7 @@ export default function WorkerTasksPage() {
 
             {/* Which of the four stages this job is at, and whether it's running. */}
             <div className="shrink-0 text-right">
-              <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+              <span className="rounded-full bg-neutral-900 px-2.5 py-1 text-xs font-semibold text-white">
                 {STAGE_LABEL[task.stage]}
               </span>
               <p className="mt-1 text-[11px] text-neutral-400">

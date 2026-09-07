@@ -592,11 +592,11 @@ export default function Header() {
               )}
             </Link>
 
-            {/* Notifications (plan 7.1 task 4). mounted-gated the same way the
-                profile button below is — rendering it before hydration would
-                show a bell that can never possibly be right. */}
+            {/* Notifications — hidden on mobile to avoid header clutter, available in mobile drawer */}
             {mounted && isAuthenticated && (
-              <NotificationBell signedIn={isAuthenticated} />
+              <div className="hide-mobile">
+                <NotificationBell signedIn={isAuthenticated} />
+              </div>
             )}
 
             {/* Auth — separator line */}
@@ -617,7 +617,7 @@ export default function Header() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.375rem 0.75rem',
+                      padding: '0.375rem 0.5rem',
                       border: '1px solid var(--clr-border)',
                       borderRadius: 'var(--r-sm)',
                       background: 'transparent',
@@ -629,15 +629,15 @@ export default function Header() {
                   >
                     <div
                       style={{
-                        width: '22px',
-                        height: '22px',
+                        width: '24px',
+                        height: '24px',
                         borderRadius: '50%',
                         background: 'var(--clr-brand)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#fff',
-                        fontSize: '0.6rem',
+                        fontSize: '0.62rem',
                         fontWeight: 700,
                         fontFamily: 'var(--font-mono)',
                         letterSpacing: '0.02em',
@@ -655,7 +655,9 @@ export default function Header() {
                     >
                       {user?.firstName}
                     </span>
-                    <IconChevronDown size={11} />
+                    <span className="hide-mobile flex items-center">
+                      <IconChevronDown size={11} />
+                    </span>
                   </button>
 
                   {profileOpen && (
@@ -889,14 +891,21 @@ export default function Header() {
               Navigation Menu
             </span>
           </div>
-          <button
-            onClick={closeMobile}
-            className="btn-icon"
-            aria-label="Close menu"
-            style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px' }}
-          >
-            <IconClose size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {mounted && isAuthenticated && (
+              <div style={{ filter: 'brightness(1.5)' }}>
+                <NotificationBell signedIn={isAuthenticated} />
+              </div>
+            )}
+            <button
+              onClick={closeMobile}
+              className="btn-icon"
+              aria-label="Close menu"
+              style={{ color: '#ffffff', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px' }}
+            >
+              <IconClose size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Drawer Nav (Categories with Circular Thumbnails & Chevron) */}

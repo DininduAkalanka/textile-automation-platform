@@ -30,7 +30,6 @@ const SUGGESTIONS = [
 export function ChatWidget() {
   const pathname = usePathname();
   const isCheckout = pathname === '/checkout' || pathname?.startsWith('/checkout/');
-  const hasStickyBottomBar = pathname === '/cart' || pathname?.startsWith('/products/');
   const { open, toggle, setOpen, messages, unread } = useChatStore();
   const send = useSendMessage();
 
@@ -76,15 +75,15 @@ export function ChatWidget() {
           aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
           className={cn(
             'fixed z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105',
-            hasStickyBottomBar ? 'chat-launcher-elevated right-4 sm:right-6' : 'bottom-4 right-4 sm:bottom-6 sm:right-6',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-            open ? 'bg-neutral-800 text-white' : 'bg-indigo-600 text-white',
+            'bottom-4 right-4 sm:bottom-6 sm:right-6',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] focus-visible:ring-offset-2',
+            open ? 'bg-neutral-900 text-white' : 'bg-black hover:bg-[#CC0000] text-white',
           )}
         >
           {open ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
           {/* A reply arrived while it was shut. A dot, not a popup. */}
           {unread && !open && (
-            <span className="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
+            <span className="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-[#CC0000]" />
           )}
         </button>
       )}
@@ -95,19 +94,19 @@ export function ChatWidget() {
           data-testid="ai-chat-dialog"
           aria-label="Shopping assistant"
           className={cn(
-            'fixed z-40 flex flex-col overflow-hidden bg-white shadow-2xl',
+            'fixed z-50 flex flex-col overflow-hidden bg-white shadow-2xl',
             // Full-screen sheet on a phone, responsive panel on desktop with safe max-height
             'inset-0 sm:inset-auto sm:bottom-20 sm:right-6 sm:h-[min(540px,calc(100dvh-6.5rem))] sm:max-h-[calc(100dvh-6.5rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-neutral-200',
           )}
         >
-          <header className="flex items-center justify-between border-b border-neutral-200 bg-indigo-600 px-4 py-3 text-white">
+          <header className="flex items-center justify-between border-b-2 border-[#CC0000] bg-black px-4 py-3 text-white">
             <div className="flex items-center gap-2">
-              <Sparkles size={18} aria-hidden />
+              <Sparkles size={18} className="text-[#CC0000]" aria-hidden />
               <div>
                 <p className="text-sm font-semibold leading-tight">
                   Shopping assistant
                 </p>
-                <p className="text-[11px] text-indigo-200">
+                <p className="text-[11px] text-neutral-300">
                   Ask about fabrics, uniforms or sizes
                 </p>
               </div>
@@ -116,7 +115,7 @@ export function ChatWidget() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="rounded-md p-1 hover:bg-indigo-500"
+              className="rounded-md p-1 hover:bg-neutral-800"
             >
               <X size={18} />
             </button>
@@ -124,9 +123,10 @@ export function ChatWidget() {
 
           <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4" data-testid="ai-chat-messages">
             {messages.length === 0 && (
-              <div className="pt-6 text-center">
+              <div className="py-6 text-center">
                 <Sparkles
-                  className="mx-auto mb-3 h-8 w-8 text-indigo-300"
+                  className="mx-auto mb-2 text-[#CC0000]"
+                  size={28}
                   aria-hidden
                 />
                 <p className="text-sm font-medium text-neutral-900">
@@ -143,7 +143,7 @@ export function ChatWidget() {
                       key={suggestion}
                       type="button"
                       onClick={() => submit(suggestion)}
-                      className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs text-neutral-700 transition-colors hover:border-indigo-400 hover:text-indigo-600"
+                      className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs text-neutral-700 transition-colors hover:border-[#CC0000] hover:text-[#CC0000]"
                     >
                       {suggestion}
                     </button>
@@ -159,7 +159,7 @@ export function ChatWidget() {
                   className={cn(
                     'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed',
                     message.role === 'user'
-                      ? 'ml-auto bg-indigo-600 text-white'
+                      ? 'ml-auto bg-[#CC0000] text-white'
                       : 'bg-neutral-100 text-neutral-900',
                   )}
                 >
@@ -206,7 +206,7 @@ export function ChatWidget() {
                   }
                   placeholder="e.g. cotton fabric for school shirts"
                   aria-label="Message"
-                  className="w-full rounded-full border border-neutral-300 px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="w-full rounded-full border border-neutral-300 px-4 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
                 />
                 {draft.length > MAX_CHARS - 100 && (
                   <p className="mt-1 pl-3 text-[11px] text-neutral-400">
@@ -219,7 +219,7 @@ export function ChatWidget() {
                 type="submit"
                 size="icon"
                 data-testid="ai-chat-send-btn"
-                className="shrink-0 rounded-full"
+                className="shrink-0 rounded-full bg-[#CC0000] hover:bg-[#A80000] text-white"
                 disabled={!draft.trim() || send.isPending}
                 aria-label="Send"
               >

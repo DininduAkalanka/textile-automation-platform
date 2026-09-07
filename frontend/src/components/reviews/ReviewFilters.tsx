@@ -42,7 +42,7 @@ function Chip({
       className={cn(
         'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
         active
-          ? 'border-indigo-600 bg-indigo-600 text-white'
+          ? 'border-black bg-black text-white'
           : 'border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50',
       )}
     >
@@ -106,7 +106,7 @@ export function ReviewFilters({
         <select
           value={value.sortBy}
           onChange={(e) => onChange({ ...value, sortBy: e.target.value as ReviewSortBy })}
-          className="rounded-[10px] border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="rounded-[10px] border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>

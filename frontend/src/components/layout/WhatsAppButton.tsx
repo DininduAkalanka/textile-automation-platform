@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { X, Send, Clock, ShieldCheck } from 'lucide-react';
 
 const WHATSAPP_NUMBER = '94717088445';
@@ -17,9 +16,6 @@ interface Props {
 }
 
 export default function WhatsAppButton({ productContext }: Props) {
-  const pathname = usePathname();
-  const hasStickyBottomBar = pathname === '/cart' || pathname?.startsWith('/products/');
-
   const [isOpen, setIsOpen] = useState(false);
   const [customMsg, setCustomMsg] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
@@ -71,11 +67,7 @@ export default function WhatsAppButton({ productContext }: Props) {
 
   return (
     <div
-      className={`fixed z-40 font-sans transition-all duration-300 ${
-        hasStickyBottomBar
-          ? 'bottom-20 left-4 sm:bottom-6 sm:left-6'
-          : 'bottom-4 left-4 sm:bottom-6 sm:left-6'
-      }`}
+      className={`fixed ${isOpen ? 'z-50' : 'z-40'} font-sans transition-all duration-300 bottom-4 left-4 sm:bottom-6 sm:left-6`}
     >
       {/* ── WhatsApp Popover Panel ───────────────────────────────── */}
       {isOpen && (

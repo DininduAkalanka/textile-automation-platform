@@ -15,8 +15,8 @@ const RED_HOURS = 72;
 
 const STATUS_STYLE: Record<TaskStatus, string> = {
   PENDING: 'bg-neutral-100 text-neutral-600',
-  IN_PROGRESS: 'bg-indigo-100 text-indigo-700',
-  DONE: 'bg-emerald-100 text-emerald-700',
+  IN_PROGRESS: 'bg-black text-white',
+  DONE: 'bg-neutral-800 text-white',
 };
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -41,7 +41,7 @@ export function TaskCard({
       onClick={onClick}
       className={cn(
         'w-full rounded-xl border bg-white p-3 text-left transition-shadow hover:shadow-md',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]',
         overdue
           ? 'border-red-300'
           : ageing

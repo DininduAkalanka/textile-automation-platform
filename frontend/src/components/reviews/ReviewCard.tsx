@@ -57,7 +57,7 @@ export function ReviewCard({ review, productId }: { review: Review; productId: s
     <div className="rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
             {initials(review)}
           </div>
           <div>
@@ -96,7 +96,7 @@ export function ReviewCard({ review, productId }: { review: Review; productId: s
           className={cn(
             'rounded-full px-3 py-1',
             review.wouldRecommend
-              ? 'border border-indigo-200 bg-indigo-50 text-indigo-700'
+              ? 'border border-black bg-black text-white'
               : 'border border-neutral-200 text-neutral-500',
           )}
         >
@@ -111,7 +111,7 @@ export function ReviewCard({ review, productId }: { review: Review; productId: s
               key={url}
               type="button"
               onClick={() => setLightboxUrl(url)}
-              className="h-20 w-20 overflow-hidden rounded-xl border border-neutral-200 transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="h-20 w-20 overflow-hidden rounded-xl border border-neutral-200 transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt="Customer photo" className="h-full w-full object-cover" />
@@ -167,7 +167,7 @@ export function ReviewCard({ review, productId }: { review: Review; productId: s
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Why are you reporting this review?"
-            className="flex-1 rounded-[10px] border border-neutral-300 bg-white px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex-1 rounded-[10px] border border-neutral-300 bg-white px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
           />
           <button
             type="button"

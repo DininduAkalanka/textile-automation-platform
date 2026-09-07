@@ -119,7 +119,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
             disabled={cartState === 'added'}
             className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 text-[11px] font-semibold tracking-wider uppercase transition-all duration-200 shadow-md ${
               cartState === 'added'
-                ? 'bg-emerald-600 text-white rounded-full cursor-default'
+                ? 'bg-black text-white rounded-full cursor-default'
                 : 'bg-neutral-950/85 hover:bg-neutral-900 text-white backdrop-blur-md border border-white/25 rounded-full sm:rounded-sm sm:bg-[var(--clr-brand)] sm:hover:bg-[var(--crimson-700)] cursor-pointer'
             }`}
           >

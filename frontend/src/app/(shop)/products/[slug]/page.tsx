@@ -79,7 +79,6 @@ export default function ProductDetailPage() {
   const imagesCountRef = useRef(1);
 
   const buyBoxRef = useRef<HTMLDivElement>(null);
-  const [showStickyBar, setShowStickyBar] = useState(false);
 
   const addItem = useCartStore((s) => s.addItem);
   const { toggleItem, isWishlisted } = useWishlistStore();
@@ -156,19 +155,6 @@ export default function ProductDetailPage() {
       .catch(() => setRelated([]));
   }, [product?.id]);
 
-  useEffect(() => {
-    if (loading || !product) return;
-    const el = buyBoxRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowStickyBar(!entry.isIntersecting);
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [product, loading]);
 
   if (loading) {
     return (
@@ -387,7 +373,7 @@ export default function ProductDetailPage() {
   ];
 
   return (
-    <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '5rem' }}>
+    <div className="container pt-4 sm:pt-6 pb-28 sm:pb-20">
       {/* ── Breadcrumb ────────────────────────────────────────────── */}
       <nav className="flex min-w-0 items-center gap-2 mb-4 sm:mb-6 text-xs text-neutral-500">
         <Link href="/" className="hover:text-neutral-900 transition-colors">Home</Link>
@@ -515,34 +501,34 @@ export default function ProductDetailPage() {
             </h1>
 
             {/* Vendor, SKU, Availability & Category metadata block */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-neutral-600">
+            <div className="mt-2.5 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-neutral-600">
               <div>
                 <span className="text-neutral-400">Vendor:</span>{' '}
                 <span className="font-semibold text-neutral-900">{vendorName}</span>
               </div>
-              <span className="text-neutral-300">•</span>
+              <div className="hidden sm:inline text-neutral-300">•</div>
               <div>
                 <span className="text-neutral-400">SKU:</span>{' '}
-                <span className="font-mono text-neutral-750 font-medium">{product.sku}</span>
+                <span className="font-mono text-neutral-800 font-medium">{product.sku}</span>
               </div>
-              <span className="text-neutral-300">•</span>
+              <div className="hidden sm:inline text-neutral-300">•</div>
               <div className="flex items-center gap-1.5">
                 <span className="text-neutral-400">Availability:</span>
                 {product.stockQuantity > 0 ? (
-                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="inline-flex items-center gap-1 font-semibold text-neutral-900">
+                    <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
                     In Stock
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 font-semibold text-red-600">
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="inline-flex items-center gap-1 font-semibold text-[#CC0000]">
+                    <span className="w-2 h-2 rounded-full bg-[#CC0000]" />
                     Out of Stock
                   </span>
                 )}
               </div>
               {product.category && (
                 <>
-                  <span className="text-neutral-300">•</span>
+                  <div className="hidden sm:inline text-neutral-300">•</div>
                   <div>
                     <span className="text-neutral-400">Product Type:</span>{' '}
                     <span className="font-medium text-neutral-900">{product.category.name}</span>
@@ -578,7 +564,7 @@ export default function ProductDetailPage() {
               </span>
             )}
             {discount > 0 && (
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <span className="text-xs font-bold text-white bg-[#CC0000] px-2 py-0.5 rounded">
                 Save {discount}%
               </span>
             )}
@@ -589,7 +575,7 @@ export default function ProductDetailPage() {
             <div className="flex items-center justify-between text-neutral-700">
               <span>
                 or pay in 3 x <strong className="text-neutral-900">Rs. {kokoInstallment}</strong> with{' '}
-                <span className="font-bold text-indigo-600">koko</span>
+                <span className="font-bold text-neutral-900 uppercase tracking-tight">koko</span>
               </span>
               <button 
                 type="button" 
@@ -603,13 +589,13 @@ export default function ProductDetailPage() {
             <div className="flex items-center justify-between text-neutral-700">
               <span>
                 3 x <strong className="text-neutral-900">Rs. {mintpayInstallment}</strong> or 3% Cashback with{' '}
-                <span className="font-bold text-emerald-600">mintpay</span>
+                <span className="font-bold text-neutral-900 uppercase tracking-tight">mintpay</span>
               </span>
             </div>
             <div className="flex items-center justify-between text-neutral-700">
               <span>
                 or up to 4 x <strong className="text-neutral-900">Rs. {payzyInstallment}</strong> with{' '}
-                <span className="font-bold text-blue-600">payzy</span>
+                <span className="font-bold text-neutral-900 uppercase tracking-tight">payzy</span>
               </span>
             </div>
           </div>
@@ -624,7 +610,7 @@ export default function ProductDetailPage() {
               </div>
               <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-red-500 to-amber-500 h-2 rounded-full transition-all duration-500"
+                  className="bg-[#CC0000] h-2 rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, Math.max(15, (product.stockQuantity / 20) * 100))}%` }}
                 />
               </div>
@@ -640,14 +626,14 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowSizeGuide(true)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-700 hover:text-[var(--clr-brand)] transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-[var(--clr-brand)] transition-colors"
               >
                 <Ruler size={14} />
                 <span>Size Guide</span>
               </button>
             </div>
 
-            {/* Square Size Pills */}
+            {/* Square Size Pills - Thilakawardhana specification */}
             <div className="flex flex-wrap gap-2">
               {sizeOptions.map((sz) => {
                 const isOutOfStock = outOfStockSizes.includes(sz);
@@ -658,11 +644,11 @@ export default function ProductDetailPage() {
                     type="button"
                     disabled={isOutOfStock}
                     onClick={() => setSelectedSize(sz)}
-                    className={`min-w-[44px] h-10 px-3 text-xs font-bold rounded border transition-all flex items-center justify-center relative ${
+                    className={`w-11 h-11 text-xs font-bold border transition-all flex items-center justify-center relative ${
                       isSelected
-                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm'
+                        ? 'bg-neutral-950 text-white border-neutral-950 shadow-sm'
                         : isOutOfStock
-                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed overflow-hidden before:absolute before:inset-0 before:border-t before:border-neutral-300 before:rotate-45'
+                        ? 'bg-neutral-50 text-neutral-300 border-neutral-200 cursor-not-allowed overflow-hidden before:absolute before:inset-0 before:border-t before:border-red-300 before:rotate-45'
                         : 'bg-white text-neutral-800 border-neutral-300 hover:border-neutral-900'
                     }`}
                   >
@@ -684,56 +670,62 @@ export default function ProductDetailPage() {
                   alert('Virtual Try-On: 3D interactive fit analysis initialized for ' + product.name);
                 }
               }}
-              className="w-full py-2.5 px-4 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors uppercase tracking-wider"
+              className="w-full sm:w-auto min-h-[38px] px-4 py-2 rounded-full border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 font-semibold text-xs flex items-center justify-center gap-2 transition-all group"
             >
-              <Sparkles size={16} />
-              {product.productType === 'UNIFORM' || product.requiresMeasurement
-                ? 'Bespoke Uniform Sizing & Measurement Support'
-                : 'Try-on with Virtual 3D Fit'}
+              <Sparkles size={15} className="text-neutral-900 group-hover:scale-110 transition-transform" />
+              <span>
+                {product.productType === 'UNIFORM' || product.requiresMeasurement
+                  ? 'Bespoke Uniform Sizing & Measurement'
+                  : 'Try-on with Virtual 3D Fit'}
+              </span>
             </button>
           </div>
 
           {/* 7. Live Subtotal Display */}
-          <div className="pt-1 text-sm font-semibold text-neutral-800 flex items-center justify-between border-t border-neutral-100">
+          <div className="pt-2 text-sm font-semibold text-neutral-700 flex items-center justify-between border-t border-neutral-150">
             <span>Subtotal:</span>
             <span className="text-base font-bold text-neutral-950">Rs. {subtotalFormatted}</span>
           </div>
 
-          {/* 8. Quantity & Primary Add to Cart Row */}
+          {/* 8. Quantity & Primary Action Hierarchy (Thilakawardhana Pattern) */}
           {product.stockQuantity > 0 && (
-            <div className="flex flex-col gap-2.5 pt-1">
-              <div className="flex items-center gap-2.5">
-                {/* Quantity Stepper */}
-                <div className="flex items-center border border-neutral-300 rounded-lg overflow-hidden bg-white shrink-0 h-12">
+            <div className="flex flex-col gap-3 pt-1">
+              {/* Row 1: Quantity Stepper on its own line */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
+                  Quantity:
+                </span>
+                <div className="flex items-center border border-neutral-300 rounded bg-white w-32 h-11 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    aria-label="Decrease quantity"
                     className="w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
                   >
                     −
                   </button>
-                  <span className="w-11 text-center font-bold text-sm text-neutral-900">
+                  <span className="flex-1 text-center font-bold text-sm text-neutral-900">
                     {quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                    aria-label="Increase quantity"
                     className="w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
                   >
                     +
                   </button>
                 </div>
+              </div>
 
-                {/* Primary Add to Cart Button */}
+              {/* Row 2: Hero ADD TO CART Button + Wishlist + Share */}
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   data-testid="add-to-cart-btn"
                   onClick={handleAddToCart}
-                  className={`flex-1 h-12 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center transition-all ${
-                    added
-                      ? 'bg-emerald-600 text-white shadow'
-                      : 'bg-[#0f172a] hover:bg-[#1e293b] text-white shadow-md'
-                  }`}
+                  style={{ backgroundColor: added ? '#000000' : '#CC0000' }}
+                  className="flex-1 h-12 rounded font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow-sm active:scale-[0.99]"
                 >
                   {added ? '✓ Added to Cart!' : 'Add to Cart'}
                 </button>
@@ -743,10 +735,10 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={() => toggleItem(product)}
                   aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
-                  className={`w-12 h-12 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
+                  className={`w-12 h-12 rounded border flex items-center justify-center transition-colors shrink-0 ${
                     isSaved
-                      ? 'border-[var(--clr-brand)] bg-red-50 text-[var(--clr-brand)]'
-                      : 'border-neutral-300 text-neutral-600 hover:border-neutral-900'
+                      ? 'border-[#CC0000] bg-red-50 text-[#CC0000]'
+                      : 'border-neutral-300 text-neutral-600 hover:border-black bg-white'
                   }`}
                 >
                   <Heart size={20} fill={isSaved ? 'currentColor' : 'none'} />
@@ -757,34 +749,35 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={handleShare}
                   aria-label="Share product"
-                  className="w-12 h-12 rounded-lg border border-neutral-300 text-neutral-600 hover:border-neutral-900 flex items-center justify-center transition-colors shrink-0"
+                  className="w-12 h-12 rounded border border-neutral-300 text-neutral-600 hover:border-black bg-white flex items-center justify-center transition-colors shrink-0"
                 >
-                  {copiedLink ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
+                  {copiedLink ? <Check size={18} className="text-[#CC0000]" /> : <Share2 size={18} />}
                 </button>
               </div>
 
-              {/* Express Checkout: BUY IT NOW Button */}
+              {/* Row 3: Express Checkout: BUY IT NOW Button */}
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="w-full h-12 rounded-lg border-2 border-neutral-900 bg-white hover:bg-neutral-900 text-neutral-900 hover:text-white font-bold text-xs uppercase tracking-widest transition-all shadow-sm"
+                className="w-full h-12 rounded border-2 border-black bg-black text-white hover:bg-neutral-800 font-bold text-xs uppercase tracking-widest transition-all shadow-sm active:scale-[0.99]"
               >
                 Buy It Now
               </button>
 
-              {/* Direct WhatsApp Order / Inquire Button */}
+              {/* Row 4: Elegant WhatsApp Inquiries Strip (Premium Neutral with Official Icon) */}
               <a
                 href={`https://wa.me/94717088445?text=${encodeURIComponent(
-                  `Hello Nandana Textile! I am interested in ordering: ${product.name} (SKU: ${product.sku}, Size: ${selectedSize}, Qty: ${quantity}, Price: Rs. ${subtotalFormatted}). Is it available for delivery?`
+                  `Hello Nandana Textile! I am interested in: ${product.name} (SKU: ${product.sku}, Size: ${selectedSize}, Qty: ${quantity}, Price: Rs. ${subtotalFormatted}). Is it available for delivery?`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full h-12 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all group"
+                className="w-full py-2.5 px-3 rounded border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
               >
-                <svg className="w-5 h-5 fill-current shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+                <svg className="w-4 h-4 fill-[#25D366] shrink-0" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.952 1.18-.175.201-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.796-1.496-1.78-1.671-2.08-.176-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.151-.175.201-.301.301-.501.101-.2.05-.376-.025-.526-.075-.15-.677-1.63-.927-2.233-.244-.588-.492-.508-.677-.517l-.577-.01c-.201 0-.526.075-.802.376-.276.301-1.053 1.029-1.053 2.51s1.078 2.912 1.229 3.113c.15.201 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.78-.727 2.031-1.429.25-.702.25-1.303.175-1.429-.075-.125-.276-.2-.577-.35zM12.04 2C6.52 2 2.03 6.49 2.03 12.01c0 1.95.56 3.84 1.63 5.48L2 22l4.67-1.62c1.58.99 3.42 1.54 5.37 1.54 5.52 0 10.01-4.49 10.01-10.01C22.05 6.49 17.56 2 12.04 2zm0 18.25c-1.74 0-3.41-.49-4.86-1.41l-.35-.22-2.77.96.98-2.7-.24-.38a8.212 8.212 0 0 1-1.28-4.49c0-4.56 3.71-8.27 8.27-8.27 4.56 0 8.27 3.71 8.27 8.27 0 4.56-3.71 8.24-8.27 8.24z" />
                 </svg>
-                <span>Order via WhatsApp (+94 71 708 8445)</span>
+                <span>Have questions or sizing inquiry? Order via WhatsApp (+94 71 708 8445)</span>
               </a>
             </div>
           )}
@@ -816,7 +809,7 @@ export default function ProductDetailPage() {
           <div className="pt-2 border-t border-neutral-150 space-y-3">
             {/* Showroom Pickup */}
             <div className="flex items-start gap-3 text-xs text-neutral-700">
-              <span className="text-emerald-600 mt-0.5"><Check size={16} /></span>
+              <span className="text-neutral-900 mt-0.5"><Check size={16} /></span>
               <div>
                 <p className="font-bold text-neutral-900 uppercase tracking-wide">
                   Pickup Available at Nandana Textile Showroom
@@ -942,37 +935,6 @@ export default function ProductDetailPage() {
         );
       })()}
 
-      {/* ── Sticky Mobile Add to Bag Bar ──────────────────────────── */}
-      {product && product.stockQuantity > 0 && (
-        <div
-          className={`fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.08)] transition-transform duration-300 ${
-            showStickyBar ? 'translate-y-0' : 'translate-y-full'
-          }`}
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <img
-                src={primaryImgUrl}
-                alt=""
-                className="w-10 h-10 object-cover rounded-md bg-neutral-100 shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-neutral-900 truncate">{product.name}</p>
-                <p className="text-xs font-bold text-[var(--clr-brand)]">
-                  Rs. {priceNum.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleAddToCart}
-              className="btn btn-primary btn-sm shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wider"
-            >
-              {added ? '✓ Added' : 'Add to Bag'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── Interactive Size Guide Modal ──────────────────────────── */}
       {showSizeGuide && (

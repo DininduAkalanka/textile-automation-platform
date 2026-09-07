@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       className={cn(
         'flex h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm sm:h-10',
         'placeholder:text-neutral-400',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] focus-visible:border-[#CC0000]',
         'disabled:cursor-not-allowed disabled:opacity-50',
         // aria-invalid is set by FormField when the field has an error, so the
         // red border is driven by the same state a screen reader announces.

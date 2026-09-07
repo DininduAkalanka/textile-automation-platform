@@ -181,7 +181,7 @@ function VerifyContent() {
           </Button>
           <button
             type="button"
-            className="text-sm text-indigo-600 disabled:text-neutral-400"
+            className="text-sm text-[#CC0000] hover:text-[#A80000] hover:underline disabled:text-neutral-400"
             disabled={cooldown > 0 || sendCode.isPending}
             onClick={() => handleSend(channel)}
           >

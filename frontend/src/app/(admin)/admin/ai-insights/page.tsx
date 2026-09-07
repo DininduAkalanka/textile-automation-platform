@@ -90,7 +90,7 @@ export default function AiInsightsPage() {
 
       {turns.length === 0 && (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
-          <Sparkles className="mx-auto mb-3 h-8 w-8 text-indigo-300" aria-hidden />
+          <Sparkles className="mx-auto mb-3 h-8 w-8 text-[#CC0000]" aria-hidden />
           <p className="text-sm font-medium text-neutral-900">
             What would you like to know?
           </p>
@@ -105,7 +105,7 @@ export default function AiInsightsPage() {
                 key={suggestion}
                 type="button"
                 onClick={() => submit(suggestion)}
-                className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs text-neutral-700 transition-colors hover:border-indigo-400 hover:text-indigo-600"
+                className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs text-neutral-700 transition-colors hover:border-[#CC0000] hover:text-[#CC0000]"
               >
                 {suggestion}
               </button>
@@ -117,7 +117,7 @@ export default function AiInsightsPage() {
       <div className="space-y-6">
         {turns.map((turn, index) => (
           <div key={index} className="space-y-3">
-            <p className="ml-auto w-fit max-w-[80%] rounded-2xl bg-indigo-600 px-4 py-2 text-sm text-white">
+            <p className="ml-auto w-fit max-w-[80%] rounded-2xl bg-black px-4 py-2 text-sm text-white">
               {turn.question}
             </p>
 
@@ -195,11 +195,11 @@ function Answer({ reply }: { reply: BusinessReply }) {
       <p className="text-sm leading-relaxed text-neutral-900">{reply.insight}</p>
 
       {reply.recommendation && (
-        <div className="rounded-lg border-l-4 border-indigo-500 bg-indigo-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+        <div className="rounded-lg border-l-4 border-black bg-neutral-100 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-900">
             Recommended
           </p>
-          <p className="mt-0.5 text-sm text-indigo-900">{reply.recommendation}</p>
+          <p className="mt-0.5 text-sm text-neutral-800">{reply.recommendation}</p>
         </div>
       )}
 
@@ -242,7 +242,7 @@ function Chart({ spec }: { spec: { title: string; categories: string[]; series: 
             </span>
             <div className="h-4 flex-1 overflow-hidden rounded bg-neutral-100">
               <div
-                className="h-full rounded bg-indigo-500"
+                className="h-full rounded bg-[#CC0000]"
                 style={{
                   width: `${Math.max(2, ((spec.series[i] ?? 0) / max) * 100)}%`,
                 }}

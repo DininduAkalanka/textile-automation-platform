@@ -30,7 +30,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {/* Radix handles focus trapping, Escape and restoring focus on close. */}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]">
         <X className="h-4 w-4" aria-hidden />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

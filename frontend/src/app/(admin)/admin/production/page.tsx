@@ -52,7 +52,7 @@ export default function ProductionBoardPage() {
             value={workerFilter}
             onChange={(e) => setWorkerFilter(e.target.value)}
             aria-label="Filter by worker"
-            className="h-9 w-full sm:w-auto rounded-lg border border-neutral-300 bg-white px-2.5 text-sm text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="h-9 w-full sm:w-auto rounded-lg border border-neutral-300 bg-white px-2.5 text-sm text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
           >
             <option value="">Everyone</option>
             {workers.map((worker) => (

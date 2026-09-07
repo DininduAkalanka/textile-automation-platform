@@ -23,8 +23,8 @@ export function WriteReviewCta({ productId }: { productId: string }) {
 
   if (!isAuthenticated) {
     return (
-      <p className="rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-        <Link href="/login" className="font-semibold text-indigo-600 hover:underline">
+      <p className="rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600 border border-neutral-200">
+        <Link href="/login" className="font-semibold text-[#CC0000] hover:underline">
           Sign in
         </Link>{' '}
         to write a review.

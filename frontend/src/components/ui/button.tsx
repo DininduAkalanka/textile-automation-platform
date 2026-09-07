@@ -12,16 +12,16 @@ import { cn } from '@/lib/utils';
  * Primary = solid, secondary = outline, destructive = red.
  */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-indigo-600 text-white hover:bg-indigo-700',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
+        default: 'bg-black text-white hover:bg-[#CC0000]',
+        destructive: 'bg-[#CC0000] text-white hover:bg-[#A80000]',
         outline:
-          'border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-900',
+          'border border-neutral-300 bg-white hover:bg-neutral-50 hover:border-black text-neutral-900',
         ghost: 'hover:bg-neutral-100 text-neutral-900',
-        link: 'text-indigo-600 underline-offset-4 hover:underline',
+        link: 'text-[#CC0000] underline-offset-4 hover:underline hover:text-[#A80000]',
       },
       size: {
         // 44px on mobile (comfortable tap target), settles to 40px from sm: up.

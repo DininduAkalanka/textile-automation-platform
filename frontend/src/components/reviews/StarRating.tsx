@@ -70,7 +70,7 @@ export function StarRating({ value, onChange, size = 'md', className, label }: S
           onFocus={() => setHovered(n)}
           onBlur={() => setHovered(null)}
           onClick={() => onChange?.(n)}
-          className="rounded p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="rounded p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]"
         >
           <Star
             className={cn(

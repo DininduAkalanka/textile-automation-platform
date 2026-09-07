@@ -1288,13 +1288,3 @@
   scrollbar-width: none;  /* Firefox */
 }
 
-/* AI Chat widget offset when sticky bottom actions are present on mobile */
-.chat-launcher-elevated {
-  bottom: 5.5rem !important;
-}
-@media (min-width: 640px) {
-  .chat-launcher-elevated {
-    bottom: 1.5rem !important;
-  }
-}
-

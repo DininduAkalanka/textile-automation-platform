@@ -193,7 +193,7 @@ export function ReviewForm(props: ReviewFormProps) {
               maxLength={120}
               placeholder="Sum up your experience"
               aria-invalid={Boolean(errors.title)}
-              className="mt-1 flex h-10 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 aria-[invalid=true]:border-red-500"
+              className="mt-1 flex h-10 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] aria-[invalid=true]:border-red-500"
             />
             {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
           </div>
@@ -208,7 +208,7 @@ export function ReviewForm(props: ReviewFormProps) {
               rows={4}
               placeholder="What did you like or dislike? How does it fit and feel?"
               aria-invalid={Boolean(errors.comment)}
-              className="mt-1 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 aria-[invalid=true]:border-red-500"
+              className="mt-1 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] aria-[invalid=true]:border-red-500"
             />
             <div className="mt-1 flex justify-between text-xs text-neutral-500">
               <span>{errors.comment && <span className="text-red-600">{errors.comment}</span>}</span>
@@ -227,7 +227,7 @@ export function ReviewForm(props: ReviewFormProps) {
                   className={cn(
                     'flex-1 rounded-[10px] border px-3 py-2 text-sm font-medium transition-colors',
                     state.sizeFeedback === opt.value
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      ? 'border-black bg-black text-white'
                       : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50',
                   )}
                 >
@@ -293,7 +293,7 @@ export function ReviewForm(props: ReviewFormProps) {
                   className={cn(
                     'rounded-[10px] border px-4 py-2 text-sm font-medium transition-colors',
                     state.wouldRecommend === opt.value
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      ? 'border-black bg-black text-white'
                       : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50',
                   )}
                 >

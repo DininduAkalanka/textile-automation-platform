@@ -456,7 +456,7 @@ export function CategoryMegaNav() {
 
                       {/* Card Content at bottom */}
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                        <h5 className="font-serif text-sm font-bold leading-tight text-white group-hover:text-amber-300 transition-colors">
+                        <h5 className="font-serif text-sm font-bold leading-tight text-white group-hover:text-[#CC0000] transition-colors">
                           {activeCategory.promoCard.title}
                         </h5>
                         <p className="mt-1 text-[0.7rem] text-neutral-300 line-clamp-2 leading-relaxed">
