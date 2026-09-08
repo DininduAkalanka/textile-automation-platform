@@ -35,6 +35,7 @@ export function ChatWidget() {
 
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Keep the newest message in view as the conversation grows.
   useEffect(() => {
@@ -51,7 +52,7 @@ export function ChatWidget() {
     send.mutate(message);
   };
 
-  // Close WhatsApp drawer if AI chat is opened, and listen to close-ai-chat event
+  // Mutual exclusion: Close WhatsApp drawer if AI chat is opened, and listen to close-ai-chat event
   useEffect(() => {
     if (open) {
       window.dispatchEvent(new CustomEvent('close-whatsapp-chat'));
@@ -64,10 +65,34 @@ export function ChatWidget() {
     return () => window.removeEventListener('close-ai-chat', handleClose);
   }, [setOpen]);
 
+  // Close on outside click (desktop)
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open, setOpen]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && open) {
+        setOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, setOpen]);
+
   return (
     <>
-      {/* Launcher — never obscures the page; suppressed during checkout, elevated above mobile bottom bars */}
-      {(!isCheckout || open) && (
+      {/* Launcher — never obscures the page; suppressed during checkout; hides when dialog is open so dialog anchors flush in the corner */}
+      {!isCheckout && (
         <button
           type="button"
           data-testid="ai-chat-toggle"
@@ -77,10 +102,11 @@ export function ChatWidget() {
             'fixed z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105',
             'bottom-4 right-4 sm:bottom-6 sm:right-6',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] focus-visible:ring-offset-2',
-            open ? 'bg-neutral-900 text-white' : 'bg-black hover:bg-[#CC0000] text-white',
+            'bg-black hover:bg-[#CC0000] text-white',
+            open && 'hidden pointer-events-none opacity-0',
           )}
         >
-          {open ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
+          <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
           {/* A reply arrived while it was shut. A dot, not a popup. */}
           {unread && !open && (
             <span className="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-[#CC0000]" />
@@ -90,32 +116,38 @@ export function ChatWidget() {
 
       {open && (
         <div
+          ref={dialogRef}
           role="dialog"
           data-testid="ai-chat-dialog"
           aria-label="Shopping assistant"
           className={cn(
-            'fixed z-50 flex flex-col overflow-hidden bg-white shadow-2xl',
-            // Full-screen sheet on a phone, responsive panel on desktop with safe max-height
-            'inset-0 sm:inset-auto sm:bottom-20 sm:right-6 sm:h-[min(540px,calc(100dvh-6.5rem))] sm:max-h-[calc(100dvh-6.5rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-neutral-200',
+            'fixed z-[350] flex flex-col overflow-hidden bg-white shadow-2xl',
+            // Full-screen sheet on mobile, clean corner panel on desktop with safe max-height preventing navbar overlap
+            'inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[min(520px,calc(100dvh-10.5rem))] sm:max-h-[calc(100dvh-10.5rem)] sm:rounded-2xl sm:border sm:border-neutral-200',
+            'animate-fade-in transition-all',
           )}
+          style={{ boxShadow: '0 16px 40px -8px rgba(0,0,0,0.28)' }}
         >
-          <header className="flex items-center justify-between border-b-2 border-[#CC0000] bg-black px-4 py-3 text-white">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-[#CC0000]" aria-hidden />
+          <header className="flex items-center justify-between border-b-2 border-[#CC0000] bg-black px-4 py-3 text-white shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 border border-neutral-700 text-[#CC0000]">
+                <Sparkles size={16} aria-hidden />
+              </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">
-                  Shopping assistant
+                <p className="text-sm font-bold leading-tight tracking-wide text-white">
+                  Shopping Assistant
                 </p>
-                <p className="text-[11px] text-neutral-300">
+                <p className="text-[11px] text-neutral-400">
                   Ask about fabrics, uniforms or sizes
                 </p>
               </div>
             </div>
             <button
               type="button"
+              data-testid="ai-chat-toggle"
               onClick={() => setOpen(false)}
-              aria-label="Close"
-              className="rounded-md p-1 hover:bg-neutral-800"
+              aria-label="Close shopping assistant"
+              className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
             >
               <X size={18} />
             </button>

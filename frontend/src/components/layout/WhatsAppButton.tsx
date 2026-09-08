@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Clock, ShieldCheck } from 'lucide-react';
+import { useChatStore } from '@/store/useChatStore';
 
 const WHATSAPP_NUMBER = '94717088445';
 const FORMATTED_PHONE = '+94 71 708 8445';
@@ -19,11 +20,13 @@ export default function WhatsAppButton({ productContext }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [customMsg, setCustomMsg] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Mutual exclusion: Close AI chat whenever WhatsApp drawer opens
   useEffect(() => {
     if (isOpen) {
       window.dispatchEvent(new CustomEvent('close-ai-chat'));
+      useChatStore.getState().setOpen(false);
     }
   }, [isOpen]);
 
@@ -34,10 +37,10 @@ export default function WhatsAppButton({ productContext }: Props) {
     return () => window.removeEventListener('close-whatsapp-chat', handleClose);
   }, []);
 
-  // Close on outside click
+  // Close on outside click (checks whole container so clicking the button cleanly toggles)
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -45,6 +48,17 @@ export default function WhatsAppButton({ productContext }: Props) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   const defaultGreeting = productContext
@@ -67,14 +81,15 @@ export default function WhatsAppButton({ productContext }: Props) {
 
   return (
     <div
-      className={`fixed ${isOpen ? 'z-50' : 'z-40'} font-sans transition-all duration-300 bottom-4 left-4 sm:bottom-6 sm:left-6`}
+      ref={containerRef}
+      className={`fixed ${isOpen ? 'z-[350]' : 'z-40'} font-sans transition-all duration-300 bottom-4 left-4 sm:bottom-6 sm:left-6`}
     >
       {/* ── WhatsApp Popover Panel ───────────────────────────────── */}
       {isOpen && (
         <div
           ref={panelRef}
-          className="absolute bottom-16 left-0 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[360px] max-h-[min(520px,calc(100dvh-6.5rem))] flex flex-col bg-white rounded-2xl shadow-2xl border border-neutral-200/90 overflow-hidden animate-fade-in transition-all"
-          style={{ boxShadow: '0 12px 36px -4px rgba(0,0,0,0.22)' }}
+          className="absolute bottom-16 left-0 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[360px] max-h-[min(480px,calc(100dvh-14.5rem))] flex flex-col bg-white rounded-2xl shadow-2xl border border-neutral-200/90 overflow-hidden animate-fade-in transition-all"
+          style={{ boxShadow: '0 16px 40px -8px rgba(0,0,0,0.28)' }}
         >
           {/* Header */}
           <div className="bg-[#075E54] text-white p-4 relative shrink-0">
