@@ -46,6 +46,7 @@ This runbook documents the deployment, operational lifecycle, secret rotation, b
 | `JWT_EXPIRATION` | `7d` | Token expiration period |
 | `INTERNAL_API_KEY` | `openssl rand -hex 32` | Shared secret between Backend and AI microservice |
 | `AI_SERVICE_URL` | `https://ai.nandanatextile.lk` | Internal endpoint to FastAPI service |
+| `AI_TIMEOUT_MS` | `30000` | Gateway timeout allowance (recommended 30s to absorb free-tier cold starts) |
 | `PAYHERE_MERCHANT_ID` | Production Merchant ID | Live or sandbox merchant identifier |
 | `PAYHERE_MERCHANT_SECRET` | Live Merchant Secret | Secret used for MD5 signature calculation |
 | `PAYHERE_MODE` | `live` (or `sandbox`) | PayHere gateway environment switch |
@@ -58,10 +59,10 @@ This runbook documents the deployment, operational lifecycle, secret rotation, b
 
 | Variable | Recommended Production Value | Description |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | `postgresql://textile_ai_readonly:...` | **Read-only** Postgres user credentials (cannot execute mutations) |
-| `LLM_PROVIDER` | `anthropic` or `openai` | Active Large Language Model provider |
-| `LLM_MODEL` | `claude-sonnet-5` or `gpt-4o` | Model identifier |
-| `LLM_API_KEY` | `sk-...` | Anthropic / OpenAI API secret key |
+| `DATABASE_URL_READONLY` | `postgresql://textile_ai_readonly:...` | **Read-only** Postgres user credentials (cannot execute mutations) |
+| `LLM_PROVIDER` | `groq` (or `openai` / `anthropic`) | Active Large Language Model provider |
+| `LLM_MODEL` | `openai/gpt-oss-120b` (or `gpt-4o`) | Model identifier |
+| `LLM_API_KEY` | `gsk_...` | LLM provider API secret key |
 | `INTERNAL_API_KEY` | Matches Backend `INTERNAL_API_KEY` | Shared secret for inter-service communication |
 
 ### Frontend (`apps/web` / Vercel)
