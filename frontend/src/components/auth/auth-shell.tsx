@@ -20,11 +20,10 @@ import { BrandMark } from '@/components/brand/brand-mark';
  */
 
 const HERO_IMAGES = [
-  '/images/hero2.png', // premium school uniforms + corporate collection
-  '/images/hero3.png', // red & gold saree
-  '/images/hero1.png', // red/black fashion editorial
-  '/auth/hero-1.jpg',
-  '/auth/hero-2.jpg',
+  '/images/hero/hero-banner-suits.png', // executive tailored suiting & corporate collection
+  '/images/hero/hero-banner-web2.jpg',  // Sri Lankan elegance & women's collection
+  '/images/hero/hero-banner-polo.png',  // smart casuals & comfort wear
+  '/images/hero/hero-banner-denim.png', // contemporary lifestyle
 ];
 
 const BRAND = 'Nandana Textile';

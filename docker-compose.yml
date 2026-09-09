@@ -97,6 +97,9 @@ services:
       # users table. See the ai_readonly_role migration.
       - DATABASE_URL_READONLY=postgresql://textile_ai_readonly:ai_readonly_local_dev_password@postgres:5432/textile_db
       - INTERNAL_API_KEY=local-dev-internal-key
+      # Override PORT=3001 inherited from backend/.env — this service must
+      # listen on 8000 to match the Docker port mapping and health check.
+      - PORT=8000
     depends_on:
       postgres:
         condition: service_healthy

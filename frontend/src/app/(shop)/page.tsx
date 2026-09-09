@@ -28,33 +28,43 @@ const IconChevronRight = () => (
 const HERO_SLIDES = [
   {
     id: 1,
-    eyebrow: 'New Season 2024',
-    headline: 'Curated Textiles for Every Occasion',
-    subheadline: 'School, office, and fashion — precision-crafted fabrics with over 15 years of expertise in Sri Lanka.',
-    primaryCta:   { label: 'Shop New Arrivals',  href: '/products?sort=newest' },
-    secondaryCta: { label: 'Explore Categories', href: '/products' },
+    eyebrow: 'New Season 2026',
+    headline: 'Where Elegance Meets Innovation',
+    subheadline: 'School, office, and celebration fashion — precision-crafted fabrics and ready-to-wear collections with over 15 years of expertise in Sri Lanka.',
+    primaryCta:   { label: 'Explore New Collection', href: '/products?sort=newest' },
+    secondaryCta: { label: 'Shop Women & Sarees',    href: '/products?category=women' },
     accentColor: 'var(--crimson-600)',
-    image: '/images/hero1.png',
+    image: '/images/hero/hero-banner-web2.jpg',
   },
   {
     id: 2,
-    eyebrow: 'Uniform Specialists',
-    headline: 'School & Office Uniforms, Precisely Tailored',
-    subheadline: 'Government and private school uniforms, corporate formal wear — uniform-grade fabrics trusted by institutions across Sri Lanka.',
+    eyebrow: 'Executive & Uniform Specialists',
+    headline: 'Corporate & School Uniforms, Precisely Tailored',
+    subheadline: 'Institutional blazers, executive suiting, and regulation school uniforms — durable, color-fast fabrics trusted by organizations across Sri Lanka.',
     primaryCta:   { label: 'View Uniform Collection', href: '/products?category=uniforms' },
     secondaryCta: { label: 'Request Bulk Order',       href: '/products?category=uniforms&bulk=1' },
     accentColor: 'var(--gold-500)',
-    image: '/images/hero2.png',
+    image: '/images/hero/hero-banner-suits.png',
   },
   {
     id: 3,
-    eyebrow: "Women's Collection",
-    headline: 'Sarees, Dress Materials & Kurthas',
-    subheadline: 'From traditional sarees to contemporary dress materials — discover the finest women\'s fabrics, curated for every celebration.',
-    primaryCta:   { label: "Shop Women's Collection", href: '/products?category=women' },
-    secondaryCta: { label: 'View Sarees',              href: '/products?category=women&sub=sarees' },
+    eyebrow: 'Smart Casuals & Everyday Comfort',
+    headline: 'Breathable Cottons & Precision Linens',
+    subheadline: 'Engineered for tropical climates with vibrant tones and enduring comfort. Explore classic polos, casual shirting, and lifestyle wear.',
+    primaryCta:   { label: 'Shop Casuals & Polos',   href: '/products?category=men' },
+    secondaryCta: { label: 'Explore All Textiles',    href: '/products' },
     accentColor: 'var(--crimson-600)',
-    image: '/images/hero3.png',
+    image: '/images/hero/hero-banner-polo.png',
+  },
+  {
+    id: 4,
+    eyebrow: 'Contemporary Lifestyle',
+    headline: 'It All Starts With Quality Denim & Everyday Fits',
+    subheadline: 'High-grade stretch denims, rugged cottons, and durable weaves tailored for long-lasting performance and modern style.',
+    primaryCta:   { label: 'Shop Lifestyle & Casuals', href: '/products?category=teenagers' },
+    secondaryCta: { label: 'View All Categories',       href: '/products' },
+    accentColor: 'var(--crimson-600)',
+    image: '/images/hero/hero-banner-denim.png',
   },
 ];
 
@@ -225,41 +235,51 @@ export default function HomePage() {
           background: 'var(--obsidian-950)',
         }}
       >
+        {/* Preloaded High-Resolution Photography Slides */}
+        {HERO_SLIDES.map((s, idx) => (
+          <div
+            key={s.id}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: idx === slide ? 1 : 0,
+              transition: 'opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+              zIndex: 0,
+              pointerEvents: 'none',
+            }}
+          >
+            <Image
+              src={s.image}
+              alt={s.headline}
+              fill
+              priority={idx === 0}
+              sizes="100vw"
+              quality={90}
+              style={{
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+            />
+          </div>
+        ))}
+
+        {/* Balanced gradient overlay: keeps text legible on the left while photography stays vibrant and clear */}
         <div
           style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `url(${current.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            transition: 'background-image 0.8s ease',
-            zIndex: 0,
-          }}
-        />
-        {/* Dark overlay for readability */}
-        <div
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to right, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)',
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to right, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 42%, rgba(0,0,0,0.18) 72%, transparent 100%)',
             zIndex: 1,
             pointerEvents: 'none',
           }}
         />
-        {/* Ambient gradient */}
+        {/* Subtle warm ambient highlight matching slide accent */}
         <div
           style={{
-            position: 'absolute', inset: 0,
-            background: `radial-gradient(ellipse 70% 70% at 65% 40%, ${current.accentColor === 'var(--gold-500)' ? 'rgba(212,175,55,0.1)' : 'rgba(204,0,0,0.15)'} 0%, transparent 70%)`,
+            position: 'absolute',
+            inset: 0,
+            background: `radial-gradient(ellipse 60% 60% at 75% 45%, ${current.accentColor === 'var(--gold-500)' ? 'rgba(212,175,55,0.08)' : 'rgba(204,0,0,0.1)'} 0%, transparent 70%)`,
             transition: 'background 0.8s ease',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}
-        />
-        {/* Fine grid texture */}
-        <div
-          style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)',
-            backgroundSize: '64px 64px',
             pointerEvents: 'none',
             zIndex: 1,
           }}

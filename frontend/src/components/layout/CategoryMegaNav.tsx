@@ -49,7 +49,7 @@ export const CATEGORIES_DATA: CategoryItem[] = [
     id: 'new-arrivals',
     label: 'NEW ARRIVALS',
     href: '/products?category=new-arrivals',
-    thumbnail: '/images/hero1.png',
+    thumbnail: '/images/hero/hero-banner-web2.jpg',
     columns: [
       {
         title: 'WOMEN NEW ARRIVALS',
@@ -84,7 +84,7 @@ export const CATEGORIES_DATA: CategoryItem[] = [
     promoCard: {
       title: 'New Arrivals 2026',
       subtitle: 'Explore the freshest fabrics and ready-to-wear seasonal trends',
-      image: '/images/hero1.png',
+      image: '/images/hero/hero-banner-web2.jpg',
       href: '/products?category=new-arrivals',
       ctaText: 'Shop New In',
     },
