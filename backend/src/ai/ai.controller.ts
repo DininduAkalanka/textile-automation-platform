@@ -3,6 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { AiService } from './ai.service';
@@ -27,6 +28,7 @@ export class AiController {
    * The default throttle is 100/min, which would be generous enough to be
    * expensive.
    */
+  @Public()
   @Post('customer-chat')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   customerChat(@Body() dto: CustomerChatDto) {
