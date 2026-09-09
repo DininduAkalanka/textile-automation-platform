@@ -15,46 +15,46 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E.svg)](backend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688.svg)](ai)
 
-> **Academic Capstone Excellence** · Designed and engineered to strict enterprise production standards.  
-> Comprehensive Documentation: [QA & Performance Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [Viva Demo Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
+> **Enterprise Production Platform** · High-performance, scalable textile business management and e-commerce infrastructure.  
+> Comprehensive Documentation: [QA & Performance Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [Core Business Capabilities](#-core-business-capabilities)
-- [Dual-Engine AI Intelligence Layer](#-dual-engine-ai-intelligence-layer)
-- [System Architecture](#-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [Prerequisites](#-prerequisites)
-- [Quick Start (Docker — Recommended)](#-quick-start-docker--recommended)
-- [Local Development Without Docker](#-local-development-without-docker)
-- [Demo Credentials & Role Access Matrix](#-demo-credentials--role-access-matrix)
-- [Service URLs & Ports](#-service-urls--ports)
-- [Payment Gateway Testing (PayHere Sandbox)](#-payment-gateway-testing-payhere-sandbox)
-- [Quality Assurance & Verification (Cypress & k6)](#-quality-assurance--verification-cypress--k6)
-- [Production Cloud Deployment & Topology](#-production-cloud-deployment--topology)
-- [Comprehensive Documentation Index](#-comprehensive-documentation-index)
-- [Repository Layout](#-repository-layout)
-- [Contributing & Git Workflow](#-contributing--git-workflow)
+- [Core Business Capabilities](#core-business-capabilities)
+- [Dual-Engine AI Intelligence Layer](#dual-engine-ai-intelligence-layer)
+- [System Architecture](#system-architecture)
+- [Technology Stack](#technology-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start (Docker — Recommended)](#quick-start-docker--recommended)
+- [Local Development Without Docker](#local-development-without-docker)
+- [Demo Credentials & Role Access Matrix](#demo-credentials--role-access-matrix)
+- [Service URLs & Ports](#service-urls--ports)
+- [Payment Gateway Testing (PayHere Sandbox)](#payment-gateway-testing-payhere-sandbox)
+- [Quality Assurance & Verification (Cypress & k6)](#quality-assurance--verification-cypress--k6)
+- [Production Cloud Deployment & Topology](#production-cloud-deployment--topology)
+- [Comprehensive Documentation Index](#comprehensive-documentation-index)
+- [Repository Layout](#repository-layout)
+- [Contributing & Git Workflow](#contributing--git-workflow)
 
 ---
 
-## 💎 Core Business Capabilities
+## Core Business Capabilities
 
 | Feature Domain | Production Capabilities | Business Value |
 | :--- | :--- | :--- |
 | **Curated Storefront & UX** | High-performance catalog, multi-criteria filtering, visual search, mega navigation menu, dynamic cart, and full responsive design across mobile, tablet, and desktop viewports. Header hero swapper powered by authentic Sri Lankan lifestyle photography without promotional clutter. | Maximizes conversion, brand trust, and user engagement across devices. |
 | **Bespoke Measurement Capture (BR3)** | Tailoring measurement profile module capturing precise dimensions (neck, chest, waist, hips, inseam, sleeve, height) plus custom tailoring notes. Linked directly to custom order line items. | Eliminates sizing guesswork and manual order errors for school uniforms and custom garments. |
 | **Race-Safe Inventory Ledger** | Single-source-of-truth double-entry ledger with row-level locks (`SELECT FOR UPDATE`). Tracks all stock transitions: `INITIAL`, `RESERVE`, `RELEASE`, `SALE`, `PURCHASE`, `RETURN`, `ADJUSTMENT`, `PRODUCTION_USE`. | Prevents overselling during high-concurrency spikes; guarantees 100% financial and inventory consistency. |
-| **Manufacturing Kanban Pipeline** | Automated stage progression: `PENDING` → `CUTTING` → `SEWING` → `FINISHING` → `QUALITY_CONTROL` → `DISPATCHED` → `COMPLETED`. Live factory worker portal (`/worker/tasks`) for task claiming and stage completion. | Complete operational visibility from customer order placement to warehouse dispatch. |
+| **Manufacturing Kanban Pipeline** | Automated stage progression: `PENDING` -> `CUTTING` -> `SEWING` -> `FINISHING` -> `QUALITY_CONTROL` -> `DISPATCHED` -> `COMPLETED`. Live factory worker portal (`/worker/tasks`) for task claiming and stage completion. | Complete operational visibility from customer order placement to warehouse dispatch. |
 | **Zero Client-Trust Payments** | Multi-method support: **PayHere** (Visa/Mastercard/Amex with server-to-server signed MD5 webhooks), **Cash on Delivery (COD)** with phone risk validation, and **Bank Transfer / Slip Upload** with admin verification. | Eliminates payment fraud, tampering, and unpaid order dispatch. |
 | **Marketing Automation** | Automated social media post generator utilizing Meta Graph API (Facebook Pages & Instagram) with AI-crafted captions, price tags, and hashtags. Native WhatsApp direct chat support. | Reduces customer acquisition costs and automates promotional workflows. |
 | **Enterprise Security** | Dual-identifier auth (email or phone OTP), JWT access tokens + SHA-256 hashed refresh tokens, RBAC (`ADMIN`, `MANAGER`, `WORKER`, `CUSTOMER`), IDOR protection, and bcrypt password hashing (12 rounds). | Safeguards customer data, admin operations, and enterprise assets against OWASP Top 10 vulnerabilities. |
 
 ---
 
-## 🧠 Dual-Engine AI Intelligence Layer
+## Dual-Engine AI Intelligence Layer
 
 The platform features an isolated, high-performance Python FastAPI microservice (`ai/`) interfacing with Groq LLMs (`openai/gpt-oss-120b` and `llama-3.3-70b-versatile`):
 
@@ -104,7 +104,7 @@ The platform features an isolated, high-performance Python FastAPI microservice 
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
                                ┌──────────────────────────────────────────┐
@@ -138,7 +138,7 @@ The platform features an isolated, high-performance Python FastAPI microservice 
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technologies | Key Libraries & Frameworks |
 | :--- | :--- | :--- |
@@ -152,7 +152,7 @@ The platform features an isolated, high-performance Python FastAPI microservice 
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Docker Desktop** (version 24.0 or newer) — Recommended for single-command orchestration.
 - **Node.js 20+** and **npm 10+** (if developing locally without Docker).
@@ -162,7 +162,7 @@ The platform features an isolated, high-performance Python FastAPI microservice 
 
 ---
 
-## 🚀 Quick Start (Docker — Recommended)
+## Quick Start (Docker — Recommended)
 
 Start the entire platform (PostgreSQL, Redis, NestJS Backend, FastAPI AI, and Next.js Frontend) in isolated containers with a single command:
 
@@ -184,7 +184,7 @@ The database migrations and initial seed catalogue will be applied automatically
 ```bash
 docker compose ps
 ```
-You should see all 5 containers active and healthy:
+All 5 containers should report active and healthy:
 - `textile_frontend` (`http://localhost:3000`)
 - `textile_backend` (`http://localhost:3001/api/v1`)
 - `textile_ai` (`http://localhost:8000`)
@@ -193,9 +193,9 @@ You should see all 5 containers active and healthy:
 
 ---
 
-## 💻 Local Development Without Docker
+## Local Development Without Docker
 
-If you prefer to run services natively on your host machine:
+To run services natively on the host system:
 
 ### 1. PostgreSQL Database & Migrations
 ```bash
@@ -230,7 +230,7 @@ npm run dev
 
 ---
 
-## 👥 Demo Credentials & Role Access Matrix
+## Demo Credentials & Role Access Matrix
 
 The database is pre-seeded with sample data and test accounts for every business role:
 
@@ -243,7 +243,7 @@ The database is pre-seeded with sample data and test accounts for every business
 
 ---
 
-## 🌐 Service URLs & Ports
+## Service URLs & Ports
 
 | Service Component | URL / Port | Description |
 | :--- | :--- | :--- |
@@ -256,7 +256,7 @@ The database is pre-seeded with sample data and test accounts for every business
 
 ---
 
-## 💳 Payment Gateway Testing (PayHere Sandbox)
+## Payment Gateway Testing (PayHere Sandbox)
 
 The platform includes integration with Sri Lanka's **PayHere** payment gateway:
 
@@ -273,7 +273,7 @@ The platform includes integration with Sri Lanka's **PayHere** payment gateway:
 
 ---
 
-## 🧪 Quality Assurance & Verification (Cypress & k6)
+## Quality Assurance & Verification (Cypress & k6)
 
 The repository implements a comprehensive testing pyramid verified via continuous integration. Full test logs and metrics are documented in [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md).
 
@@ -292,11 +292,11 @@ npm run test:e2e:open
 
 | Test Specification | Covered Business Flows | Tests | Status |
 | :--- | :--- | :---: | :---: |
-| `admin-operations.cy.ts` | Executive Dashboard metrics, Orders management, Production Kanban, Inventory Ledger | 4 / 4 | ✅ 100% Passed |
-| `ai.cy.ts` | Customer Shopping Assistant (RAG chat) & Admin Business Intelligence insights | 2 / 2 | ✅ 100% Passed |
-| `customer-journey.cy.ts` | Customer registration, Catalog search, Cart state, Bespoke measurements, COD checkout | 3 / 3 | ✅ 100% Passed |
-| `payment-online.cy.ts` | PayHere card checkout simulation & idempotent server-to-server webhook verification | 1 / 1 | ✅ 100% Passed |
-| `security.cy.ts` | Route guards, RBAC enforcement across 4 roles, and IDOR defense validation | 3 / 3 | ✅ 100% Passed |
+| `admin-operations.cy.ts` | Executive Dashboard metrics, Orders management, Production Kanban, Inventory Ledger | 4 / 4 | PASS (100%) |
+| `ai.cy.ts` | Customer Shopping Assistant (RAG chat) & Admin Business Intelligence insights | 2 / 2 | PASS (100%) |
+| `customer-journey.cy.ts` | Customer registration, Catalog search, Cart state, Bespoke measurements, COD checkout | 3 / 3 | PASS (100%) |
+| `payment-online.cy.ts` | PayHere card checkout simulation & idempotent server-to-server webhook verification | 1 / 1 | PASS (100%) |
+| `security.cy.ts` | Route guards, RBAC enforcement across 4 roles, and IDOR defense validation | 3 / 3 | PASS (100%) |
 
 ### 2. Grafana k6 Load & Concurrency Stress Testing
 
@@ -326,7 +326,7 @@ npm run reconcile
 
 ---
 
-## ☁️ Production Cloud Deployment & Topology
+## Production Cloud Deployment & Topology
 
 ```
                        ┌─────────────────────────────────────────┐
@@ -390,7 +390,7 @@ NEXT_PUBLIC_API_URL=https://api.nandanatextile.lk/api/v1
 
 ---
 
-## 📖 Comprehensive Documentation Index
+## Comprehensive Documentation Index
 
 All architectural specifications, designs, and operational runbooks are maintained in the [`docs/`](docs/) directory:
 
@@ -414,11 +414,11 @@ All architectural specifications, designs, and operational runbooks are maintain
 | **Security Review** | [`docs/SECURITY_REVIEW.md`](docs/SECURITY_REVIEW.md) | Formal security audit, threat modeling, pen-test verification. |
 | **QA & Performance Report** | [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) | Official test execution logs, timings, Cypress passes, k6 graphs. |
 | **Database Schema (DBML)** | [`docs/database.dbml`](docs/database.dbml) | DBML schema definition renderable visually at [dbdiagram.io](https://dbdiagram.io/d). |
-| **Viva Demo Walkthrough** | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | 10-minute structured presentation script for university examiners and stakeholders. |
+| **System Demonstration Script** | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Structured operational demonstration script for stakeholders and system evaluators. |
 
 ---
 
-## 📁 Repository Layout
+## Repository Layout
 
 ```
 .
@@ -460,7 +460,7 @@ All architectural specifications, designs, and operational runbooks are maintain
 
 ---
 
-## 🤝 Contributing & Git Workflow
+## Contributing & Git Workflow
 
 The `main` branch is protected and always deployable to staging and production. All updates follow conventional commits and branch pull requests:
 
@@ -477,13 +477,3 @@ git push -u origin feat/your-feature-name
 ```
 
 *Continuous Integration (GitHub Actions) runs backend TypeScript builds, unit test suites, and Cypress headless end-to-end browser specifications automatically on every pull request.*
-
----
-
-## 📜 Academic Capstone Declaration
-
-This project was engineered as an **Honours Degree Final-Year Capstone Project** addressing automated supply chain management, bespoke tailoring workflows, and grounded artificial intelligence in the Sri Lankan apparel retail sector.
-
-**Author:** Dinindu Akalanka  
-**Institution:** Sri Lanka Institute of Information Technology (SLIIT)  
-**Project Title:** Smart Textile Business Management & E-Commerce Platform with AI Intelligence
