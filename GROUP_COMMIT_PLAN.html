@@ -1,0 +1,638 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial,sans-serif;color:#202124;line-height:1.35;margin:2.2cm}h1{color:#17365d;font-size:24pt;border-bottom:2px solid #17365d;padding-bottom:8px}h2{color:#1f4e79;font-size:17pt;margin-top:24px;border-bottom:1px solid #9fbad0;padding-bottom:4px}h3{color:#2f5597;font-size:13pt;margin-top:18px}p{font-size:10.5pt}li{font-size:10.5pt;margin:3px 0}pre{background:#f2f4f7;border:1px solid #d8dde5;padding:8px;font-family:Consolas,monospace;font-size:9pt;white-space:pre-wrap}code{font-family:Consolas,monospace;background:#f2f4f7;padding:1px 3px}strong{color:#17365d}.cover{background:#17365d;color:white;padding:24px;margin-bottom:24px}.cover h1{color:white;border:0}.pagebreak{page-break-before:always}</style></head><body>
+<div class="cover"><h1>Group GitHub Commit Plan</h1></div>
+<h2>Smart Textile Business Management and AI-Powered E-Commerce Platform</h2>
+<p>**Team size:** 5 members   **Purpose:** A practical commit plan for dividing implementation work, explaining each member&#39;s responsibilities, and maintaining a clear GitHub history.</p>
+<p>---</p>
+<h2>1. Git Rules for the Whole Team</h2>
+<h3>Branch naming</h3>
+<p>Each member should create a branch from `main` using this format:</p>
+<pre>
+feature/member-1-customer-frontend
+feature/member-2-core-backend
+feature/member-3-inventory-production
+feature/member-4-ai-analytics
+feature/member-5-admin-qa-devops
+</pre>
+<h3>Commit message format</h3>
+<p>Use short, action-oriented commit messages:</p>
+<pre>
+feat(scope): add product catalogue filters
+fix(scope): prevent duplicate payment webhook processing
+test(scope): add concurrent stock reservation tests
+docs(scope): document deployment and API setup
+chore(scope): configure CI workflow
+</pre>
+<h3>Commit guidelines</h3>
+<li>One commit should represent one logical change.</li>
+<li>Do not combine unrelated frontend, backend and documentation changes in one commit.</li>
+<li>Do not commit passwords, API keys, `.env` files or payment secrets.</li>
+<li>Run the relevant tests before opening a pull request.</li>
+<li>Pull requests should explain what changed, how it was tested and which member owns the work.</li>
+<li>Every member reviews at least one other member&#39;s pull request.</li>
+<li>The final merge to `main` should be performed only after integration tests pass.</li>
+<p>---</p>
+<h2>2. Recommended Implementation Order</h2>
+<p>The commits should generally be merged in this order:</p>
+<li>Shared project setup and database foundation.</li>
+<li>Authentication and role-based access control.</li>
+<li>Product catalogue and customer storefront.</li>
+<li>Admin product management.</li>
+<li>Cart, checkout and server-side order validation.</li>
+<li>Inventory reservation and movement ledger.</li>
+<li>Payment methods and PayHere webhook handling.</li>
+<li>Production workflow and worker portal.</li>
+<li>AI assistants, forecasting and analytics.</li>
+<li>Automated testing, security review, deployment and final documentation.</li>
+<p>Some commits can be developed in parallel, but database schema and API contracts must be agreed before dependent work is merged.</p>
+<p>---</p>
+<div class="cover"><h1>Member 1: Customer Frontend Developer</h1></div>
+<p>**Primary area:** `frontend/src` customer-facing pages and components   **Branch:** `feature/member-1-customer-frontend`</p>
+<h2>Commit 1.1: Create the customer application shell</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): create storefront layout and navigation
+</pre>
+<h3>Work included</h3>
+<li>Create the main customer layout.</li>
+<li>Add header, logo, navigation links and footer.</li>
+<li>Add responsive navigation for mobile devices.</li>
+<li>Add loading, empty and error states.</li>
+<li>Add the customer route structure.</li>
+<li>Add a shared design style for buttons, forms, alerts and product cards.</li>
+<h3>Why this is needed</h3>
+<p>The application needs a consistent customer experience before individual pages are added. A shared layout prevents every page from implementing its own navigation and visual rules.</p>
+<h3>Expected result</h3>
+<p>A user can open the customer application, navigate between the home page, catalogue, login, cart and orders pages, and see a consistent responsive layout.</p>
+<p>---</p>
+<h2>Commit 1.2: Implement product catalogue and search interface</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): add product catalogue and search filters
+</pre>
+<h3>Work included</h3>
+<li>Display products returned by the backend API.</li>
+<li>Add product cards with name, image, price, fabric type and availability.</li>
+<li>Add text search.</li>
+<li>Add filtering by product type, fabric and price range.</li>
+<li>Add pagination or infinite scrolling if supported by the API.</li>
+<li>Add loading skeletons and no-results messages.</li>
+<li>Handle API errors without breaking the page.</li>
+<h3>Why this is needed</h3>
+<p>The catalogue is the main entry point for customers. Search and filters allow users to find textile products efficiently.</p>
+<h3>Expected result</h3>
+<p>Customers can browse real products from the backend instead of seeing hard-coded data.</p>
+<p>---</p>
+<h2>Commit 1.3: Implement product details and measurements</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): add product details and measurement capture
+</pre>
+<h3>Work included</h3>
+<li>Create a product details page.</li>
+<li>Display product images, description, price, fabric and available quantity.</li>
+<li>Display whether a product requires measurements.</li>
+<li>Add measurement form for uniforms and custom products.</li>
+<li>Validate required fields before adding an item to the cart.</li>
+<li>Show clear validation messages.</li>
+<h3>Why this is needed</h3>
+<p>Uniform and custom textile products require additional information. Capturing measurements at the product stage reduces missing information during checkout.</p>
+<h3>Expected result</h3>
+<p>A customer can inspect a product, enter measurements when required and add a valid item to the cart.</p>
+<p>---</p>
+<h2>Commit 1.4: Implement cart and checkout screens</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): add cart and checkout workflow
+</pre>
+<h3>Work included</h3>
+<li>Add and remove products from the cart.</li>
+<li>Change item quantities.</li>
+<li>Persist the cart using the existing client-side store.</li>
+<li>Display subtotal, delivery fee and total.</li>
+<li>Add address selection or address entry.</li>
+<li>Add payment method selection for COD, bank transfer and online payment.</li>
+<li>Submit the order to the backend.</li>
+<li>Display server-side price or stock differences returned during checkout.</li>
+<h3>Why this is needed</h3>
+<p>The server must recalculate prices and stock, but the frontend must present the result clearly and allow the customer to correct conflicts.</p>
+<h3>Expected result</h3>
+<p>A customer can complete the checkout process without the frontend trusting old prices or stock values.</p>
+<p>---</p>
+<h2>Commit 1.5: Implement customer orders and tracking</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): add order history and tracking timeline
+</pre>
+<h3>Work included</h3>
+<li>Add customer order history.</li>
+<li>Add order details page.</li>
+<li>Display order number, items, payment status and total.</li>
+<li>Display order lifecycle from pending to delivered.</li>
+<li>Display production progress where applicable.</li>
+<li>Add cancellation action only when allowed by the backend.</li>
+<li>Add success and failure states.</li>
+<h3>Why this is needed</h3>
+<p>Customers need visibility after checkout. The tracking timeline also demonstrates the connection between ordering, payment, production and delivery.</p>
+<h3>Expected result</h3>
+<p>A customer can follow an order from placement through production and delivery.</p>
+<p>---</p>
+<h2>Commit 1.6: Add customer AI assistant interface</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(customer-ui): add retrieval-grounded shopping assistant
+</pre>
+<h3>Work included</h3>
+<li>Add the chat panel or chat widget.</li>
+<li>Send customer questions to the AI API.</li>
+<li>Display assistant responses and referenced products.</li>
+<li>Show an unavailable response when the AI service is offline.</li>
+<li>Prevent unsafe HTML rendering from assistant output.</li>
+<li>Link recommended product IDs to product detail pages.</li>
+<h3>Why this is needed</h3>
+<p>The customer assistant improves product discovery, but the frontend must display only products returned by the trusted backend or AI service.</p>
+<h3>Expected result</h3>
+<p>Customers can ask questions about fabrics, uniforms and products and receive grounded recommendations.</p>
+<p>---</p>
+<h2>Member 1 testing responsibilities</h2>
+<li>Test customer pages on desktop and mobile sizes.</li>
+<li>Test empty catalogue, failed API and loading states.</li>
+<li>Test invalid measurements and checkout validation.</li>
+<li>Test stale price and out-of-stock responses.</li>
+<li>Add Cypress tests for catalogue browsing, cart and customer checkout.</li>
+<p>---</p>
+<div class="cover"><h1>Member 2: Core Backend Developer</h1></div>
+<p>**Primary area:** `backend/src/auth`, `backend/src/orders`, `backend/src/payments`, shared API rules   **Branch:** `feature/member-2-core-backend`</p>
+<h2>Commit 2.1: Establish backend API standards and shared database foundation</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(api): establish versioned API envelope and database foundation
+</pre>
+<h3>Work included</h3>
+<li>Confirm the NestJS module structure.</li>
+<li>Apply the common API response envelope.</li>
+<li>Configure validation pipes and error handling.</li>
+<li>Confirm Prisma database connection and migrations.</li>
+<li>Add common enums for user roles, order status, payment status and payment methods.</li>
+<li>Add request logging and basic health checking.</li>
+<h3>Why this is needed</h3>
+<p>All other members depend on consistent API responses, validation and database types. This commit creates the contract that frontend and backend developers can use safely.</p>
+<h3>Expected result</h3>
+<p>Every API module follows the same structure and returns predictable success and error responses.</p>
+<p>---</p>
+<h2>Commit 2.2: Implement authentication and user roles</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(auth): add registration login refresh tokens and RBAC
+</pre>
+<h3>Work included</h3>
+<li>Implement customer registration and login.</li>
+<li>Hash passwords using the project standard.</li>
+<li>Issue short-lived access tokens.</li>
+<li>Store hashed refresh tokens in the database.</li>
+<li>Rotate refresh tokens and support revocation.</li>
+<li>Implement logout.</li>
+<li>Add role guards for admin, customer and worker users.</li>
+<li>Protect API routes from unauthorized access.</li>
+<li>Validate ownership when customers request their own orders.</li>
+<h3>Why this is needed</h3>
+<p>Authentication is a dependency of almost every protected module. Role checks must be enforced by the API and not only by the frontend.</p>
+<h3>Expected result</h3>
+<p>Users can log in securely, refresh sessions and access only the features allowed for their role.</p>
+<p>---</p>
+<h2>Commit 2.3: Implement customer, address and product API contracts</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(api): add customer address and catalogue endpoints
+</pre>
+<h3>Work included</h3>
+<li>Add customer profile endpoints.</li>
+<li>Add address creation, update and selection.</li>
+<li>Add product list and product detail endpoints.</li>
+<li>Add filtering, pagination and search parameters.</li>
+<li>Validate DTOs with class-validator.</li>
+<li>Ensure inactive or unavailable products are handled correctly.</li>
+<li>Document request and response examples.</li>
+<h3>Why this is needed</h3>
+<p>Member 1 requires stable API endpoints to build the customer frontend. This commit defines the server-side contract for catalogue and customer data.</p>
+<h3>Expected result</h3>
+<p>The customer frontend can load real catalogue, profile and address data.</p>
+<p>---</p>
+<h2>Commit 2.4: Implement order creation and status transitions</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(orders): add validated checkout and order lifecycle
+</pre>
+<h3>Work included</h3>
+<li>Accept cart data from the frontend.</li>
+<li>Re-fetch products from the database.</li>
+<li>Recalculate prices and totals on the server.</li>
+<li>Validate measurements and addresses.</li>
+<li>Create orders and order items inside a database transaction.</li>
+<li>Implement valid order status transitions.</li>
+<li>Add order status history.</li>
+<li>Prevent customers from viewing other customers&#39; orders.</li>
+<li>Return line-level conflicts for changed prices or unavailable stock.</li>
+<h3>Why this is needed</h3>
+<p>The browser cannot be trusted for prices, totals or ownership. Server-side order validation protects business rules and prevents incorrect orders.</p>
+<h3>Expected result</h3>
+<p>A valid checkout creates a correctly calculated order, while invalid or stale cart data produces a useful response for the frontend.</p>
+<p>---</p>
+<h2>Commit 2.5: Implement payment methods and PayHere webhooks</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(payments): add COD bank transfer and idempotent PayHere webhooks
+</pre>
+<h3>Work included</h3>
+<li>Add payment records and payment status transitions.</li>
+<li>Support COD order confirmation.</li>
+<li>Support bank-transfer slip submission or verification flow.</li>
+<li>Create PayHere checkout data.</li>
+<li>Verify webhook signatures.</li>
+<li>Verify webhook amount against the order total.</li>
+<li>Store raw webhook payloads and processing results.</li>
+<li>Prevent duplicate webhook processing.</li>
+<li>Confirm the order only after a valid server-to-server event.</li>
+<h3>Why this is needed</h3>
+<p>Payments affect order confirmation and stock deduction. Webhook processing must be idempotent because gateways may send the same event multiple times.</p>
+<h3>Expected result</h3>
+<p>The system supports multiple payment methods without confirming unpaid or tampered orders.</p>
+<p>---</p>
+<h2>Member 2 testing responsibilities</h2>
+<li>Test registration, login, logout and refresh-token rotation.</li>
+<li>Test role-based access and ownership checks.</li>
+<li>Test invalid order status transitions.</li>
+<li>Test price and total recalculation.</li>
+<li>Test invalid payment signatures and incorrect amounts.</li>
+<li>Test repeated PayHere webhooks.</li>
+<p>---</p>
+<div class="cover"><h1>Member 3: Inventory and Production Developer</h1></div>
+<p>**Primary area:** `backend/src/inventory`, `backend/src/production`, worker functionality   **Branch:** `feature/member-3-inventory-production`</p>
+<h2>Commit 3.1: Implement single-source inventory model</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(inventory): add inventory quantities and movement ledger
+</pre>
+<h3>Work included</h3>
+<li>Use the inventory table as the source of truth for stock.</li>
+<li>Store available, reserved and minimum quantities.</li>
+<li>Add inventory movement records.</li>
+<li>Support receiving stock and adjusting stock.</li>
+<li>Record the user and reason for manual changes.</li>
+<li>Add inventory history endpoints.</li>
+<li>Add low-stock query support.</li>
+<h3>Why this is needed</h3>
+<p>Keeping stock in multiple tables causes inconsistency. The inventory table and movement ledger provide traceability for every stock change.</p>
+<h3>Expected result</h3>
+<p>Administrators can view current stock and see exactly why the quantity changed.</p>
+<p>---</p>
+<h2>Commit 3.2: Implement reservation, deduction and release logic</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(inventory): add transaction-safe stock reservation lifecycle
+</pre>
+<h3>Work included</h3>
+<li>Reserve stock when an order is created.</li>
+<li>Reject orders when available stock is insufficient.</li>
+<li>Deduct stock after payment confirmation or COD confirmation.</li>
+<li>Release reservations after cancellation or payment failure.</li>
+<li>Use database transactions and row locking.</li>
+<li>Add movement records for reserve, sale and release operations.</li>
+<li>Ensure stock cannot become negative.</li>
+<h3>Why this is needed</h3>
+<p>Two customers may try to buy the same item at the same time. Database locking and transactions prevent overselling.</p>
+<h3>Expected result</h3>
+<p>Stock remains correct even when multiple checkout requests happen concurrently.</p>
+<p>---</p>
+<h2>Commit 3.3: Implement production task generation</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(production): create production tasks from confirmed orders
+</pre>
+<h3>Work included</h3>
+<li>Generate tasks only for custom, uniform or measurement-based products.</li>
+<li>Assign the initial Cutting stage.</li>
+<li>Store order item and task relationships.</li>
+<li>Track task status and production stage.</li>
+<li>Add task notes and due dates where supported.</li>
+<li>Skip production for retail-only products.</li>
+<h3>Why this is needed</h3>
+<p>The factory workflow must begin automatically after an order is confirmed. Retail fabric orders should not create unnecessary production tasks.</p>
+<h3>Expected result</h3>
+<p>Confirmed custom orders appear in the production workflow with the correct tasks.</p>
+<p>---</p>
+<h2>Commit 3.4: Implement worker task workflow</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(worker): add production task portal and stage transitions
+</pre>
+<h3>Work included</h3>
+<li>Allow workers to view tasks assigned to their stage.</li>
+<li>Support Pending, In Progress and Done task statuses.</li>
+<li>Support movement through Cutting, Stitching, Finishing and Quality Check.</li>
+<li>Record the worker who changed a task.</li>
+<li>Record notes when quality control fails.</li>
+<li>Prevent workers from changing tasks outside their permitted stage.</li>
+<li>Update the parent order when production milestones are reached.</li>
+<h3>Why this is needed</h3>
+<p>Workers need a simple interface that reflects the physical factory process while preserving accountability.</p>
+<h3>Expected result</h3>
+<p>Workers can update assigned tasks and administrators can see real-time production progress.</p>
+<p>---</p>
+<h2>Commit 3.5: Add inventory and production administration APIs</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(operations): add inventory and production administration endpoints
+</pre>
+<h3>Work included</h3>
+<li>Add admin inventory adjustment endpoints.</li>
+<li>Add low-stock alert endpoints.</li>
+<li>Add production board data endpoints.</li>
+<li>Add task assignment endpoints.</li>
+<li>Add order-to-production progress data.</li>
+<li>Enforce admin permissions on management operations.</li>
+<h3>Why this is needed</h3>
+<p>The admin frontend needs a single operational view of stock, production tasks and order progress.</p>
+<h3>Expected result</h3>
+<p>Member 5 can build administration screens using stable inventory and production APIs.</p>
+<p>---</p>
+<h2>Member 3 testing responsibilities</h2>
+<li>Test stock cannot go below zero.</li>
+<li>Test reservation and release behavior.</li>
+<li>Test two simultaneous reservations for the same product.</li>
+<li>Test correct movement ledger entries.</li>
+<li>Test worker permissions and stage transitions.</li>
+<li>Test production task creation for custom and retail products.</li>
+<p>---</p>
+<div class="cover"><h1>Member 4: AI and Analytics Developer</h1></div>
+<p>**Primary area:** `ai/app`, analytics integration and AI-related backend contracts   **Branch:** `feature/member-4-ai-analytics`</p>
+<h2>Commit 4.1: Establish the FastAPI AI service</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(ai): create FastAPI service and health endpoints
+</pre>
+<h3>Work included</h3>
+<li>Configure the FastAPI application.</li>
+<li>Add environment-based configuration.</li>
+<li>Add health and readiness endpoints.</li>
+<li>Add Pydantic request and response models.</li>
+<li>Add structured logging and error handling.</li>
+<li>Add Docker support for the AI service.</li>
+<li>Connect using a restricted read-only database role where required.</li>
+<h3>Why this is needed</h3>
+<p>The AI service must be isolated from the main API and must not become an uncontrolled database writer.</p>
+<h3>Expected result</h3>
+<p>The AI service starts independently and can be checked by Docker and CI.</p>
+<p>---</p>
+<h2>Commit 4.2: Implement grounded customer product retrieval</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(ai): add grounded product retrieval for customer chat
+</pre>
+<h3>Work included</h3>
+<li>Implement product search using the approved retrieval approach.</li>
+<li>Retrieve products based on names, descriptions and fabric types.</li>
+<li>Pass only retrieved product IDs to the language model.</li>
+<li>Validate returned product IDs against the database.</li>
+<li>Return product references with assistant responses.</li>
+<li>Add fallback responses when no products match.</li>
+<h3>Why this is needed</h3>
+<p>The assistant must not invent products or make unsupported recommendations. Retrieval grounding keeps answers connected to real catalogue data.</p>
+<h3>Expected result</h3>
+<p>The assistant can recommend real products that exist in the database.</p>
+<p>---</p>
+<h2>Commit 4.3: Implement analytics functions</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(analytics): add sales revenue product and customer metrics
+</pre>
+<h3>Work included</h3>
+<li>Add sales summary calculations.</li>
+<li>Add top-product calculations.</li>
+<li>Add revenue trend data.</li>
+<li>Add customer statistics.</li>
+<li>Add low-stock analysis.</li>
+<li>Add profit-by-product calculation if cost data is available.</li>
+<li>Return typed responses for the admin dashboard.</li>
+<h3>Why this is needed</h3>
+<p>The admin dashboard needs reliable structured data before adding charts or AI-generated explanations.</p>
+<h3>Expected result</h3>
+<p>The dashboard can display business metrics without asking an AI model to generate SQL.</p>
+<p>---</p>
+<h2>Commit 4.4: Implement forecasting and business-intelligence assistant</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(ai): add demand forecasting and owner insights assistant
+</pre>
+<h3>Work included</h3>
+<li>Add demand forecasting using historical sales data.</li>
+<li>Add reorder suggestions.</li>
+<li>Expose a small set of approved analytics functions.</li>
+<li>Allow the language model to select functions and arguments only.</li>
+<li>Limit the number of tool calls.</li>
+<li>Log tool calls and errors.</li>
+<li>Prevent direct AI-generated SQL.</li>
+<li>Return explanations based on actual analytics results.</li>
+<h3>Why this is needed</h3>
+<p>The owner assistant should provide useful business insights while remaining controlled, auditable and safe.</p>
+<h3>Expected result</h3>
+<p>An administrator can ask questions about sales, revenue, customers and stock and receive answers based on real system data.</p>
+<p>---</p>
+<h2>Commit 4.5: Integrate analytics data with the admin dashboard</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(analytics-ui): connect dashboard metrics charts and reports
+</pre>
+<h3>Work included</h3>
+<li>Connect metric cards to analytics endpoints.</li>
+<li>Add revenue and sales charts.</li>
+<li>Display top products and low-stock items.</li>
+<li>Add forecast results.</li>
+<li>Add CSV export where required.</li>
+<li>Add loading, empty and error states.</li>
+<h3>Why this is needed</h3>
+<p>Analytics are useful only when administrators can understand them quickly through the user interface.</p>
+<h3>Expected result</h3>
+<p>The admin can monitor business performance and make decisions using current data.</p>
+<p>---</p>
+<h2>Member 4 testing responsibilities</h2>
+<li>Test retrieval returns valid product IDs only.</li>
+<li>Test empty and low-confidence search results.</li>
+<li>Test analytics calculations using known seed data.</li>
+<li>Test forecasting with missing or small data sets.</li>
+<li>Test that the AI service cannot write to the main database.</li>
+<li>Test invalid tool names and invalid tool arguments.</li>
+<p>---</p>
+<div class="cover"><h1>Member 5: Admin Frontend, QA and DevOps Lead</h1></div>
+<p>**Primary area:** `frontend` admin and worker-facing screens, `frontend/cypress`, Docker, CI and documentation   **Branch:** `feature/member-5-admin-qa-devops`</p>
+<h2>Commit 5.1: Create the admin application shell</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(admin-ui): create protected admin dashboard layout
+</pre>
+<h3>Work included</h3>
+<li>Create the admin navigation and layout.</li>
+<li>Add route protection for admin screens.</li>
+<li>Add dashboard summary placeholders.</li>
+<li>Add reusable tables, forms, modal dialogs and status badges.</li>
+<li>Add responsive behavior for tablet and desktop screens.</li>
+<li>Add permission-aware navigation.</li>
+<h3>Why this is needed</h3>
+<p>Administrators need a consistent workspace for products, orders, inventory, production and analytics.</p>
+<h3>Expected result</h3>
+<p>An administrator can navigate the protected dashboard and see the correct management sections.</p>
+<p>---</p>
+<h2>Commit 5.2: Implement admin product and order management screens</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(admin-ui): add product and order management screens
+</pre>
+<h3>Work included</h3>
+<li>Add product create, update and deactivate forms.</li>
+<li>Add product image management where supported.</li>
+<li>Add product search and filtering for administrators.</li>
+<li>Add order list and order details screens.</li>
+<li>Display payment status and order status.</li>
+<li>Add permitted order actions.</li>
+<li>Add confirmation dialogs for destructive actions.</li>
+<h3>Why this is needed</h3>
+<p>The admin must manage the catalogue and process customer orders without accessing the database directly.</p>
+<h3>Expected result</h3>
+<p>An administrator can maintain products and manage order operations through the UI.</p>
+<p>---</p>
+<h2>Commit 5.3: Implement inventory, production and worker screens</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+feat(admin-ui): add inventory production and worker dashboards
+</pre>
+<h3>Work included</h3>
+<li>Add inventory table with available and reserved quantities.</li>
+<li>Display low-stock alerts.</li>
+<li>Display inventory movement history.</li>
+<li>Add production Kanban or stage board.</li>
+<li>Add task assignment controls.</li>
+<li>Add worker task view.</li>
+<li>Display quality-control failures and notes.</li>
+<li>Add filters by status, stage and worker.</li>
+<h3>Why this is needed</h3>
+<p>The operational screens connect backend inventory and production functionality to the actual textile business workflow.</p>
+<h3>Expected result</h3>
+<p>Administrators can monitor stock and production, while workers can view and update their assigned tasks.</p>
+<p>---</p>
+<h2>Commit 5.4: Add CI, Docker and environment checks</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+chore(devops): configure CI Docker checks and environment validation
+</pre>
+<h3>Work included</h3>
+<li>Configure GitHub Actions for frontend, backend and AI tests.</li>
+<li>Run linting and type checks in CI.</li>
+<li>Build Docker images in CI.</li>
+<li>Confirm Docker Compose starts the required services.</li>
+<li>Add environment variable examples without real secrets.</li>
+<li>Add database migration checks.</li>
+<li>Add health-check verification.</li>
+<h3>Why this is needed</h3>
+<p>A shared CI pipeline prevents broken code from being merged and confirms that all services can run together.</p>
+<h3>Expected result</h3>
+<p>Every pull request receives automated checks before merging.</p>
+<p>---</p>
+<h2>Commit 5.5: Add integration, security and end-to-end tests</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+test(e2e): cover customer admin payment and security workflows
+</pre>
+<h3>Work included</h3>
+<li>Add customer registration and shopping journey tests.</li>
+<li>Add admin product and order management tests.</li>
+<li>Add payment and webhook idempotency tests.</li>
+<li>Add inventory reservation tests.</li>
+<li>Add worker production workflow tests.</li>
+<li>Add protected-route and role-permission tests.</li>
+<li>Add IDOR tests to confirm users cannot access another user&#39;s resources.</li>
+<li>Add basic load or performance checks where required.</li>
+<h3>Why this is needed</h3>
+<p>End-to-end tests prove that independently developed modules work together as a complete product.</p>
+<h3>Expected result</h3>
+<p>The group can demonstrate complete business workflows with repeatable automated evidence.</p>
+<p>---</p>
+<h2>Commit 5.6: Complete deployment and project documentation</h2>
+<p><strong>Commit message:</strong></p>
+<pre>
+docs(project): add setup deployment testing and viva documentation
+</pre>
+<h3>Work included</h3>
+<li>Update the root README with setup instructions.</li>
+<li>Document frontend, backend and AI service commands.</li>
+<li>Document database migration and seed commands.</li>
+<li>Document demo accounts without exposing production secrets.</li>
+<li>Add deployment and rollback instructions.</li>
+<li>Add test execution instructions.</li>
+<li>Add architecture diagrams and module ownership.</li>
+<li>Add the final demonstration flow.</li>
+<li>Record known limitations and future enhancements.</li>
+<h3>Why this is needed</h3>
+<p>Documentation makes the project reproducible for supervisors, evaluators and future developers.</p>
+<h3>Expected result</h3>
+<p>A new developer can clone the repository, start the services, run tests and understand the system.</p>
+<p>---</p>
+<div class="cover"><h1>3. Final Integration Commits</h1></div>
+<p>These commits should be created only after all feature branches have been reviewed.</p>
+<h2>Integration commit 1: Connect all services</h2>
+<pre>
+chore(integration): connect frontend backend and AI service
+</pre>
+<p>Confirm that:</p>
+<li>The frontend reaches the backend API.</li>
+<li>The backend reaches PostgreSQL.</li>
+<li>The backend reaches the AI service.</li>
+<li>Docker Compose starts all required containers.</li>
+<li>Environment variables are documented.</li>
+<h2>Integration commit 2: Fix cross-module issues</h2>
+<pre>
+fix(integration): resolve cross-module API and workflow issues
+</pre>
+<p>Check:</p>
+<li>Product IDs and order IDs use the same format everywhere.</li>
+<li>Order and payment statuses match across frontend and backend.</li>
+<li>Inventory is updated at the correct order/payment events.</li>
+<li>Production tasks are created only when required.</li>
+<li>Admin and worker permissions are enforced.</li>
+<h2>Integration commit 3: Release preparation</h2>
+<pre>
+chore(release): prepare final tested project release
+</pre>
+<p>Confirm:</p>
+<li>All tests pass.</li>
+<li>No secrets are committed.</li>
+<li>Database migrations work from a clean database.</li>
+<li>Docker images build successfully.</li>
+<li>Documentation matches the current code.</li>
+<li>The final demo workflow works from login to delivery.</li>
+<p>---</p>
+<div class="cover"><h1>4. Pull Request Checklist</h1></div>
+<p>Every member should use this checklist before requesting a merge:</p>
+<li>[ ] My branch contains only related work.</li>
+<li>[ ] The commit messages explain the changes clearly.</li>
+<li>[ ] The code follows the existing project structure.</li>
+<li>[ ] Validation and error handling are included.</li>
+<li>[ ] Tests were added or updated.</li>
+<li>[ ] I tested the feature locally.</li>
+<li>[ ] I did not commit `.env` files or secrets.</li>
+<li>[ ] API or database changes are documented.</li>
+<li>[ ] At least one other member reviewed the pull request.</li>
+<li>[ ] CI checks pass.</li>
+<p>---</p>
+<div class="cover"><h1>5. Contribution Evidence for the Final Report</h1></div>
+<p>Each member should keep the following evidence for the project report and presentation:</p>
+<li>GitHub branch name.</li>
+<li>List of commits authored by the member.</li>
+<li>Pull requests created and reviewed.</li>
+<li>Screenshots of completed features.</li>
+<li>Tests written and test results.</li>
+<li>Problems encountered and how they were solved.</li>
+<li>Short explanation of the member&#39;s technical contribution.</li>
+<p>The contribution should be evaluated by the quality and importance of the work, not only by the number of commits. A single well-designed database transaction or security feature may be more valuable than many small visual commits.</p>
+<p>---</p>
+<div class="cover"><h1>6. Suggested Final Contribution Statement</h1></div>
+<p>The project was divided into five coordinated workstreams. Member 1 developed the customer-facing web application. Member 2 developed authentication, orders and payment services. Member 3 developed inventory and textile production workflows. Member 4 developed AI assistants, analytics and forecasting. Member 5 developed the administration interface and led quality assurance, deployment and documentation. All members contributed feature commits, testing, peer review and final integration activities.</p>
+</body></html>
