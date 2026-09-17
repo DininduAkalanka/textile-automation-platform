@@ -1,6 +1,68 @@
 /// <reference types="cypress" />
 
+export {};
+
 describe('Admin Full CRUD (Read, Write, Edit) Suite', () => {
+  const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
+
+  before(() => {
+    // Hermetic setup: Ensure at least 1 order exists for orders table testing
+    cy.loginByApi('customer@example.com', 'Customer@123456').then(({ accessToken }) => {
+      cy.request({
+        method: 'GET',
+        url: `${apiUrl}/products`,
+      }).then((prodRes) => {
+        const products = prodRes.body.data?.products || prodRes.body.products || prodRes.body.data;
+        const product = products.find((p: any) => !p.requiresMeasurement && p.productType === 'READY_MADE') || products[0];
+        if (product) {
+          cy.request({
+            method: 'POST',
+            url: `${apiUrl}/orders`,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: {
+              items: [
+                {
+                  productId: product.id,
+                  quantity: 1,
+                  ...(product.requiresMeasurement
+                    ? {
+                        measurements: {
+                          personName: 'Admin Test Student',
+                          unit: 'cm',
+                          values: {
+                            chest: 96,
+                            waist: 80,
+                            shoulder: 45,
+                            sleeveLength: 60,
+                            shirtLength: 70,
+                            trouserWaist: 80,
+                            hip: 95,
+                            trouserLength: 100,
+                          },
+                        },
+                      }
+                    : {}),
+                },
+              ],
+              shippingAddress: {
+                fullName: 'Admin Test Customer',
+                addressLine1: '123 Galle Road',
+                city: 'Colombo',
+                state: 'Western',
+                postalCode: '00300',
+                country: 'Sri Lanka',
+                phone: '0771234567',
+              },
+            },
+            failOnStatusCode: false,
+          });
+        }
+      });
+    });
+  });
+
   beforeEach(() => {
     // Authenticate as Admin before each test
     cy.loginByApi('admin@textileshop.com', 'Admin@123456');
@@ -203,6 +265,62 @@ describe('Admin Full CRUD (Read, Write, Edit) Suite', () => {
       cy.visit('/admin/orders');
       cy.wait('@getOrders');
       cy.contains('h1', 'Orders').should('be.visible');
+
+      cy.get('body').then(($body) => {
+        if ($body.find('[data-testid="admin-order-row"]').length === 0) {
+          cy.loginByApi('customer@example.com', 'Customer@123456').then(({ accessToken }) => {
+            cy.request('GET', `${apiUrl}/products`).then((res) => {
+              const prods = res.body.data?.products || res.body.data;
+              const prod = prods[0];
+              cy.request({
+                method: 'POST',
+                url: `${apiUrl}/orders`,
+                headers: { Authorization: `Bearer ${accessToken}` },
+                body: {
+                  items: [
+                    {
+                      productId: prod.id,
+                      quantity: 1,
+                      ...(prod.requiresMeasurement
+                        ? {
+                            measurements: {
+                              personName: 'Admin Test Student',
+                              unit: 'cm',
+                              values: {
+                                chest: 96,
+                                waist: 80,
+                                shoulder: 45,
+                                sleeveLength: 60,
+                                shirtLength: 70,
+                                trouserWaist: 80,
+                                hip: 95,
+                                trouserLength: 100,
+                              },
+                            },
+                          }
+                        : {}),
+                    },
+                  ],
+                  shippingAddress: {
+                    fullName: 'Admin Test Customer',
+                    addressLine1: '123 Galle Road',
+                    city: 'Colombo',
+                    state: 'Western',
+                    postalCode: '00300',
+                    country: 'Sri Lanka',
+                    phone: '0771234567',
+                  },
+                },
+                failOnStatusCode: false,
+              }).then(() => {
+                cy.loginByApi('admin@textileshop.com', 'Admin@123456');
+                cy.visit('/admin/orders');
+                cy.wait('@getOrders');
+              });
+            });
+          });
+        }
+      });
 
       cy.get('[data-testid="admin-order-row"]', { timeout: 10000 })
         .should('have.length.at.least', 1)

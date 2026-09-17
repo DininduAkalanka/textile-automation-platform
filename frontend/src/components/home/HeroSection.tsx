@@ -123,6 +123,13 @@ export function HeroSection() {
       onTouchEnd={handleTouchEnd}
       className="relative w-full overflow-hidden bg-neutral-100 select-none group/banner focus:outline-none"
     >
+      {/* Editorial Storefront Brand Badge & Primary SEO Heading */}
+      <div className="absolute top-3 left-3 sm:top-5 sm:left-6 z-20 pointer-events-none">
+        <h1 className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white/95 bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded border border-white/20 shadow-sm inline-block">
+          Nandana Textile &bull; Sri Lanka
+        </h1>
+      </div>
+
       {/* Full-width responsive banner viewport matching 1920x700 aspect ratio */}
       <div className="relative w-full aspect-[16/8] sm:aspect-[21/9] lg:aspect-[1920/700] min-h-[260px] sm:min-h-[420px] lg:min-h-[520px] max-h-[660px] overflow-hidden">
         {/* Sliding Track */}
