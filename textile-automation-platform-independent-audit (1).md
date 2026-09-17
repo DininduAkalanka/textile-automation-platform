@@ -306,10 +306,3 @@ None of these require re-architecture or a multi-week delay; they are patch-and-
 
 ---
 
-## Appendix: What was directly verified vs. inferred vs. out of scope
-
-**Directly verified (FACT):** JWT secret boot validation; bcrypt cost 12; refresh-token rotation + reuse detection; per-route ownership checks in `orders.controller.ts`/`payments.controller.ts`; race-safe raw-SQL inventory reservation; Stripe/PayHere webhook signature verification and PayHere event-idempotency constraint; guest-checkout token-exposure inconsistency (cross-checked against the frontend's own type contract); `npm audit` results against both lockfiles as committed; CI workflow contents including the lint `continue-on-error` and its stated reason; upload MIME/extension/size validation; absence of committed live secrets matching common patterns.
-
-**Inference (strongly evidenced, not runtime-reproduced):** guest users likely lose their session ~15 minutes after checkout due to the missing refresh cookie; Stripe webhook idempotency relies on `confirmPayment`/`confirmOrder`'s own idempotency rather than an event-ledger table like PayHere's.
-
-**Out of scope / unable to verify from repository evidence this pass:** full frontend component/accessibility/performance audit; `notifications`, `sms`, `social` module internals; all 11 Prisma migrations individually; the AI service's prompt-injection defenses, cost controls, and evaluation harness in depth; whether a CD/deployment pipeline exists outside this repository; load-test results or production performance numbers (none exist in-repo to cite).
