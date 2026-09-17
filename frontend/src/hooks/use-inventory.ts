@@ -64,6 +64,7 @@ function useInvalidateInventory() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    void queryClient.invalidateQueries({ queryKey: ['products'] });
   };
 }
 

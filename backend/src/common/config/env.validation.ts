@@ -145,6 +145,10 @@ export class EnvironmentVariables {
   ADMIN_ALERT_EMAIL?: string;
 
   @IsOptional()
+  @IsString()
+  ADMIN_ALERT_PHONE?: string;
+
+  @IsOptional()
   @IsEnum(['notifylk', 'textlk'])
   SMS_PROVIDER?: string;
 

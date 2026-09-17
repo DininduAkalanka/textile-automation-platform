@@ -79,6 +79,7 @@ export default function WorkerTasksPage() {
       {queue.map((task) => (
         <article
           key={task.id}
+          data-testid="worker-task-card"
           className="rounded-xl border border-neutral-200 bg-white p-4"
         >
           <div className="flex items-start justify-between gap-2">
@@ -91,7 +92,10 @@ export default function WorkerTasksPage() {
                   </span>
                 )}
               </h2>
-              <p className="mt-0.5 font-mono text-xs text-neutral-500">
+              <p
+                data-testid="worker-task-order-number"
+                className="mt-0.5 font-mono text-xs text-neutral-500"
+              >
                 {task.orderNumber}
               </p>
             </div>

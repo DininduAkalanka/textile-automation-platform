@@ -74,6 +74,7 @@ export function TaskActions({ task, size = 'default' }: TaskActionsProps) {
         {task.allowedActions.map((action) => (
           <Button
             key={action}
+            data-testid={`task-action-${action}`}
             size={size}
             variant={variantFor(action)}
             loading={act.isPending}

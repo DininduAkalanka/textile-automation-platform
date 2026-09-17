@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,13 @@ export default function WorkerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -34,7 +40,7 @@ export default function WorkerLayout({
           </Link>
 
           <div className="flex items-center gap-3">
-            {user && (
+            {mounted && user && (
               <span className="hidden text-sm text-neutral-500 sm:inline">
                 {user.firstName}
               </span>
