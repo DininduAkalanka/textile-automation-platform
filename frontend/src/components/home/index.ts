@@ -1,0 +1,13 @@
+export { HeroSection } from './HeroSection';
+export { TrustMetricsBar } from './TrustMetricsBar';
+export { CategoryDiscovery } from './CategoryDiscovery';
+export { NewArrivalsSection } from './NewArrivalsSection';
+export { WomensWearSection } from './WomensWearSection';
+export { EditorialCampaign } from './EditorialCampaign';
+export { MensWearSection } from './MensWearSection';
+export { BestSellersSection } from './BestSellersSection';
+export { UniformSolutionsSection } from './UniformSolutionsSection';
+export { ShopTheLookSection } from './ShopTheLookSection';
+export { FabricShowcaseSection } from './FabricShowcaseSection';
+export { WhyChooseUsSection } from './WhyChooseUsSection';
+export { BrandPartnersSection } from './BrandPartnersSection';

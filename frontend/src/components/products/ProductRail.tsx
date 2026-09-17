@@ -27,7 +27,7 @@ export function ProductRail({ title, subtitle, products }: Props) {
   };
 
   return (
-    <section style={section}>
+    <section style={section} className="w-full">
       <div style={head}>
         <div>
           <div style={eyebrow}>
@@ -37,18 +37,34 @@ export function ProductRail({ title, subtitle, products }: Props) {
           <h2 style={heading}>{title}</h2>
         </div>
         <div style={arrows} className="rail-arrows">
-          <button aria-label="Scroll left" onClick={() => scrollBy(-1)} style={arrowBtn}>
+          <button
+            aria-label="Scroll left"
+            onClick={() => scrollBy(-1)}
+            style={arrowBtn}
+            className="hover:border-neutral-900 hover:bg-neutral-900 hover:text-white transition-all shadow-sm active:scale-95"
+          >
             ‹
           </button>
-          <button aria-label="Scroll right" onClick={() => scrollBy(1)} style={arrowBtn}>
+          <button
+            aria-label="Scroll right"
+            onClick={() => scrollBy(1)}
+            style={arrowBtn}
+            className="hover:border-neutral-900 hover:bg-neutral-900 hover:text-white transition-all shadow-sm active:scale-95"
+          >
             ›
           </button>
         </div>
       </div>
 
-      <div ref={trackRef} style={track} className="product-rail-track">
+      <div
+        ref={trackRef}
+        className="product-rail-track flex gap-3.5 sm:gap-5 lg:gap-6 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {products.map((p, i) => (
-          <div key={p.id} style={item} className="product-rail-item">
+          <div
+            key={p.id}
+            className="product-rail-item flex-none w-[180px] sm:w-[230px] md:w-[260px] lg:w-[285px] 2xl:w-[315px] snap-start"
+          >
             <ProductCard product={p} index={i} />
           </div>
         ))}
