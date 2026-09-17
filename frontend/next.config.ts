@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   images: {
     unoptimized: true,
+    qualities: [75, 90],
     dangerouslyAllowLocalIP: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

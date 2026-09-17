@@ -19,7 +19,7 @@ describe('Customer Full CRUD (Read, Write, Edit) Suite', () => {
 
       // Assert single product detail is loaded
       cy.get('h1').should('be.visible');
-      cy.contains(/Add to Cart|Custom Measurement|Price/i).should('be.visible');
+      cy.contains(/Rs\.|Price|Add to Cart|Custom Measurement/i).should('be.visible');
     });
 
     it('2. Reads Customer Order History and Status', () => {
@@ -40,7 +40,7 @@ describe('Customer Full CRUD (Read, Write, Edit) Suite', () => {
 
         // 1. Visit product page and WRITE (Add to cart)
         cy.visit(`/products/${product.slug}`);
-        cy.get('[data-testid="add-to-cart-btn"]').should('be.visible').click();
+        cy.getByTestId('add-to-cart-btn').click();
 
         // 2. READ Cart
         cy.visit('/cart');

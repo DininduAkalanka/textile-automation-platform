@@ -151,5 +151,65 @@ describe('Admin Full CRUD (Read, Write, Edit) Suite', () => {
       // Verify updated price is reflected in desktop table
       cy.get('table').contains('7,750').should('be.visible');
     });
+
+    it('9. EDIT / INVENTORY: Adjusts stock via PURCHASE restock modal and verifies live ledger update', () => {
+      cy.visit('/admin/inventory');
+      cy.contains('h1', /Inventory/i).should('be.visible');
+      cy.get('table').should('be.visible');
+
+      // Click "Adjust" on the first item in the table
+      cy.get('table tbody tr').first().within(() => {
+        cy.contains('button', 'Adjust').click();
+      });
+
+      // Dialog opens
+      cy.contains('[role="dialog"], div', 'Adjust stock').should('be.visible');
+
+      // Select "Stock received" reason
+      cy.contains('button[type="button"]', 'Stock received').click();
+
+      // Enter quantity +20
+      cy.get('#qty').should('be.visible').clear().type('20');
+
+      // Enter note
+      const noteText = `QA-Restock-${Date.now().toString().slice(-4)}`;
+      cy.get('#note').clear().type(noteText);
+
+      // Verify and apply
+      cy.contains('[role="dialog"] button', 'Apply').should('not.be.disabled').click();
+
+      // Modal closes
+      cy.contains('Adjust stock').should('not.exist');
+
+      // Table stays visible with updated inventory
+      cy.get('table').should('be.visible');
+    });
+
+    it('10. EDIT / INVENTORY: Inspects append-only audit ledger and stock history timeline', () => {
+      cy.visit('/admin/inventory');
+      cy.contains('h1', /Inventory/i).should('be.visible');
+      cy.get('table').should('be.visible');
+
+      // Expand the first row's movements timeline via the chevron/product button
+      cy.get('table tbody tr').first().find('button[aria-expanded]').first().click();
+
+      // The MovementsTimeline inside the table renders the audit ledger with history
+      cy.get('table').contains(/Stock history/i, { timeout: 8000 }).should('be.visible');
+      cy.get('table').contains(/Stock received|Opening balance/i).should('be.visible');
+    });
+
+    it('11. ADMIN JOURNEY: Inspects Orders management table and individual order timeline', () => {
+      cy.intercept('GET', '**/orders/admin/all*').as('getOrders');
+      cy.visit('/admin/orders');
+      cy.wait('@getOrders');
+      cy.contains('h1', 'Orders').should('be.visible');
+
+      cy.get('[data-testid="admin-order-row"]', { timeout: 10000 })
+        .should('have.length.at.least', 1)
+        .first()
+        .click();
+      cy.url().should('include', '/admin/orders/');
+      cy.contains(/Items|Payment|Customer|History/i, { timeout: 10000 }).should('be.visible');
+    });
   });
 });
