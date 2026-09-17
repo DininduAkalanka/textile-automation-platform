@@ -456,32 +456,6 @@ The AI subsystem maintains 100% test coverage across mathematical and logic laye
 
 ---
 
-## 9. Professional Maintenance & Runbook Guide
 
-### Local Development Setup
-```bash
-# Navigate to microservice directory
-cd ai
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install locked dependencies
-pip install -r requirements.txt
-
-# Run automated tests
-pytest -v
-
-# Start development server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Dockerized Production Deployment
-```bash
-# Build and run isolated container
-docker compose up -d --build ai
-
-# Check real-time service health
-curl -s http://localhost:8000/health | jq .
-```
