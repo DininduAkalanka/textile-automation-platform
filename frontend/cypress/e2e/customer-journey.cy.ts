@@ -14,6 +14,8 @@
  *  4. Guest Express Checkout: Frictionless guest purchase without prior account.
  */
 
+export {};
+
 const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
 
 describe('Customer Journey E2E Flow', () => {

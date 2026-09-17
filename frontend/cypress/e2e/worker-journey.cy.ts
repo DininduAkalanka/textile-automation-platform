@@ -12,6 +12,8 @@
  *   worker.cutting@textileshop.com / Worker@123456  (specialization: CUTTING)
  */
 
+export {};
+
 const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
 
 /**
