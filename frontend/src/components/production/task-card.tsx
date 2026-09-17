@@ -38,6 +38,7 @@ export function TaskCard({
   return (
     <button
       type="button"
+      data-testid="admin-task-card"
       onClick={onClick}
       className={cn(
         'w-full rounded-xl border bg-white p-3 text-left transition-shadow hover:shadow-md',

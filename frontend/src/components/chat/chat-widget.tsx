@@ -100,7 +100,7 @@ export function ChatWidget() {
           aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
           className={cn(
             'fixed z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105',
-            'bottom-4 right-4 sm:bottom-6 sm:right-6',
+            'bottom-20 right-4 sm:bottom-6 sm:right-6',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000] focus-visible:ring-offset-2',
             'bg-black hover:bg-[#CC0000] text-white',
             open && 'hidden pointer-events-none opacity-0',

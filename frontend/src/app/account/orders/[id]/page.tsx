@@ -84,6 +84,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
       {isSuccess && (
         <div
+          data-testid="order-success-banner"
           className="animate-fade-in-up"
           style={{
             background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
@@ -106,7 +107,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem', fontFamily: 'var(--font-mono)' }}>
+          <h1 data-testid="order-number-heading" className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem', fontFamily: 'var(--font-mono)' }}>
             {order.orderNumber}
           </h1>
           <p style={{ color: 'var(--clr-text-2)', fontSize: '0.875rem' }}>
@@ -294,6 +295,7 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
 
           {canCancel && (
             <button
+              data-testid="cancel-order-btn"
               onClick={() => {
                 setCancelling(true);
                 cancel.mutate(

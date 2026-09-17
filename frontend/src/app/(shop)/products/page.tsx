@@ -151,7 +151,7 @@ function ProductsContent() {
 
   return (
     <div style={{ padding: '1.5rem 0 5rem' }}>
-      <div className="container">
+      <div className="container-wide">
         {/* Header */}
         <div style={{ marginBottom: '1.5rem' }}>
           <h1 className="font-display flex items-baseline gap-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '-0.01em', color: '#111827' }}>

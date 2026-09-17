@@ -82,7 +82,7 @@ export default function WhatsAppButton({ productContext }: Props) {
   return (
     <div
       ref={containerRef}
-      className={`fixed ${isOpen ? 'z-[350]' : 'z-40'} font-sans transition-all duration-300 bottom-4 left-4 sm:bottom-6 sm:left-6`}
+      className={`fixed ${isOpen ? 'z-[350]' : 'z-40'} font-sans transition-all duration-300 bottom-20 left-4 sm:bottom-6 sm:left-6`}
     >
       {/* ── WhatsApp Popover Panel ───────────────────────────────── */}
       {isOpen && (

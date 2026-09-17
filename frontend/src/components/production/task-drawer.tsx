@@ -42,6 +42,7 @@ export function TaskDrawer({ task, open, onOpenChange }: TaskDrawerProps) {
           <Label htmlFor="assignee">Assigned worker</Label>
           <select
             id="assignee"
+            data-testid="assign-worker-select"
             value={task.worker?.id ?? ''}
             disabled={assign.isPending || task.status === 'IN_PROGRESS'}
             onChange={(event) =>
@@ -69,7 +70,7 @@ export function TaskDrawer({ task, open, onOpenChange }: TaskDrawerProps) {
           )}
           {!task.worker && (
             <p className="text-xs font-medium text-amber-700">
-              Assign someone before this task can be started.
+              Assign a worker before this task can be started.
             </p>
           )}
         </div>

@@ -152,7 +152,7 @@ export function MeasurementDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button data-testid="save-measurements-btn" type="submit" className="flex-1">
               Save measurements
             </Button>
           </div>

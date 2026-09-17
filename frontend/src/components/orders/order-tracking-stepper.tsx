@@ -118,7 +118,7 @@ export function OrderTrackingStepper({ order }: { order: Order }) {
   const currentIndex = STEPS.indexOf(order.status);
 
   return (
-    <ol style={{ position: 'relative', paddingLeft: '2rem' }}>
+    <ol data-testid="order-tracking-stepper" style={{ position: 'relative', paddingLeft: '2rem' }}>
       {/* The spine. */}
       <span
         aria-hidden
@@ -142,7 +142,12 @@ export function OrderTrackingStepper({ order }: { order: Order }) {
             : firstReachedAt(history, step);
 
         return (
-          <li key={step} style={{ position: 'relative', paddingBottom: '1.75rem' }}>
+          <li
+            key={step}
+            data-testid={`tracking-step-${step.toLowerCase()}`}
+            data-step-state={state}
+            style={{ position: 'relative', paddingBottom: '1.75rem' }}
+          >
             <span
               aria-hidden
               style={{

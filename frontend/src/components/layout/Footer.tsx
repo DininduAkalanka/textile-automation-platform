@@ -250,7 +250,7 @@ export default function Footer() {
               {/* Contact */}
               <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
-                  { label: '+94 77 000 0000' },
+                  { label: '+94 71 708 8445' },
                   { label: 'info@nandanatextile.lk' },
                   { label: 'Colombo, Sri Lanka' },
                 ].map(c => (

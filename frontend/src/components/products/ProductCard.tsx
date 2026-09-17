@@ -28,9 +28,10 @@ function categoryTag(name?: string): string {
 interface Props {
   product: Product;
   index?: number;
+  isBestseller?: boolean;
 }
 
-export default function ProductCard({ product, index = 0 }: Props) {
+export default function ProductCard({ product, index = 0, isBestseller = false }: Props) {
   const addItem        = useCartStore(s => s.addItem);
   const toggleItem     = useWishlistStore(s => s.toggleItem);
   const wishlistItems  = useWishlistStore(s => s.items);
@@ -56,6 +57,18 @@ export default function ProductCard({ product, index = 0 }: Props) {
   const discount = product.compareAtPrice
     ? Math.round((1 - Number(product.price) / Number(product.compareAtPrice)) * 100)
     : 0;
+
+  const rawSizes = product.attributes?.size || product.attributes?.sizes;
+  const sizeList: string[] = rawSizes
+    ? String(rawSizes)
+        .split(',')
+        .map((s) => {
+          const clean = s.replace(/Waist/i, '').trim();
+          if (/free\s*size/i.test(clean)) return 'Free Size';
+          return clean;
+        })
+        .filter(Boolean)
+    : [];
 
   const plate = PLATE_BG[index % PLATE_BG.length];
   const isNew = index < 4 && !discount;
@@ -194,7 +207,8 @@ export default function ProductCard({ product, index = 0 }: Props) {
         {/* Badges */}
         <div style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 5 }}>
           {discount > 0 && <span className="badge badge-brand">{discount}% Off</span>}
-          {isNew       && <span className="badge badge-dark">New</span>}
+          {isBestseller && <span className="badge badge-gold">Bestseller</span>}
+          {isNew && !isBestseller && <span className="badge badge-dark">New</span>}
           {product.stockQuantity <= 5 && product.stockQuantity > 0 && (
             <span className="badge badge-gold">Low Stock</span>
           )}
@@ -229,10 +243,16 @@ export default function ProductCard({ product, index = 0 }: Props) {
           {product.name}
         </Link>
 
-        {/* Attributes */}
-        {(product.attributes?.color || product.attributes?.gsm) && (
+        {/* Attributes: supports both attributes JSON (seeds) and direct model fields (admin forms) */}
+        {Boolean(
+          product.attributes?.color ||
+            product.color ||
+            product.attributes?.material ||
+            product.fabricType ||
+            product.attributes?.gsm,
+        ) && (
           <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.625rem' }}>
-            {product.attributes?.color && (
+            {(product.attributes?.color || product.color) && (
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -243,9 +263,27 @@ export default function ProductCard({ product, index = 0 }: Props) {
                   padding: '0.15rem 0.45rem',
                   border: '1px solid var(--clr-border-2)',
                   borderRadius: 'var(--r-xs)',
+                  textTransform: 'capitalize',
                 }}
               >
-                {product.attributes.color}
+                {product.attributes?.color || product.color}
+              </span>
+            )}
+            {(product.attributes?.material || product.fabricType) && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.6rem',
+                  fontWeight: 400,
+                  letterSpacing: '0.08em',
+                  color: 'var(--clr-text-3)',
+                  padding: '0.15rem 0.45rem',
+                  border: '1px solid var(--clr-border-2)',
+                  borderRadius: 'var(--r-xs)',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {product.attributes?.material || product.fabricType}
               </span>
             )}
             {product.attributes?.gsm && (
@@ -304,6 +342,25 @@ export default function ProductCard({ product, index = 0 }: Props) {
             <span>Or 3 x Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')} with</span>
             <span style={{ fontWeight: 700, color: 'var(--clr-text-2)', background: 'var(--clr-surface-3)', padding: '1px 4px', borderRadius: '2px', fontSize: '0.55rem', letterSpacing: '0.04em' }}>KOKO</span>
           </div>
+
+          {/* Available Sizes Pills (Thilakawardhana signature layout) */}
+          {sizeList.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 flex-wrap pt-2.5 mt-1 border-t border-neutral-100">
+              {sizeList.slice(0, 7).map((sz) => (
+                <span
+                  key={sz}
+                  className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1.5 text-[0.62rem] font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-300 rounded-[2px] transition-colors shadow-2xs"
+                >
+                  {sz}
+                </span>
+              ))}
+              {sizeList.length > 7 && (
+                <span className="text-[0.58rem] text-neutral-400 font-mono self-center">
+                  +{sizeList.length - 7}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </article>

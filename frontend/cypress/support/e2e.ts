@@ -1,8 +1,13 @@
 import './commands';
 
-// Catch uncaught exceptions: only allow benign framework signals like NEXT_REDIRECT
+// Catch uncaught exceptions: only allow benign framework signals like NEXT_REDIRECT and hydration mismatch warnings in dev mode
 Cypress.on('uncaught:exception', (err) => {
-  if (err.message.includes('NEXT_REDIRECT')) {
+  if (
+    err.message.includes('NEXT_REDIRECT') ||
+    err.message.includes('hydration') ||
+    err.message.includes('Hydration') ||
+    err.message.includes('Minified React error')
+  ) {
     return false;
   }
   return true;

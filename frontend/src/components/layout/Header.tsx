@@ -9,6 +9,8 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useModalStore } from '@/store/useModalStore';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { BrandMark } from '@/components/brand/brand-mark';
+import { Product } from '@/types';
+import { api } from '@/lib/api';
 import { CategoryMegaNav, CATEGORIES_DATA, useNavCategories } from '@/components/layout/CategoryMegaNav';
 
 /* ── SVG Icon Components ──────────────────────────────────── */
@@ -278,12 +280,65 @@ export default function Header() {
   const [scrolled,        setScrolled]        = useState(false);
   const [mobileOpen,      setMobileOpen]      = useState(false);
   const [profileOpen,     setProfileOpen]      = useState(false);
-  const [searchOpen,      setSearchOpen]      = useState(false);
   const [searchQuery,     setSearchQuery]     = useState('');
   const [mobileExpanded,  setMobileExpanded]  = useState<string | null>(null);
   const [mounted,         setMounted]         = useState(false);
+  const [suggestions,     setSuggestions]     = useState<{ products: Product[]; categories: { label: string; href: string }[] }>({ products: [], categories: [] });
+  const [showDropdown,    setShowDropdown]    = useState(false);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Predictive search query debounced lookup
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) {
+      setSuggestions({ products: [], categories: [] });
+      setShowDropdown(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const matchedCats: { label: string; href: string }[] = [];
+      CATEGORIES_DATA.forEach((cat) => {
+        if (cat.label.toLowerCase().includes(q)) {
+          matchedCats.push({ label: cat.label, href: cat.href });
+        }
+        cat.columns?.forEach((col) => {
+          col.links.forEach((link) => {
+            if (link.label.toLowerCase().includes(q)) {
+              matchedCats.push({ label: `${cat.label} → ${link.label}`, href: link.href });
+            }
+          });
+        });
+      });
+
+      api
+        .getProducts({ search: q, limit: 4 })
+        .then((res) => {
+          setSuggestions({
+            categories: matchedCats.slice(0, 3),
+            products: res.products || [],
+          });
+          setShowDropdown(true);
+        })
+        .catch(() => {
+          setSuggestions({ categories: matchedCats.slice(0, 3), products: [] });
+          setShowDropdown(matchedCats.length > 0);
+        });
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Click outside to close suggestion dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -292,10 +347,6 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  useEffect(() => {
-    if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 60);
-  }, [searchOpen]);
-
   const closeMobile = useCallback(() => {
     setMobileOpen(false);
     setMobileExpanded(null);
@@ -303,7 +354,7 @@ export default function Header() {
 
   // Lock body scroll when drawer open
   useEffect(() => {
-    if (mobileOpen || searchOpen) {
+    if (mobileOpen) {
       document.body.style.overflow = 'hidden';
       // Prevent iOS body scroll bounce
       document.documentElement.style.overflow = 'hidden';
@@ -315,7 +366,7 @@ export default function Header() {
       document.body.style.overflow = ''; 
       document.documentElement.style.overflow = '';
     };
-  }, [mobileOpen, searchOpen]);
+  }, [mobileOpen]);
 
   return (
     <>
@@ -355,7 +406,7 @@ export default function Header() {
           transition: 'box-shadow 240ms ease, backdrop-filter 240ms ease',
         }}
       >
-        <div className="container" style={{ display: 'flex', alignItems: 'center', height: '64px', gap: 'clamp(0.25rem, 2.5vw, 1rem)' }}>
+        <div className="container-wide" style={{ display: 'flex', alignItems: 'center', height: '64px', gap: 'clamp(0.25rem, 2.5vw, 1rem)' }}>
 
           {/* Mobile hamburger */}
           <button
@@ -405,13 +456,16 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* ── Center Search Bar ────────────────────────── */}
-          <div className="hide-mobile" style={{ flex: 1, maxWidth: '480px', margin: '0 auto' }}>
+          {/* ── Center Search Bar with Predictive Dropdown ── */}
+          <div ref={searchContainerRef} className="hide-mobile" style={{ flex: 1, maxWidth: '480px', margin: '0 auto', position: 'relative' }}>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const q = searchQuery.trim();
-                if (q) window.location.href = `/products?search=${encodeURIComponent(q)}`;
+                if (q) {
+                  setShowDropdown(false);
+                  window.location.href = `/products?search=${encodeURIComponent(q)}`;
+                }
               }}
               style={{ position: 'relative', width: '100%' }}
             >
@@ -419,11 +473,17 @@ export default function Header() {
                 type="text"
                 placeholder="Search fabrics, sarees, uniforms, shirts..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.trim().length >= 2) setShowDropdown(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) setShowDropdown(true);
+                }}
                 style={{
                   width: '100%',
                   height: '38px',
-                  padding: '0 38px 0 16px',
+                  padding: '0 68px 0 16px',
                   fontSize: '0.84rem',
                   border: '1.5px solid var(--clr-border)',
                   borderRadius: '20px',
@@ -432,17 +492,49 @@ export default function Header() {
                   transition: 'all 200ms ease',
                   fontFamily: 'var(--font-sans)',
                 }}
-                onFocus={(e) => {
+                onFocusCapture={(e) => {
                   e.currentTarget.style.borderColor = '#CC0000';
                   e.currentTarget.style.background = '#ffffff';
                   e.currentTarget.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.1)';
                 }}
-                onBlur={(e) => {
+                onBlurCapture={(e) => {
                   e.currentTarget.style.borderColor = 'var(--clr-border)';
                   e.currentTarget.style.background = '#f9fafb';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               />
+              {/* Visual Search (AI Lens) shortcut inside primary search bar */}
+              <button
+                type="button"
+                onClick={openVisualSearch}
+                aria-label="Search by image with AI"
+                title="Search by image (AI Lens)"
+                style={{
+                  position: 'absolute',
+                  right: '36px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '26px',
+                  height: '26px',
+                  background: 'transparent',
+                  color: 'var(--clr-text-3)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  borderRadius: '50%',
+                  transition: 'color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#CC0000')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--clr-text-3)')}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                  <circle cx="12" cy="13" r="3" />
+                </svg>
+              </button>
+
               <button
                 type="submit"
                 aria-label="Submit search"
@@ -463,32 +555,99 @@ export default function Header() {
                   cursor: 'pointer',
                   transition: 'background 150ms ease',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#990000'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#CC0000'}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#990000')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#CC0000')}
               >
                 <IconSearch size={13} />
               </button>
             </form>
+
+            {/* Predictive Suggestions Dropdown */}
+            {showDropdown && (suggestions.categories.length > 0 || suggestions.products.length > 0) && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up"
+                style={{ maxHeight: '380px', overflowY: 'auto' }}
+              >
+                {/* Matching Categories */}
+                {suggestions.categories.length > 0 && (
+                  <div className="p-2 border-b border-neutral-100 bg-neutral-50/70">
+                    <span className="font-mono text-[0.625rem] font-bold uppercase tracking-wider text-neutral-400 px-2 block mb-1">
+                      CATEGORIES
+                    </span>
+                    {suggestions.categories.map((cat, cIdx) => (
+                      <Link
+                        key={cIdx}
+                        href={cat.href}
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-700 hover:text-[#CC0000] hover:bg-neutral-100/80 rounded transition-colors font-sans"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                        <span>{cat.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* Matching Products */}
+                {suggestions.products.length > 0 && (
+                  <div className="p-2">
+                    <span className="font-mono text-[0.625rem] font-bold uppercase tracking-wider text-neutral-400 px-2 block mb-1">
+                      PRODUCTS
+                    </span>
+                    {suggestions.products.map((prod) => (
+                      <Link
+                        key={prod.id}
+                        href={`/products/${prod.slug}`}
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded bg-neutral-100 overflow-hidden relative shrink-0 border border-neutral-200">
+                          {prod.images?.[0] ? (
+                            <Image
+                              src={prod.images[0]}
+                              alt={prod.name}
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-mono text-neutral-400">NT</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-neutral-800 group-hover:text-[#CC0000] transition-colors truncate">
+                            {prod.name}
+                          </div>
+                          <div className="text-[11px] font-bold text-neutral-900 mt-0.5">
+                            Rs. {Number(prod.price).toLocaleString('en-LK')}.00
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* View All Search Action */}
+                <Link
+                  href={`/products?search=${encodeURIComponent(searchQuery.trim())}`}
+                  onClick={() => setShowDropdown(false)}
+                  className="block p-2.5 text-center text-xs font-mono font-bold uppercase tracking-wider text-[#CC0000] bg-neutral-50 hover:bg-neutral-100 border-t border-neutral-100 transition-colors"
+                >
+                  View all results for &ldquo;{searchQuery}&rdquo; &rarr;
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* ── Actions ──────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
             {/* LKR Currency Indicator */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.725rem', fontWeight: 600, color: 'var(--clr-text-2)', padding: '0.3rem 0.6rem', background: '#f3f4f6', borderRadius: '14px', marginRight: '0.25rem' }}>
-              <span>🇱🇰</span>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.725rem', fontWeight: 700, color: 'var(--clr-text-2)', padding: '0.3rem 0.65rem', background: '#f3f4f6', borderRadius: '14px', marginRight: '0.25rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
               <span>LKR</span>
             </div>
-
-            {/* Visual Search button */}
-            <button
-              id="search-btn"
-              aria-label="Search"
-              className="btn-icon"
-              onClick={() => setSearchOpen(true)}
-              title="Quick Search & AI Lens"
-            >
-              <IconSearch size={17} />
-            </button>
 
             {/* Wishlist */}
             <Link
@@ -757,6 +916,119 @@ export default function Header() {
           </div>
         </div>
 
+        {/* ── Mobile Row 2 Search Bar ── */}
+        <div
+          className="show-mobile"
+          style={{
+            padding: '0 0.875rem 0.625rem',
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              if (q) {
+                setShowDropdown(false);
+                window.location.href = `/products?search=${encodeURIComponent(q)}`;
+              }
+            }}
+            style={{ position: 'relative', width: '100%' }}
+          >
+            <input
+              type="text"
+              placeholder="Search fabrics, sarees, uniforms, shirts..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (e.target.value.trim().length >= 2) setShowDropdown(true);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim().length >= 2) setShowDropdown(true);
+              }}
+              style={{
+                width: '100%',
+                height: '38px',
+                padding: '0 68px 0 14px',
+                fontSize: '0.82rem',
+                border: '1.5px solid var(--clr-border)',
+                borderRadius: '20px',
+                outline: 'none',
+                background: '#f9fafb',
+                fontFamily: 'var(--font-sans)',
+                transition: 'all 200ms ease',
+              }}
+              onFocusCapture={(e) => {
+                e.currentTarget.style.borderColor = '#CC0000';
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(204,0,0,0.1)';
+              }}
+              onBlurCapture={(e) => {
+                e.currentTarget.style.borderColor = 'var(--clr-border)';
+                e.currentTarget.style.background = '#f9fafb';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+
+            {/* Mobile Visual Search (AI Lens) Camera Button */}
+            <button
+              type="button"
+              onClick={openVisualSearch}
+              aria-label="Search by image with AI"
+              title="Search by image (AI Lens)"
+              id="mobile-visual-search-btn"
+              style={{
+                position: 'absolute',
+                right: '36px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '26px',
+                height: '26px',
+                background: 'transparent',
+                color: 'var(--clr-text-3)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                borderRadius: '50%',
+                transition: 'color 150ms ease',
+              }}
+              onTouchStart={(e) => ((e.currentTarget as HTMLElement).style.color = '#CC0000')}
+              onTouchEnd={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--clr-text-3)')}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+            </button>
+
+            <button
+              type="submit"
+              aria-label="Submit search"
+              style={{
+                position: 'absolute',
+                right: '5px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'var(--clr-brand)',
+                color: '#ffffff',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <IconSearch size={13} />
+            </button>
+          </form>
+        </div>
+
         {/* Thin brand accent line (desktop only) */}
         <div className="hide-mobile" style={{ height: '2px', background: 'var(--clr-brand)', opacity: 0.9 }} />
         {/* ── Signature Red Category Navigation Bar (Desktop Only) ── */}
@@ -765,94 +1037,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* ── Search Overlay ────────────────────────────────── */}
-      {searchOpen && (
-        <>
-          <div
-            onClick={() => setSearchOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-              backdropFilter: 'blur(3px)', zIndex: 490,
-              animation: 'fadeIn 0.2s ease',
-            }}
-          />
-          <div
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0,
-              background: '#fff', borderBottom: '1px solid var(--clr-border)',
-              padding: '1.25rem 1rem 1.5rem', zIndex: 495,
-              boxShadow: 'var(--shadow-lg)', animation: 'slideDown 0.2s ease',
-            }}
-          >
-            <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.75rem 1rem', border: '1.5px solid var(--clr-brand)',
-                  borderRadius: 'var(--r-md)', background: 'var(--warm-50)',
-                }}
-              >
-                <IconSearch size={18} />
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  placeholder="Search products, fabrics, uniforms, sarees..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      setSearchOpen(false);
-                      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`;
-                    }
-                  }}
-                  style={{
-                    flex: 1, border: 'none', outline: 'none', fontSize: '0.9375rem',
-                    color: 'var(--clr-text)', background: 'transparent', fontFamily: 'var(--font-sans)',
-                  }}
-                />
-                {/* Visual Search shortcut */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSearchOpen(false);
-                    openVisualSearch();
-                  }}
-                  title="Search by image (AI Visual Search)"
-                  style={{
-                    color: 'var(--clr-text-3)', background: 'transparent',
-                    border: 'none', cursor: 'pointer', padding: '2px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'color 150ms ease',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--clr-brand)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--clr-text-3)'}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                    <circle cx="12" cy="13" r="3" />
-                  </svg>
-                </button>
-              </div>
-              <button
-                onClick={() => setSearchOpen(false)}
-                className="btn-icon"
-                aria-label="Close search"
-                style={{ flexShrink: 0, color: 'var(--clr-text-2)' }}
-              >
-                <IconClose size={18} />
-              </button>
-            </div>
-            <p
-              style={{
-                maxWidth: '680px', margin: '0.625rem auto 0', paddingLeft: '1.75rem',
-                fontSize: '0.72rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em',
-              }}
-            >
-              Press Escape to close &mdash; suggestions appear as you type
-            </p>
-          </div>
-        </>
-      )}
+
 
       {/* ── Mobile Overlay ────────────────────────────────── */}
       <div
@@ -1029,8 +1214,8 @@ export default function Header() {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#111827', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
               CURRENCY
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
-              <span style={{ fontSize: '1.1rem' }}>🇱🇰</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
               <span>LKR</span>
             </div>
           </div>

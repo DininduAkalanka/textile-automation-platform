@@ -30,6 +30,7 @@ export interface ProductInput {
   color?: string;
   unit?: string;
   costPrice?: number;
+  attributes?: Record<string, any>;
 }
 
 export const productsService = {

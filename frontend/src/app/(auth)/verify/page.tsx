@@ -163,6 +163,7 @@ function VerifyContent() {
             {channel === 'EMAIL' ? 'email' : 'phone'}.
           </p>
           <FormField
+            data-testid="verification-code-input"
             label="Verification code"
             inputMode="numeric"
             maxLength={6}
@@ -171,6 +172,7 @@ function VerifyContent() {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           />
           <Button
+            data-testid="verify-code-submit-btn"
             size="lg"
             className="w-full"
             loading={verifyCode.isPending}

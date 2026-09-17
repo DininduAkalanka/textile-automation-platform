@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+export {};
+
 describe('AI Intelligence & Shopping Assistant E2E', () => {
   it('1. Customer Shopping Assistant opens, accepts prompt and displays grounded product cards', () => {
     cy.visit('/');

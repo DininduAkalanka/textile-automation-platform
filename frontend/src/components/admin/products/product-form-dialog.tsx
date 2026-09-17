@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import { Loader2, Plus, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useCategories } from '@/hooks/use-categories';
+import { useAdjustStock } from '@/hooks/use-inventory';
 import { useCreateProduct, useUpdateProduct } from '@/hooks/use-products';
 import { categorySelectOptions } from '@/lib/category-tree';
 import { cn } from '@/lib/utils';
@@ -44,6 +46,7 @@ interface FormState {
   compareAtPrice: string;
   costPrice: string;
   stockQuantity: string;
+  sizes: string;
   images: string[];
 }
 
@@ -62,6 +65,7 @@ function emptyForm(): FormState {
     compareAtPrice: '',
     costPrice: '',
     stockQuantity: '',
+    sizes: '',
     images: [],
   };
 }
@@ -81,6 +85,7 @@ function formFromProduct(p: Product): FormState {
     compareAtPrice: p.compareAtPrice != null ? String(p.compareAtPrice) : '',
     costPrice: p.costPrice != null ? String(p.costPrice) : '',
     stockQuantity: String(p.stockQuantity),
+    sizes: (p.attributes?.size || p.attributes?.sizes) ? String(p.attributes?.size || p.attributes?.sizes) : '',
     images: p.images ?? [],
   };
 }
@@ -158,9 +163,10 @@ function ProductFormInner({
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const adjustStock = useAdjustStock();
 
   const isEdit = product !== null;
-  const busy = createProduct.isPending || updateProduct.isPending;
+  const busy = createProduct.isPending || updateProduct.isPending || adjustStock.isPending;
 
   const priceNum = Number.parseFloat(form.price);
   const costNum = form.costPrice ? Number.parseFloat(form.costPrice) : null;
@@ -175,7 +181,8 @@ function ProductFormInner({
     form.sku.trim() !== '' &&
     Number.isFinite(priceNum) &&
     priceNum >= 0 &&
-    (isEdit || (Number.isFinite(stockNum) && stockNum >= 0));
+    Number.isFinite(stockNum) &&
+    stockNum >= 0;
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -240,6 +247,22 @@ function ProductFormInner({
   function submit() {
     if (!step1Valid) return;
 
+    const existingAttrs = (product?.attributes as Record<string, any>) || {};
+    const attributes: Record<string, any> = {
+      ...existingAttrs,
+    };
+    if (form.sizes.trim()) {
+      attributes.size = form.sizes.trim();
+    } else {
+      delete attributes.size;
+    }
+    if (form.color.trim()) {
+      attributes.color = form.color.trim();
+    }
+    if (form.fabricType.trim()) {
+      attributes.material = form.fabricType.trim();
+    }
+
     // Partial, not ProductInput: stockQuantity is only ever sent on create
     // (UpdateProductDto omits it — stock changes go through Inventory's
     // ledger, never a bare column write), so it can't be a required field on
@@ -260,13 +283,35 @@ function ProductFormInner({
         : undefined,
       costPrice: form.costPrice ? Number.parseFloat(form.costPrice) : undefined,
       images: form.images,
+      attributes,
     };
     if (!isEdit) {
       payload.stockQuantity = stockNum;
     }
 
     if (isEdit) {
-      updateProduct.mutate({ id: product.id, data: payload }, { onSuccess: onClose });
+      const stockChanged =
+        Number.isFinite(stockNum) &&
+        stockNum >= 0 &&
+        stockNum !== product.stockQuantity;
+
+      updateProduct.mutate(
+        { id: product.id, data: payload },
+        {
+          onSuccess: () => {
+            if (stockChanged) {
+              const delta = stockNum - product.stockQuantity;
+              adjustStock.mutate({
+                productId: product.id,
+                change: delta,
+                type: 'ADJUSTMENT',
+                note: `Stock updated via product edit (${product.stockQuantity} -> ${stockNum})`,
+              });
+            }
+            onClose();
+          },
+        },
+      );
     } else {
       // step1Valid already guarantees name/sku/price/stockQuantity are set.
       createProduct.mutate(payload as ProductInput, {
@@ -396,6 +441,20 @@ function ProductFormInner({
                 </div>
 
                 <div>
+                  <label className={labelClass} htmlFor="pf-sizes">Available Sizes</label>
+                  <input
+                    id="pf-sizes"
+                    value={form.sizes}
+                    onChange={(e) => set('sizes', e.target.value)}
+                    className={inputClass}
+                    placeholder="S, M, L, XL or Free Size"
+                  />
+                  <p className="mt-1 text-[11px] text-[#928E82]">
+                    Comma-separated (e.g. S, M, L, XL or Free Size)
+                  </p>
+                </div>
+
+                <div>
                   <label className={labelClass} htmlFor="pf-unit">Unit</label>
                   <input
                     id="pf-unit"
@@ -406,22 +465,42 @@ function ProductFormInner({
                   />
                 </div>
 
-                {!isEdit && (
-                  <div>
-                    <label className={labelClass} htmlFor="pf-stock">
-                      Opening stock
+                <div className="col-span-1 sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelClass.replace('mb-1.5 ', '')} htmlFor="pf-stock">
+                      {isEdit ? 'Stock Quantity' : 'Opening Stock'}
                     </label>
-                    <input
-                      id="pf-stock"
-                      type="number"
-                      inputMode="numeric"
-                      value={form.stockQuantity}
-                      onChange={(e) => set('stockQuantity', e.target.value)}
-                      className={cn(inputClass, 'tabular-nums')}
-                      placeholder="0"
-                    />
+                    {isEdit && (
+                      <Link
+                        href="/admin/inventory"
+                        target="_blank"
+                        className="text-[11px] font-medium text-[#7C1D1D] hover:underline"
+                        title="Open Inventory Management to view movements & ledger"
+                      >
+                        Open Inventory Ledger ↗
+                      </Link>
+                    )}
                   </div>
-                )}
+                  <input
+                    id="pf-stock"
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    value={form.stockQuantity}
+                    onChange={(e) => set('stockQuantity', e.target.value)}
+                    className={cn(inputClass, 'tabular-nums')}
+                    placeholder="0"
+                  />
+                  {isEdit ? (
+                    <p className="mt-1 text-[11px] text-[#928E82]">
+                      Current on-hand: <span className="font-semibold text-[#0F0F0F]">{product.stockQuantity}</span>. Updating this value records an audited ADJUSTMENT movement in the inventory ledger.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-[#928E82]">
+                      Initial units available in inventory.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 border-t border-[#F4F3EF] pt-4 sm:grid-cols-3">

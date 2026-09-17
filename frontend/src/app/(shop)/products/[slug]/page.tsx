@@ -76,7 +76,7 @@ export default function ProductDetailPage() {
   const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxZoom, setLightboxZoom] = useState(1);
-  const imagesCountRef = useRef(1);
+  const imageCount = Math.max(1, product?.images?.length || 1);
 
   const buyBoxRef = useRef<HTMLDivElement>(null);
 
@@ -102,18 +102,17 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!isLightboxOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      const count = imagesCountRef.current || 1;
       if (e.key === 'Escape') {
         setIsLightboxOpen(false);
       } else if (e.key === 'ArrowLeft') {
-        setSelectedImageIndex((prev) => (prev === 0 ? count - 1 : prev - 1));
+        setSelectedImageIndex((prev) => (prev === 0 ? imageCount - 1 : prev - 1));
       } else if (e.key === 'ArrowRight') {
-        setSelectedImageIndex((prev) => (prev === count - 1 ? 0 : prev + 1));
+        setSelectedImageIndex((prev) => (prev === imageCount - 1 ? 0 : prev + 1));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLightboxOpen]);
+  }, [isLightboxOpen, imageCount]);
 
   useEffect(() => {
     if (slug) {
@@ -217,7 +216,6 @@ export default function ProductDetailPage() {
   if (galleryImages.length === 0) {
     galleryImages.push(primaryImgUrl);
   }
-  imagesCountRef.current = galleryImages.length;
 
   // Size list parsing
   const parsedSizes = product.attributes?.size
@@ -373,7 +371,7 @@ export default function ProductDetailPage() {
   ];
 
   return (
-    <div className="container pt-4 sm:pt-6 pb-28 sm:pb-20">
+    <div className="container-pdp pt-4 sm:pt-6 pb-28 sm:pb-20">
       {/* ── Breadcrumb ────────────────────────────────────────────── */}
       <nav className="flex min-w-0 items-center gap-2 mb-4 sm:mb-6 text-xs text-neutral-500">
         <Link href="/" className="hover:text-neutral-900 transition-colors">Home</Link>
@@ -394,11 +392,11 @@ export default function ProductDetailPage() {
         <span className="text-neutral-900 font-medium truncate max-w-[160px] sm:max-w-none">{product.name}</span>
       </nav>
 
-      {/* ── Main Product Grid ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      {/* ── Main Product Grid (7 cols gallery + 5 cols sticky buy-box) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-start">
         
-        {/* ── Left Column: Gallery & Thumbnails (6 cols on lg) ───── */}
-        <div className="lg:col-span-6 xl:col-span-6 flex flex-col gap-3">
+        {/* ── Left Column: Gallery & Thumbnails (7 cols on desktop) ───── */}
+        <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-7 flex flex-col gap-3">
           {/* Primary Viewport with Interactive Hover Zoom Lens & Click-to-Enlarge Lightbox */}
           <div 
             className="relative w-full rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200/80 shadow-sm cursor-zoom-in group select-none"
@@ -491,8 +489,8 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        {/* ── Right Column: Buy Box & Product Metadata (6 cols) ──── */}
-        <div className="lg:col-span-6 xl:col-span-6 flex flex-col gap-4" ref={buyBoxRef}>
+        {/* ── Right Column: Buy Box & Product Metadata (5 cols on desktop, sticky) ──── */}
+        <div className="lg:col-span-5 xl:col-span-5 2xl:col-span-5 lg:sticky lg:top-28 flex flex-col gap-2.5 sm:gap-3 self-start" ref={buyBoxRef}>
           
           {/* 1. Title & Header Meta (Thilakawardhana Reference Structure) */}
           <div>
@@ -690,17 +688,15 @@ export default function ProductDetailPage() {
           {/* 8. Quantity & Primary Action Hierarchy (Thilakawardhana Pattern) */}
           {product.stockQuantity > 0 && (
             <div className="flex flex-col gap-3 pt-1">
-              {/* Row 1: Quantity Stepper on its own line */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
-                  Quantity:
-                </span>
-                <div className="flex items-center border border-neutral-300 rounded bg-white w-32 h-11 overflow-hidden">
+              {/* Row 1: Quantity Stepper + Hero ADD TO CART Button + Wishlist + Share */}
+              <div className="flex items-center gap-2.5">
+                {/* Quantity Stepper */}
+                <div className="flex items-center border border-neutral-300 rounded bg-white w-28 sm:w-32 h-12 shrink-0 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     aria-label="Decrease quantity"
-                    className="w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
+                    className="w-9 sm:w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
                   >
                     −
                   </button>
@@ -711,15 +707,13 @@ export default function ProductDetailPage() {
                     type="button"
                     onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
                     aria-label="Increase quantity"
-                    className="w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
+                    className="w-9 sm:w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
                   >
                     +
                   </button>
                 </div>
-              </div>
 
-              {/* Row 2: Hero ADD TO CART Button + Wishlist + Share */}
-              <div className="flex items-center gap-2.5">
+                {/* Hero ADD TO CART Button */}
                 <button
                   type="button"
                   data-testid="add-to-cart-btn"
@@ -911,7 +905,7 @@ export default function ProductDetailPage() {
                 </button>
               ))}
             </div>
-            <div className="max-w-3xl mx-auto min-h-[220px]">
+            <div className="max-w-4xl lg:max-w-5xl mx-auto min-h-[220px]">
               {TABS.find(t => t.id === activeTab)?.content}
             </div>
           </>
@@ -934,6 +928,24 @@ export default function ProductDetailPage() {
           </>
         );
       })()}
+
+      {/* ── Sticky Mobile Add-to-Cart Bar (for seamless one-thumb checkout on phone screens) ── */}
+      <div id="mobile-sticky-buy-bar" className="show-mobile fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-neutral-500 truncate">{product.name}</p>
+          <p className="text-sm font-bold text-neutral-900">
+            Rs. {priceNum.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          style={{ backgroundColor: added ? '#000000' : '#CC0000' }}
+          className="h-11 px-5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow active:scale-95 shrink-0"
+        >
+          {added ? '✓ Added' : 'Add to Cart'}
+        </button>
+      </div>
 
 
       {/* ── Interactive Size Guide Modal ──────────────────────────── */}

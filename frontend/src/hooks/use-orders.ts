@@ -59,6 +59,7 @@ export function useAdminOrders(filters: AdminOrdersFilters, options?: { enabled?
     queryFn: () => ordersService.listAll(filters),
     placeholderData: (previous) => previous, // no flicker when paging/filtering
     enabled: options?.enabled ?? true,
+    refetchInterval: 15_000,
   });
 }
 

@@ -317,7 +317,7 @@ export function CategoryMegaNav() {
       }}
     >
       {/* ── Signature Red Category Navigation Bar (Responsive & Dynamic) ── */}
-      <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
+      <div className="container-wide">
         <nav
           className="flex items-center justify-start gap-0.5 sm:gap-1 lg:gap-2 overflow-x-auto no-scrollbar py-0.5"
           aria-label="Main Store Categories"
@@ -371,7 +371,7 @@ export function CategoryMegaNav() {
           onMouseEnter={() => setActiveId(activeCategory.id)}
           onMouseLeave={() => setActiveId(null)}
         >
-          <div className="mx-auto max-w-7xl px-6 py-7">
+          <div className="container-wide py-7">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
               {/* Category Columns */}
               <div

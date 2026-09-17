@@ -172,21 +172,126 @@
 ::-webkit-scrollbar-thumb { background: var(--clr-brand); border-radius: 2px; }
 
 /* ════════════════════════════════════════════════════════════════
-   CONTAINER SYSTEM
+   CONTAINER SYSTEM (Modern Fluid Responsive Scaling)
 ════════════════════════════════════════════════════════════════ */
-/* Mobile-first horizontal gutter: 16px up to 640px, 24px from 640–1024px
-   (tablet), 32px from 1024px up (desktop) — one scale shared by every page
-   via these three classes, so no page should ever need its own horizontal
-   padding on top of this. */
-.container    { max-width: 1360px; margin: 0 auto; padding: 0 1rem; }
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-wide {
+  width: 100%;
+  max-width: 1840px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-pdp {
+  width: 100%;
+  max-width: 1760px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-full {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 .container-sm { max-width: 960px;  margin: 0 auto; padding: 0 1rem; }
 .container-xs { max-width: 680px;  margin: 0 auto; padding: 0 1rem; }
+
 @media (min-width: 640px) {
-  .container, .container-sm, .container-xs { padding: 0 1.5rem; }
+  .container, .container-wide, .container-pdp, .container-full, .container-sm, .container-xs {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container { max-width: 1440px; }
+  .container, .container-wide, .container-pdp, .container-full, .container-sm, .container-xs {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container { max-width: 1560px; }
+  .container, .container-wide, .container-pdp, .container-full {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container { max-width: 1720px; }
+  .container, .container-wide, .container-pdp, .container-full {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .container { max-width: 1840px; }
+  .container, .container-wide, .container-pdp, .container-full {
+    padding-left: 3.5rem;
+    padding-right: 3.5rem;
+  }
+}
+
+@media (min-width: 2400px) {
+  .container, .container-wide { max-width: 1920px; }
+  .container, .container-wide, .container-pdp, .container-full {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ADAPTIVE E-COMMERCE PRODUCT GRID
+════════════════════════════════════════════════════════════════ */
+.ecommerce-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.875rem;
+}
+@media (min-width: 640px) {
+  .ecommerce-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
 }
 @media (min-width: 1024px) {
-  .container, .container-sm, .container-xs { padding: 0 2rem; }
+  .ecommerce-product-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
 }
+@media (min-width: 1360px) {
+  .ecommerce-product-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (min-width: 1800px) {
+  .ecommerce-product-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.75rem;
+  }
+}
+
 
 /* ════════════════════════════════════════════════════════════════
    TYPOGRAPHY SYSTEM
@@ -531,6 +636,14 @@
 .product-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
 .product-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
 .product-grid.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.product-grid.grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+@media (min-width: 1920px) {
+  .product-grid:not(.grid-2):not(.grid-3):not(.list) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 
 /* List View Layout */
 .product-grid.list {

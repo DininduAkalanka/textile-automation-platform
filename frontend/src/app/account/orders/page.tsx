@@ -94,6 +94,7 @@ export default function AccountOrdersPage() {
             <Link
               key={order.id}
               href={`/account/orders/${order.id}`}
+              data-testid="customer-order-card"
               className="card"
               style={{
                 padding: '1.25rem 1.5rem',
@@ -107,7 +108,7 @@ export default function AccountOrdersPage() {
               }}
             >
               <div>
-                <p style={{ fontWeight: 600, marginBottom: '0.25rem', fontFamily: 'var(--font-mono)' }}>
+                <p data-testid="customer-order-number" style={{ fontWeight: 600, marginBottom: '0.25rem', fontFamily: 'var(--font-mono)' }}>
                   {order.orderNumber}
                 </p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>

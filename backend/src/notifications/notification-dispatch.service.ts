@@ -107,6 +107,44 @@ export class NotificationDispatchService {
           `Nandana Textile: order ${order.orderNumber} confirmed — total LKR ${order.total.toFixed(2)}. We'll update you as it progresses.`,
         );
       }
+
+      // ── Admin Real-Time Outbound Alerts (everywhere: email + SMS) ──
+      const adminEmail = this.config.get<string>('ADMIN_ALERT_EMAIL');
+      if (adminEmail) {
+        const adminOrderUrl = `${this.frontendUrl}/admin/orders/${order.id}`;
+        await this.emailService.send({
+          to: adminEmail,
+          subject: `🛒 [New Order Alert] ${order.orderNumber} — LKR ${order.total.toFixed(2)}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+              <h2 style="color: #991b1b; margin-top: 0;">New Order Placed!</h2>
+              <p>A customer has just placed an order on Nandana Textile.</p>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr><td style="padding: 6px 0; color: #6b7280;">Order Number:</td><td style="padding: 6px 0; font-weight: bold;">${order.orderNumber}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Customer:</td><td style="padding: 6px 0;">${order.user.firstName} ${order.user.lastName}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Contact:</td><td style="padding: 6px 0;">${order.user.email || 'N/A'} · ${order.user.phone || 'N/A'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Total Amount:</td><td style="padding: 6px 0; font-weight: bold; color: #059669;">LKR ${order.total.toFixed(2)}</td></tr>
+                <tr><td style="padding: 6px 0; color: #6b7280;">Items:</td><td style="padding: 6px 0;">${order.items.length} item(s)</td></tr>
+              </table>
+              <div style="margin-top: 24px;">
+                <a href="${adminOrderUrl}" style="display: inline-block; background: #991b1b; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">View Order in Admin Dashboard →</a>
+              </div>
+            </div>
+          `,
+          attachments: invoice
+            ? [{ filename: invoice.filename, content: invoice.buffer }]
+            : undefined,
+        });
+      }
+
+      const adminPhone = this.config.get<string>('ADMIN_ALERT_PHONE');
+      if (adminPhone) {
+        await this.smsService.send(
+          adminPhone,
+          `Nandana Textile [Admin Alert]: New order ${order.orderNumber} placed by ${order.user.firstName} ${order.user.lastName} — Total LKR ${order.total.toFixed(2)}.`,
+        );
+      }
     } catch (err) {
       this.logger.warn(
         `Order-confirmation dispatch failed for ${orderId}: ${
