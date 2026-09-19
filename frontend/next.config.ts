@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   output: process.env.VERCEL ? undefined : "standalone",
   devIndicators: false,
   images: {
+    // GHSA-2xp9-vwfh-vxw4: `unoptimized: true` is a portability choice for static/serverless hosts,
+    // not a primary security control. Upgrading Next.js (>= 16.3.3) provides the actual mitigation.
     unoptimized: true,
     qualities: [75, 90],
     dangerouslyAllowLocalIP: true,
