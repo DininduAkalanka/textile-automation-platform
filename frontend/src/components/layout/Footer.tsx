@@ -53,11 +53,12 @@ const COLS = [
   {
     heading: 'Customer Care',
     links: [
-      { label: 'Track My Order',    href: '/account/orders' },
-      { label: 'Returns & Exchange', href: '/returns-exchange' },
+      { label: 'Track My Order',       href: '/account/orders' },
+      { label: 'Contact & Showrooms',  href: '/contact' },
+      { label: 'Returns & Exchange',   href: '/returns-exchange' },
       { label: 'Shipping Information', href: '#' },
-      { label: 'Size & Fit Guide',  href: '#' },
-      { label: 'Frequently Asked',  href: '#' },
+      { label: 'Size & Fit Guide',     href: '#' },
+      { label: 'Frequently Asked',     href: '#' },
     ],
   },
 ];

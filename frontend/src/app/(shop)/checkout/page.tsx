@@ -402,7 +402,11 @@ export default function CheckoutPage() {
                         className="w-full height-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs">🧵</div>
+                      <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                        <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      </div>
                     )}
                   </div>
                   <div className="min-w-0">
@@ -434,7 +438,12 @@ export default function CheckoutPage() {
           {step === 1 && (
             <div className="card p-4 sm:p-7">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>📦</span> Shipping Address & Contact Info
+                <span className="w-6 h-6 flex items-center justify-center text-neutral-700">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </span>
+                Shipping Address & Contact Info
               </h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -719,7 +728,11 @@ export default function CheckoutPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs">🧵</div>
+                          <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                            <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                          </div>
                         )}
                       </div>
                       <div className="min-w-0">

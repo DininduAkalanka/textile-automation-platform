@@ -15,31 +15,45 @@ export interface HeroSlide {
 const HERO_SLIDES: HeroSlide[] = [
   {
     id: 1,
-    title: "Men's Casual & Polo Collection",
-    href: '/products?category=men',
-    image: '/images/hero/hero-banner-polo.png',
-    alt: "Nandana Textile Men's Casual & Pique Polo Collection",
+    title: 'Ethnic Fusion & The Silk Element',
+    href: '/products?category=women',
+    image: '/images/hero/hero-banner-silk-sarees.png',
+    alt: 'Ethnic Fusion - The Silk Element Luxury Sarees & Festive Fashion',
   },
   {
     id: 2,
-    title: "Women's Elegance & Festive Collection",
+    title: 'A True Modern Classic',
     href: '/products?category=women',
-    image: '/images/hero/hero-banner-web2.jpg',
-    alt: "Where Elegance Meets Innovation - Women's New Collection",
+    image: '/images/hero/hero-banner-modern-classic.png',
+    alt: 'A True Modern Classic - Contemporary Sri Lankan Fashion',
   },
   {
     id: 3,
-    title: 'Executive Suiting & Institutional Uniforms',
-    href: '/products?category=uniforms',
-    image: '/images/hero/hero-banner-suits.png',
-    alt: 'Executive Suiting, Blazers & Corporate Uniform Solutions',
+    title: 'SAVAGE Contemporary Streetwear & Youth Fashion',
+    href: '/products?category=teenagers',
+    image: '/images/hero/hero-banner-savage.png',
+    alt: 'SAVAGE - Wings of Freedom Graphic Tees & Urban Streetwear',
   },
   {
     id: 4,
-    title: 'Contemporary Denim & Casual Youth Weaves',
+    title: 'The Workwear Edit - Tailored & Timeless',
+    href: '/products?category=uniforms',
+    image: '/images/hero/hero-banner-tendenza.png',
+    alt: 'The Workwear Edit - Tailored Suiting & Corporate Apparel',
+  },
+  {
+    id: 5,
+    title: 'Contemporary Denim & Youth Weaves',
     href: '/products?category=teenagers',
     image: '/images/hero/hero-banner-denim.png',
-    alt: 'It All Starts With Denim - Nandana Youth & Everyday Fit',
+    alt: 'Denim Collection - Everyday Casual Fit',
+  },
+  {
+    id: 6,
+    title: 'Golden Escape Resort & Linen Collection',
+    href: '/products?category=women',
+    image: '/images/hero/hero-banner-golden-escape.png',
+    alt: 'Golden Escape - Resort Wear & Summer Linens',
   },
 ];
 
@@ -130,8 +144,8 @@ export function HeroSection() {
         </h1>
       </div>
 
-      {/* Full-width responsive banner viewport matching 1920x700 aspect ratio */}
-      <div className="relative w-full aspect-[16/8] sm:aspect-[21/9] lg:aspect-[1920/700] min-h-[260px] sm:min-h-[420px] lg:min-h-[520px] max-h-[660px] overflow-hidden">
+      {/* Full-width responsive banner viewport matching Fashion Bug & Thilakawardhana standards (1920x630 aspect ratio for 100% full fit without cropping) */}
+      <div className="relative w-full aspect-[1920/630] overflow-hidden bg-neutral-950">
         {/* Sliding Track */}
         <div
           className="flex h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
@@ -175,7 +189,7 @@ export function HeroSection() {
             prevSlide();
           }}
           aria-label="Previous banner"
-          className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/70 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
+          className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/75 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
         >
           <svg
             width="18"
@@ -199,7 +213,7 @@ export function HeroSection() {
             nextSlide();
           }}
           aria-label="Next banner"
-          className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/70 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
+          className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/75 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
         >
           <svg
             width="18"
@@ -215,7 +229,7 @@ export function HeroSection() {
           </svg>
         </button>
 
-        {/* Thilakawardhana Signature Bottom Center Pagination Dots */}
+        {/* Signature Bottom Center Pagination Dots */}
         <div
           className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full"
           role="tablist"
@@ -235,7 +249,7 @@ export function HeroSection() {
               }}
               className={`rounded-full transition-all duration-300 cursor-pointer ${
                 i === current
-                  ? 'w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#001a70] shadow-sm scale-110'
+                  ? 'w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#CC0000] shadow-sm scale-110'
                   : 'w-2 h-2 sm:w-2.5 sm:h-2.5 bg-neutral-800/40 hover:bg-neutral-800/70'
               }`}
             />

@@ -276,31 +276,35 @@ describe('Customer Journey E2E Flow', () => {
    * 4. GUEST EXPRESS CHECKOUT JOURNEY
    * ────────────────────────────────────────────────────────────────────────── */
   it('4. Guest Express Checkout: Completes an order without prior account creation', () => {
-    cy.visit('/products?category=women');
-    cy.get('a[href*="/products/"]').first().click();
-    cy.getByTestId('add-to-cart-btn').click();
+    cy.request('GET', `${apiUrl}/products?limit=100`).then((res) => {
+      const prods = res.body.data?.products || res.body.products || res.body.data;
+      const product = prods.find((p: any) => !p.requiresMeasurement && p.stockQuantity > 0) || prods[0];
 
-    // Guest goes straight to checkout
-    cy.visit('/checkout');
-    cy.contains(/Express Checkout|Customer Information/i).should('be.visible');
+      cy.visit(`/products/${product.slug}`);
+      cy.getByTestId('add-to-cart-btn').scrollIntoView().should('be.visible').click();
 
-    const guestSuffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-    cy.getByTestId('checkout-name-input').clear().type('Guest Shopper');
-    cy.getByTestId('checkout-email-input').clear().type(`guest_${guestSuffix}@example.com`);
-    cy.getByTestId('checkout-phone-input').clear().type('0777654321');
-    cy.getByTestId('checkout-address1-input').clear().type('45 Beach Road');
-    cy.getByTestId('checkout-city-input').clear().type('Mount Lavinia');
-    cy.getByTestId('checkout-state-input').clear().type('Western Province');
-    cy.getByTestId('checkout-postal-input').clear().type('10370');
-    cy.getByTestId('checkout-country-input').clear().type('Sri Lanka');
+      // Guest goes straight to checkout
+      cy.visit('/checkout');
+      cy.contains(/Express Checkout|Customer Information/i).should('be.visible');
 
-    cy.getByTestId('checkout-continue-to-payment-btn').click();
+      const guestSuffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      cy.getByTestId('checkout-name-input').clear().type('Guest Shopper');
+      cy.getByTestId('checkout-email-input').clear().type(`guest_${guestSuffix}@example.com`);
+      cy.getByTestId('checkout-phone-input').clear().type('0777654321');
+      cy.getByTestId('checkout-address1-input').clear().type('45 Beach Road');
+      cy.getByTestId('checkout-city-input').clear().type('Mount Lavinia');
+      cy.getByTestId('checkout-state-input').clear().type('Western Province');
+      cy.getByTestId('checkout-postal-input').clear().type('10370');
+      cy.getByTestId('checkout-country-input').clear().type('Sri Lanka');
 
-    // Select PayHere online payment
-    cy.getByTestId('payment-method-payhere').click();
-    cy.getByTestId('checkout-continue-to-review-btn').click();
+      cy.getByTestId('checkout-continue-to-payment-btn').click();
 
-    // Confirm button ready for payment
-    cy.getByTestId('checkout-place-order-btn').should('be.visible');
+      // Select PayHere online payment
+      cy.getByTestId('payment-method-payhere').click();
+      cy.getByTestId('checkout-continue-to-review-btn').click();
+
+      // Confirm button ready for payment
+      cy.getByTestId('checkout-place-order-btn').should('be.visible');
+    });
   });
 });

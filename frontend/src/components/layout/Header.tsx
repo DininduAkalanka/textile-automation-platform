@@ -643,10 +643,26 @@ export default function Header() {
 
           {/* ── Actions ──────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
-            {/* LKR Currency Indicator */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.725rem', fontWeight: 700, color: 'var(--clr-text-2)', padding: '0.3rem 0.65rem', background: '#f3f4f6', borderRadius: '14px', marginRight: '0.25rem' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            {/* Currency Indicator */}
+            <div 
+              className="hide-mobile" 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '4px', 
+                fontSize: '0.6875rem', 
+                fontWeight: 600, 
+                letterSpacing: '0.06em', 
+                color: 'var(--clr-text-2)', 
+                padding: '0.25rem 0.6rem', 
+                border: '1px solid var(--clr-border)', 
+                borderRadius: 'var(--r-xs)', 
+                background: '#ffffff', 
+                marginRight: '0.35rem' 
+              }}
+            >
               <span>LKR</span>
+              <span style={{ opacity: 0.5, fontSize: '0.625rem' }}>(Rs.)</span>
             </div>
 
             {/* Wishlist */}
@@ -1214,9 +1230,9 @@ export default function Header() {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#111827', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
               CURRENCY
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 700, color: '#111827', borderBottom: '2px solid #111827', paddingBottom: '2px', width: 'fit-content' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', fontWeight: 600, color: '#111827', padding: '0.35rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff' }}>
               <span>LKR</span>
+              <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>· Sri Lankan Rupee (Rs.)</span>
             </div>
           </div>
 
