@@ -62,33 +62,38 @@ describe('Customer Full CRUD (Read, Write, Edit) Suite', () => {
     });
 
     it('4. WRITE: Completes full checkout and places an order', () => {
-      // Navigate to products and add to cart first
-      cy.visit('/products?category=women');
-      cy.get('a[href*="/products/"]').first().click();
-      cy.getByTestId('add-to-cart-btn').click();
+      // Find a ready-made product without required measurements and in-stock
+      cy.request('GET', 'http://localhost:3001/api/v1/products').then((res) => {
+        const products = res.body.data?.products || res.body.products || res.body.data;
+        const product = products.find((p: any) => !p.requiresMeasurement && p.productType === 'READY_MADE' && p.stockQuantity > 0) || products[0];
 
-      cy.visit('/checkout');
+        // Navigate to products and add to cart first
+        cy.visit(`/products/${product.slug}`);
+        cy.getByTestId('add-to-cart-btn').scrollIntoView().should('be.visible').click();
 
-      // Step 1: Shipping & Contact
-      cy.getByTestId('checkout-name-input').clear().type('Nandana Evaluator');
-      cy.getByTestId('checkout-address1-input').clear().type('123 Galle Road');
-      cy.getByTestId('checkout-city-input').clear().type('Colombo');
-      cy.getByTestId('checkout-state-input').clear().type('Western');
-      cy.getByTestId('checkout-postal-input').clear().type('00300');
-      cy.getByTestId('checkout-country-input').clear().type('Sri Lanka');
-      cy.getByTestId('checkout-phone-input').clear().type('0771234567');
+        cy.visit('/checkout');
 
-      cy.getByTestId('checkout-continue-to-payment-btn').click();
+        // Step 1: Shipping & Contact
+        cy.getByTestId('checkout-name-input').clear().type('Nandana Evaluator');
+        cy.getByTestId('checkout-address1-input').clear().type('123 Galle Road');
+        cy.getByTestId('checkout-city-input').clear().type('Colombo');
+        cy.getByTestId('checkout-state-input').clear().type('Western');
+        cy.getByTestId('checkout-postal-input').clear().type('00300');
+        cy.getByTestId('checkout-country-input').clear().type('Sri Lanka');
+        cy.getByTestId('checkout-phone-input').clear().type('0771234567');
 
-      // Step 2: Payment Method
-      cy.getByTestId('payment-method-cod').click();
-      cy.getByTestId('checkout-continue-to-review-btn').click();
+        cy.getByTestId('checkout-continue-to-payment-btn').click();
 
-      // Step 3: Review & Submit (Write Order)
-      cy.getByTestId('checkout-place-order-btn').click();
+        // Step 2: Payment Method
+        cy.getByTestId('payment-method-cod').click();
+        cy.getByTestId('checkout-continue-to-review-btn').click();
 
-      // Verify redirect to order details
-      cy.url({ timeout: 15000 }).should('include', '/account/orders');
+        // Step 3: Review & Submit (Write Order)
+        cy.getByTestId('checkout-place-order-btn').click();
+
+        // Verify redirect to order details
+        cy.url({ timeout: 15000 }).should('include', '/account/orders');
+      });
     });
   });
 });

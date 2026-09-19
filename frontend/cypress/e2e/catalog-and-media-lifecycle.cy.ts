@@ -31,6 +31,26 @@ describe('Catalog Lifecycle, Dynamic Navigation & Media Upload E2E', () => {
       .contains(categoryName.toUpperCase())
       .scrollIntoView()
       .should('be.visible');
+
+    // Clean up created test category so it does not pollute the database
+    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
+    cy.request({
+      method: 'GET',
+      url: `${apiUrl}/categories`,
+    }).then((res) => {
+      const categories = res.body.data || res.body;
+      const created = categories.find((c: any) => c.name === categoryName);
+      if (created) {
+        cy.loginByApi('admin@textileshop.com', 'Admin@123456').then(({ accessToken }) => {
+          cy.request({
+            method: 'DELETE',
+            url: `${apiUrl}/categories/${created.id}`,
+            headers: { Authorization: `Bearer ${accessToken}` },
+            failOnStatusCode: false,
+          });
+        });
+      }
+    });
   });
 
   it('2. Admin uploads a product image successfully without 500 permission errors', () => {
