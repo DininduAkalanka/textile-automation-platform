@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    app_env: str = "development"
+
     # Read-only DB. If someone pastes the admin URL in here by mistake, the
     # service still cannot write, because it never issues a write statement --
     # but the role is the real guarantee.
@@ -27,6 +30,22 @@ class Settings(BaseSettings):
     # Shared secret with the NestJS gateway. The AI service is not exposed to the
     # internet; the API is its only client.
     internal_api_key: str = "local-dev-internal-key"
+
+    @model_validator(mode="after")
+    def validate_internal_api_key_in_production(self) -> "Settings":
+        """
+        audit §11.4: Refuse to start in production if INTERNAL_API_KEY is empty,
+        shorter than 32 characters, or equals 'local-dev-internal-key'.
+        """
+        if self.app_env == "production":
+            key = self.internal_api_key or ""
+            if not key or len(key) < 32 or key == "local-dev-internal-key":
+                raise ValueError(
+                    "INTERNAL_API_KEY must be configured with at least 32 characters "
+                    "in production and cannot use 'local-dev-internal-key' (audit §11.4). "
+                    "Generate one with: openssl rand -hex 32"
+                )
+        return self
 
     # Provider-agnostic by design (plan Session 9.1, task 3). Switching provider
     # is an env change, not a code change.

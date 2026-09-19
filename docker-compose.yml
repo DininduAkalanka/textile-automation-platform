@@ -63,6 +63,8 @@ services:
       # start and serve the shop whether or not the assistant is up, and it
       # falls back to plain product search when it cannot reach it.
       - AI_SERVICE_URL=http://ai:8000
+      - NODE_ENV=development
+      # Shared secret with AI service (audit §11.4). Production requires >= 32 chars: openssl rand -hex 32
       - INTERNAL_API_KEY=local-dev-internal-key
       - AI_TIMEOUT_MS=12000
       - ALLOW_DEV_OTP_BYPASS=true
@@ -96,6 +98,8 @@ services:
       # nothing else — Postgres itself refuses writes and refuses to show it the
       # users table. See the ai_readonly_role migration.
       - DATABASE_URL_READONLY=postgresql://textile_ai_readonly:ai_readonly_local_dev_password@postgres:5432/textile_db
+      - APP_ENV=development
+      # Shared secret with NestJS gateway (audit §11.4). Production requires >= 32 chars: openssl rand -hex 32
       - INTERNAL_API_KEY=local-dev-internal-key
       # Override PORT=3001 inherited from backend/.env — this service must
       # listen on 8000 to match the Docker port mapping and health check.

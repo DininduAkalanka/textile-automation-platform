@@ -107,9 +107,21 @@ export class EnvironmentVariables {
   @IsString()
   AI_SERVICE_URL?: string;
 
-  /** Shared secret with the AI service. It rejects calls that lack it. */
-  @IsOptional()
+  /**
+   * Shared secret with the AI service (audit §11.4).
+   * Required and >= 32 characters when NODE_ENV is production.
+   * Generate one with: openssl rand -hex 32
+   */
+  @ValidateIf((o: EnvironmentVariables) => o.NODE_ENV === NodeEnv.Production)
   @IsString()
+  @IsNotEmpty({
+    message:
+      'INTERNAL_API_KEY is required in production. Generate one with: openssl rand -hex 32',
+  })
+  @MinLength(32, {
+    message:
+      'INTERNAL_API_KEY must be at least 32 characters in production (audit §11.4). Generate one with: openssl rand -hex 32',
+  })
   INTERNAL_API_KEY?: string;
 
   @IsOptional()
