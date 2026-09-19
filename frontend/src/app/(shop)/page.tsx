@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import {
   HeroSection,
-  TrustMetricsBar,
   CategoryDiscovery,
   NewArrivalsSection,
   WomensWearSection,
@@ -98,22 +97,19 @@ export default function HomePage() {
         {/* 1. Hero Section: High-impact editorial commerce slider */}
         <HeroSection />
 
-        {/* 2. Trust Metrics & Value Proposition: 4 proof metrics + 4 core service guarantees */}
-        <TrustMetricsBar />
+        {/* 2. Live New Arrivals: Dynamic catalog grid with quick action triggers */}
+        <NewArrivalsSection />
 
         {/* 3. Five-Pillar Category Discovery: Women, Men, Teenagers, Uniforms, Fabrics */}
         <CategoryDiscovery />
 
-        {/* 4. Live New Arrivals: Dynamic catalog grid with quick action triggers */}
-        <NewArrivalsSection />
-
-        {/* 5. Women's Wear Showcase: Thilakawardhana-style dedicated department rail */}
+        {/* 4. Women's Wear Showcase: Thilakawardhana-style dedicated department rail */}
         <WomensWearSection />
 
-        {/* 6. Editorial Craftsmanship Campaign: Full-bleed lifestyle storytelling banner */}
+        {/* 5. Editorial Craftsmanship Campaign: Full-bleed lifestyle storytelling banner */}
         <EditorialCampaign />
 
-        {/* 7. Men's Wear Showcase: Thilakawardhana-style dedicated department rail */}
+        {/* 6. Men's Wear Showcase: Thilakawardhana-style dedicated department rail */}
         <MensWearSection />
 
         {/* 8. Best Sellers & Customer Favorites: Highest-rated catalog products */}

@@ -79,22 +79,35 @@ export default function CartPage() {
 
         {/* Customer Trust Guarantees */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-neutral-200 text-left text-xs text-neutral-600">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50">
-            <span className="text-xl">🚚</span>
+          <div className="flex items-center gap-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200/60">
+            <span className="w-9 h-9 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 text-neutral-800">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+              </svg>
+            </span>
             <div>
               <p className="font-semibold text-neutral-900">Islandwide Delivery</p>
               <p className="text-[11px] text-neutral-500">Fast 2-4 business day shipping</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50">
-            <span className="text-xl">💳</span>
+          <div className="flex items-center gap-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200/60">
+            <span className="w-9 h-9 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 text-neutral-800">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
+            </span>
             <div>
               <p className="font-semibold text-neutral-900">Interest-Free BNPL</p>
               <p className="text-[11px] text-neutral-500">3 installments with KOKO / Mintpay</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50">
-            <span className="text-xl">🔄</span>
+          <div className="flex items-center gap-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200/60">
+            <span className="w-9 h-9 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 text-neutral-800">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </span>
             <div>
               <p className="font-semibold text-neutral-900">14-Day Exchange</p>
               <p className="text-[11px] text-neutral-500">Hassle-free size or fit swaps</p>
@@ -106,7 +119,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+    <div className="container pb-32 sm:pb-16" style={{ paddingTop: '2rem' }}>
       <h1 className="font-display" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
         Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'}
         {totalItems() > items.length ? ` · ${totalItems()} units` : ''})
@@ -141,12 +154,10 @@ export default function CartPage() {
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
-                    <div style={{
-                      width: '100%', height: '100%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'linear-gradient(135deg, var(--warm-100), var(--warm-200))',
-                    }}>
-                      <span style={{ fontSize: '2rem' }}>🧵</span>
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                      <svg className="w-8 h-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
                     </div>
                   )}
                 </div>

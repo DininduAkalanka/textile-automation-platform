@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { OrderTrackingStepper } from '@/components/orders/order-tracking-stepper';
 import { useCancelMyOrder, useOrder } from '@/hooks/use-orders';
 import { api } from '@/lib/api';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 const fmt = (n: number | string) =>
   'Rs. ' + Number(n).toLocaleString('en-LK', { minimumFractionDigits: 2 });
@@ -95,7 +96,11 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
             marginBottom: '2rem',
           }}
         >
-          <p style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎉</p>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 border border-emerald-200">
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
           <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, color: '#065f46', marginBottom: '0.5rem' }}>
             Order Placed Successfully!
           </h2>
@@ -140,17 +145,30 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div
                       style={{
-                        width: '52px',
-                        height: '52px',
+                        width: '56px',
+                        height: '56px',
                         borderRadius: '0.5rem',
-                        background: 'linear-gradient(135deg, hsl(220, 25%, 90%), hsl(250, 30%, 85%))',
+                        background: 'var(--clr-surface-2)',
+                        border: '1px solid var(--clr-border-2)',
+                        overflow: 'hidden',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
+                        position: 'relative',
                       }}
                     >
-                      <span style={{ fontSize: '1.375rem' }}>🧵</span>
+                      {item.product?.images?.[0] ? (
+                        <img
+                          src={normalizeImageUrl(item.product.images[0])}
+                          alt={item.product?.name || 'Product'}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <svg className="w-6 h-6 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <p style={{ fontWeight: 500 }}>{item.product?.name || 'Product'}</p>

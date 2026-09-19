@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -66,10 +67,16 @@ export default function ProductDetailPage() {
   const [isGiftBoxAdded, setIsGiftBoxAdded] = useState(false);
   
   // Modals state
+  const [mounted, setMounted] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [sizeGuideUnit, setSizeGuideUnit] = useState<'inches' | 'cm'>('inches');
   const [showBnplInfo, setShowBnplInfo] = useState(false);
+  const [showStoreInfo, setShowStoreInfo] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Gallery interactive zoom & full-screen lightbox state
   const [isHoverZooming, setIsHoverZooming] = useState(false);
@@ -275,17 +282,51 @@ export default function ProductDetailPage() {
       </p>
       <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         {[
-          { icon: '✂️', label: 'Precision tailored stitching' },
-          { icon: '🧵', label: 'Quality-inspected fabrics' },
-          { icon: '🌿', label: 'Breathable tropical comfort' },
-          { icon: '🔄', label: 'Color-fast and durable weave' },
+          {
+            icon: (
+              <svg className="w-4 h-4 text-neutral-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+              </svg>
+            ),
+            label: 'Precision tailored stitching',
+          },
+          {
+            icon: (
+              <svg className="w-4 h-4 text-neutral-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            ),
+            label: 'Quality-inspected fabrics',
+          },
+          {
+            icon: (
+              <svg className="w-4 h-4 text-neutral-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ),
+            label: 'Breathable tropical comfort',
+          },
+          {
+            icon: (
+              <svg className="w-4 h-4 text-neutral-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            ),
+            label: 'Color-fast and durable weave',
+          },
         ].map((f) => (
           <div
             key={f.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--clr-text)' }}
+            className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-neutral-800"
           >
-            <span style={{ fontSize: '1.2rem' }}>{f.icon}</span>
-            <span>{f.label}</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neutral-100 border border-neutral-200/80 flex items-center justify-center shrink-0">
+              {f.icon}
+            </span>
+            <span className="leading-snug">{f.label}</span>
           </div>
         ))}
       </div>
@@ -615,7 +656,8 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          {/* 5. Size Selector & Size Guide Modal Trigger */}
+
+          {/* 6. Size Selector & Size Guide Modal Trigger */}
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-neutral-900 uppercase tracking-wide">
@@ -642,12 +684,12 @@ export default function ProductDetailPage() {
                     type="button"
                     disabled={isOutOfStock}
                     onClick={() => setSelectedSize(sz)}
-                    className={`w-11 h-11 text-xs font-bold border transition-all flex items-center justify-center relative ${
+                    className={`w-11 h-11 text-xs font-semibold border transition-all flex items-center justify-center relative rounded-sm ${
                       isSelected
-                        ? 'bg-neutral-950 text-white border-neutral-950 shadow-sm'
+                        ? 'border-2 border-neutral-950 text-neutral-950 bg-white font-bold shadow-sm'
                         : isOutOfStock
-                        ? 'bg-neutral-50 text-neutral-300 border-neutral-200 cursor-not-allowed overflow-hidden before:absolute before:inset-0 before:border-t before:border-red-300 before:rotate-45'
-                        : 'bg-white text-neutral-800 border-neutral-300 hover:border-neutral-900'
+                        ? 'bg-neutral-50 text-neutral-400 border-neutral-200 cursor-not-allowed overflow-hidden before:absolute before:inset-0 before:border-t-2 before:border-red-400 before:rotate-45 pointer-events-none'
+                        : 'bg-white text-neutral-700 border-neutral-300 hover:border-neutral-900'
                     }`}
                   >
                     {sz}
@@ -657,41 +699,21 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* 6. Feature Try-On / Custom Uniform Tailoring CTA */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (product.productType === 'UNIFORM' || product.requiresMeasurement) {
-                  router.push('/products?category=school-uniforms');
-                } else {
-                  alert('Virtual Try-On: 3D interactive fit analysis initialized for ' + product.name);
-                }
-              }}
-              className="w-full sm:w-auto min-h-[38px] px-4 py-2 rounded-full border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 font-semibold text-xs flex items-center justify-center gap-2 transition-all group"
-            >
-              <Sparkles size={15} className="text-neutral-900 group-hover:scale-110 transition-transform" />
-              <span>
-                {product.productType === 'UNIFORM' || product.requiresMeasurement
-                  ? 'Bespoke Uniform Sizing & Measurement'
-                  : 'Try-on with Virtual 3D Fit'}
-              </span>
-            </button>
-          </div>
-
           {/* 7. Live Subtotal Display */}
-          <div className="pt-2 text-sm font-semibold text-neutral-700 flex items-center justify-between border-t border-neutral-150">
+          <div className="pt-2 text-xs sm:text-sm text-neutral-800 flex items-center gap-1.5">
             <span>Subtotal:</span>
-            <span className="text-base font-bold text-neutral-950">Rs. {subtotalFormatted}</span>
+            <span className="font-semibold text-neutral-950">Rs. {subtotalFormatted}</span>
           </div>
 
           {/* 8. Quantity & Primary Action Hierarchy (Thilakawardhana Pattern) */}
           {product.stockQuantity > 0 && (
             <div className="flex flex-col gap-3 pt-1">
-              {/* Row 1: Quantity Stepper + Hero ADD TO CART Button + Wishlist + Share */}
-              <div className="flex items-center gap-2.5">
-                {/* Quantity Stepper */}
-                <div className="flex items-center border border-neutral-300 rounded bg-white w-28 sm:w-32 h-12 shrink-0 overflow-hidden">
+              {/* Quantity Label & Stepper on separate row */}
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Quantity:
+                </label>
+                <div className="flex items-center border border-neutral-300 rounded bg-white w-28 sm:w-32 h-11 shrink-0 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -712,16 +734,19 @@ export default function ProductDetailPage() {
                     +
                   </button>
                 </div>
+              </div>
 
-                {/* Hero ADD TO CART Button */}
+              {/* Row 1: Theme Red ADD TO CART Button + Wishlist + Share */}
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   data-testid="add-to-cart-btn"
                   onClick={handleAddToCart}
-                  style={{ backgroundColor: added ? '#000000' : '#CC0000' }}
-                  className="flex-1 h-12 rounded font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow-sm active:scale-[0.99]"
+                  className={`flex-1 h-12 rounded font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow-sm active:scale-[0.99] ${
+                    added ? 'bg-black' : 'bg-[#CC0000] hover:bg-[#b30000]'
+                  }`}
                 >
-                  {added ? '✓ Added to Cart!' : 'Add to Cart'}
+                  {added ? '✓ Added to Cart!' : 'ADD TO CART'}
                 </button>
 
                 {/* Wishlist Button */}
@@ -732,7 +757,7 @@ export default function ProductDetailPage() {
                   className={`w-12 h-12 rounded border flex items-center justify-center transition-colors shrink-0 ${
                     isSaved
                       ? 'border-[#CC0000] bg-red-50 text-[#CC0000]'
-                      : 'border-neutral-300 text-neutral-600 hover:border-black bg-white'
+                      : 'border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white'
                   }`}
                 >
                   <Heart size={20} fill={isSaved ? 'currentColor' : 'none'} />
@@ -743,22 +768,22 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={handleShare}
                   aria-label="Share product"
-                  className="w-12 h-12 rounded border border-neutral-300 text-neutral-600 hover:border-black bg-white flex items-center justify-center transition-colors shrink-0"
+                  className="w-12 h-12 rounded border border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white flex items-center justify-center transition-colors shrink-0"
                 >
-                  {copiedLink ? <Check size={18} className="text-[#CC0000]" /> : <Share2 size={18} />}
+                  {copiedLink ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
                 </button>
               </div>
 
-              {/* Row 3: Express Checkout: BUY IT NOW Button */}
+              {/* Row 2: Express Checkout: BUY IT NOW Button (Thilakawardhana white with dark border) */}
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="w-full h-12 rounded border-2 border-black bg-black text-white hover:bg-neutral-800 font-bold text-xs uppercase tracking-widest transition-all shadow-sm active:scale-[0.99]"
+                className="w-full h-12 rounded border-2 border-neutral-900 bg-white hover:bg-neutral-50 text-neutral-900 font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.99]"
               >
-                Buy It Now
+                BUY IT NOW
               </button>
 
-              {/* Row 4: Elegant WhatsApp Inquiries Strip (Premium Neutral with Official Icon) */}
+              {/* Row 3: Elegant WhatsApp Inquiries Strip */}
               <a
                 href={`https://wa.me/94717088445?text=${encodeURIComponent(
                   `Hello Nandana Textile! I am interested in: ${product.name} (SKU: ${product.sku}, Size: ${selectedSize}, Qty: ${quantity}, Price: Rs. ${subtotalFormatted}). Is it available for delivery?`
@@ -776,8 +801,8 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          {/* 9. Gift Packaging Upsell Box (Thilakawardhana Reference) */}
-          <div className="mt-1 border border-dashed border-neutral-300 rounded-lg p-3 bg-neutral-50/50 hover:bg-neutral-50 transition-colors">
+          {/* 9. Gift Packaging Upsell Box (Thilakawardhana Reference with Photography) */}
+          <div className="mt-1 border border-neutral-200 rounded-lg p-3 bg-white shadow-xs">
             <label className="flex items-start gap-3 cursor-pointer">
               <input 
                 type="checkbox" 
@@ -786,32 +811,39 @@ export default function ProductDetailPage() {
                 className="mt-1 w-4 h-4 rounded text-neutral-900 focus:ring-neutral-900 accent-neutral-900 cursor-pointer"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-900 leading-snug">
-                  Is This A Gift? Make Every Present Look Special With Our Premium, Elegant Gift Box (Up to Size 35*30*10cm) ( +Rs. 1,450 )
+                <p className="text-xs font-semibold text-neutral-800 leading-snug">
+                  Is This A Gift? Make Every Present Look Special With Our Premium, Elegant Gift Box (Up to Size 35*30*10cm)( Rs 1450 )
                 </p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
-                  Includes satin ribbon finish & custom handwritten message card.
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded bg-neutral-200 flex items-center justify-center text-neutral-400 shrink-0 overflow-hidden">
-                <Package size={24} className="text-neutral-600" />
+                <div className="mt-2.5 w-28 sm:w-36 aspect-[4/3] rounded-md overflow-hidden border border-neutral-200 shadow-xs">
+                  <img
+                    src="/images/luxury-gift-box.jpg"
+                    alt="Premium Gift Box Set"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
             </label>
           </div>
 
           {/* 10. Store Fulfillment & Delivery Badges (Sri Lankan E-commerce Standards) */}
           <div className="pt-2 border-t border-neutral-150 space-y-3">
-            {/* Showroom Pickup */}
+            {/* Showroom Pickup with Green Checkmark */}
             <div className="flex items-start gap-3 text-xs text-neutral-700">
-              <span className="text-neutral-900 mt-0.5"><Check size={16} /></span>
+              <span className="text-emerald-600 mt-0.5">
+                <Check size={18} strokeWidth={2.5} />
+              </span>
               <div>
                 <p className="font-bold text-neutral-900 uppercase tracking-wide">
                   Pickup Available at Nandana Textile Showroom
                 </p>
-                <p className="text-neutral-500">Usually ready in 2–4 hours</p>
-                <Link href="/contact" className="text-neutral-900 underline font-medium hover:text-[var(--clr-brand)] mt-0.5 inline-block">
+                <p className="text-neutral-500">Usually ready in 4 hours</p>
+                <button
+                  type="button"
+                  onClick={() => setShowStoreInfo(true)}
+                  className="text-neutral-900 underline font-medium hover:text-[#CC0000] mt-0.5 inline-block text-left cursor-pointer"
+                >
                   View store information
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -940,18 +972,25 @@ export default function ProductDetailPage() {
         <button
           type="button"
           onClick={handleAddToCart}
-          style={{ backgroundColor: added ? '#000000' : '#CC0000' }}
-          className="h-11 px-5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow active:scale-95 shrink-0"
+          className={`h-11 px-6 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow active:scale-95 shrink-0 ${
+            added ? 'bg-black' : 'bg-[#CC0000] hover:bg-[#b30000]'
+          }`}
         >
-          {added ? '✓ Added' : 'Add to Cart'}
+          {added ? '✓ Added' : 'ADD TO CART'}
         </button>
       </div>
 
 
       {/* ── Interactive Size Guide Modal ──────────────────────────── */}
       {showSizeGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          onClick={() => setShowSizeGuide(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 relative my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
               <div className="flex items-center gap-2">
                 <Ruler className="text-[var(--clr-brand)]" size={20} />
@@ -1040,8 +1079,14 @@ export default function ProductDetailPage() {
 
       {/* ── Interactive BNPL Info Modal ───────────────────────────── */}
       {showBnplInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6 relative">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          onClick={() => setShowBnplInfo(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-5 sm:p-6 relative my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
               <h3 className="text-base font-bold text-neutral-900">Buy Now, Pay Later in Sri Lanka</h3>
               <button
@@ -1078,50 +1123,194 @@ export default function ProductDetailPage() {
         </div>
       )}
 
+      {/* ── Interactive Store Information Modal ───────────────────── */}
+      {mounted && showStoreInfo && createPortal(
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          onClick={() => setShowStoreInfo(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-lg w-full shadow-2xl p-5 sm:p-6 relative my-auto max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-neutral-100 text-neutral-900 flex items-center justify-center">
+                  <Store size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-neutral-900">Showroom & Pickup Details</h3>
+                  <p className="text-[11px] text-neutral-500">In-store pickup and showroom visits</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStoreInfo(false)}
+                className="text-neutral-400 hover:text-neutral-800 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* In-Store Pickup Banner */}
+            <div className="mt-4 p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-800">
+              <div className="flex items-center gap-2 font-bold text-neutral-900 mb-1">
+                <Check size={16} strokeWidth={2.5} className="text-emerald-700" />
+                <span>Ready for In-Store Pickup in 2–4 Hours</span>
+              </div>
+              <p className="text-neutral-600 leading-relaxed text-[11.5px]">
+                Orders placed before 2:00 PM are prepared the same day. You will receive an SMS and email notification with your pickup code once ready. Zero delivery or handling fees.
+              </p>
+            </div>
+
+            {/* Showrooms */}
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider font-mono text-[11px]">Showroom Locations</p>
+              
+              {/* Veyangoda Flagship */}
+              <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-neutral-900 text-white rounded-sm mb-1">
+                      FLAGSHIP SHOWROOM
+                    </span>
+                    <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Veyangoda</h4>
+                    <p className="text-xs text-neutral-600 mt-0.5">50 Main Street, Veyangoda, Sri Lanka</p>
+                  </div>
+                </div>
+                
+                <div className="mt-2.5 pt-2.5 border-t border-neutral-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11.5px] text-neutral-600">
+                  <div>
+                    <span className="font-semibold text-neutral-800 block">Opening Hours:</span>
+                    <span>Mon – Sat: 8:30 AM – 7:00 PM</span>
+                    <span className="block">Sun & Poya: 9:00 AM – 3:00 PM</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-neutral-800 block">Showroom Contact:</span>
+                    <a href="tel:0332288445" className="hover:text-[#CC0000] block font-mono">Landline: 033 228 8445</a>
+                    <a href="https://wa.me/94717088445" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 block font-mono font-medium">WhatsApp: 071 708 8445</a>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <a
+                    href="https://maps.google.com/?q=Nandana+Textile+Veyangoda"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium transition-colors"
+                  >
+                    <span>Get Directions</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                  </a>
+                  <a
+                    href="https://wa.me/94717088445?text=Hi%20Nandana%20Textile,%20I'm%20inquiring%20about%20store%20pickup"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 hover:border-neutral-900 text-neutral-900 text-xs font-medium transition-colors"
+                  >
+                    <span>WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Kurunegala Branch */}
+              <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
+                <div>
+                  <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider border border-neutral-300 text-neutral-800 bg-neutral-100 rounded-sm mb-1">
+                    KURUNEGALA BRANCH
+                  </span>
+                  <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Kurunegala</h4>
+                  <p className="text-xs text-neutral-600 mt-0.5">No. 145, Main Street, Kurunegala, Sri Lanka</p>
+                </div>
+                <div className="mt-2.5 pt-2.5 border-t border-neutral-200/80 text-[11.5px] text-neutral-600">
+                  <span className="font-semibold text-neutral-800">Hours: </span>
+                  <span>Mon – Sat: 8:30 AM – 6:00 PM | Sun: 9:00 AM – 2:00 PM</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pickup Instructions */}
+            <div className="mt-4 p-3 bg-neutral-100 rounded-xl text-xs text-neutral-700 space-y-1">
+              <p className="font-bold text-neutral-900">What to know for pickup:</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11.5px] text-neutral-600">
+                <li>Bring your Order ID (e.g. #ORD-XXXX) or SMS confirmation.</li>
+                <li>Fitting rooms available if you wish to try garments before taking them.</li>
+                <li>Free on-the-spot size exchange if stock is available.</li>
+              </ul>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="mt-5 pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
+              <Link
+                href="/contact"
+                className="text-xs font-semibold text-[#CC0000] hover:underline inline-flex items-center gap-1"
+                onClick={() => setShowStoreInfo(false)}
+              >
+                <span>View Full Contact Page</span>
+                <ChevronRight size={14} />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowStoreInfo(false)}
+                className="btn btn-primary btn-sm px-5"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ── Full-Screen Lightbox Zoom Modal ──────────────────────── */}
       {isLightboxOpen && (
         <div 
-          className="fixed inset-0 z-[9999] bg-black/95 flex flex-col justify-between p-4 backdrop-blur-md select-none animate-fade-in"
+          className="fixed inset-0 z-[9999] bg-black/95 flex flex-col justify-between p-3 sm:p-6 backdrop-blur-md select-none animate-fade-in"
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)', paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
           onClick={() => setIsLightboxOpen(false)}
         >
           {/* Top Controls Bar */}
           <div 
-            className="flex items-center justify-between text-white z-10 px-2 sm:px-6 py-2"
+            className="w-full flex items-center justify-between gap-2 text-white z-10 px-1 sm:px-2 py-1 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold tracking-wide text-neutral-200 truncate max-w-[200px] sm:max-w-md">
+            {/* Left: Product title & counter badge */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="text-xs sm:text-sm font-semibold tracking-wide text-neutral-200 truncate max-w-[120px] xs:max-w-[170px] sm:max-w-md">
                 {product.name}
               </span>
-              <span className="text-xs text-neutral-400 bg-neutral-800/80 px-2.5 py-0.5 rounded-full shrink-0">
+              <span className="text-[11px] font-mono text-neutral-400 bg-neutral-800/90 px-2 py-0.5 rounded-full shrink-0 border border-white/10">
                 {selectedImageIndex + 1} / {galleryImages.length}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Right: Controls + Thumb-friendly Close button with guaranteed margin */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setLightboxZoom((prev) => Math.min(prev + 0.5, 3.5))}
-                className="p-2 rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-white transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-white flex items-center justify-center transition-colors border border-white/10"
                 title="Zoom In"
                 aria-label="Zoom In"
               >
-                <ZoomIn size={18} />
+                <ZoomIn size={16} />
               </button>
               <button
                 type="button"
                 onClick={() => setLightboxZoom((prev) => Math.max(prev - 0.5, 1))}
-                className="p-2 rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-white transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-white flex items-center justify-center transition-colors border border-white/10"
                 title="Zoom Out"
                 aria-label="Zoom Out"
               >
-                <ZoomOut size={18} />
+                <ZoomOut size={16} />
               </button>
               {lightboxZoom > 1 && (
                 <button
                   type="button"
                   onClick={() => setLightboxZoom(1)}
-                  className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 transition-colors"
+                  className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-neutral-800/90 hover:bg-neutral-700 text-neutral-300 transition-colors border border-white/10"
                 >
                   Reset
                 </button>
@@ -1129,11 +1318,11 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsLightboxOpen(false)}
-                className="p-2 ml-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-all shadow-md active:scale-90 shrink-0 border border-white/20 ml-1"
                 title="Close (Esc)"
                 aria-label="Close Full Screen Zoom"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
