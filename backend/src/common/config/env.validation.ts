@@ -8,6 +8,7 @@ import {
   IsString,
   IsUrl,
   MinLength,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -141,6 +142,7 @@ export class EnvironmentVariables {
   EMAIL_FROM?: string;
 
   @IsOptional()
+  @ValidateIf((o) => Boolean(o.ADMIN_ALERT_EMAIL))
   @IsEmail()
   ADMIN_ALERT_EMAIL?: string;
 
@@ -149,6 +151,7 @@ export class EnvironmentVariables {
   ADMIN_ALERT_PHONE?: string;
 
   @IsOptional()
+  @ValidateIf((o) => Boolean(o.SMS_PROVIDER))
   @IsEnum(['notifylk', 'textlk'])
   SMS_PROVIDER?: string;
 
@@ -222,7 +225,21 @@ export class EnvironmentVariables {
 }
 
 export function validateEnv(config: Record<string, unknown>) {
-  const validated = plainToInstance(EnvironmentVariables, config, {
+  const cleanedConfig = { ...config };
+  for (const key of Object.keys(cleanedConfig)) {
+    const val = cleanedConfig[key];
+    if (typeof val === 'string') {
+      const trimmed = val.trim().replace(/^["']|["']$/g, '');
+      if (trimmed === '') {
+        delete cleanedConfig[key];
+        cleanedConfig[key] = undefined;
+      } else {
+        cleanedConfig[key] = trimmed;
+      }
+    }
+  }
+
+  const validated = plainToInstance(EnvironmentVariables, cleanedConfig, {
     enableImplicitConversion: true,
   });
 
