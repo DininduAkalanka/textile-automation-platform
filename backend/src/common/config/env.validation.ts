@@ -8,6 +8,7 @@ import {
   IsString,
   IsUrl,
   MinLength,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -106,9 +107,21 @@ export class EnvironmentVariables {
   @IsString()
   AI_SERVICE_URL?: string;
 
-  /** Shared secret with the AI service. It rejects calls that lack it. */
-  @IsOptional()
+  /**
+   * Shared secret with the AI service (audit §11.4).
+   * Required and >= 32 characters when NODE_ENV is production.
+   * Generate one with: openssl rand -hex 32
+   */
+  @ValidateIf((o: EnvironmentVariables) => o.NODE_ENV === NodeEnv.Production)
   @IsString()
+  @IsNotEmpty({
+    message:
+      'INTERNAL_API_KEY is required in production. Generate one with: openssl rand -hex 32',
+  })
+  @MinLength(32, {
+    message:
+      'INTERNAL_API_KEY must be at least 32 characters in production (audit §11.4). Generate one with: openssl rand -hex 32',
+  })
   INTERNAL_API_KEY?: string;
 
   @IsOptional()
@@ -141,6 +154,7 @@ export class EnvironmentVariables {
   EMAIL_FROM?: string;
 
   @IsOptional()
+  @ValidateIf((o) => Boolean(o.ADMIN_ALERT_EMAIL))
   @IsEmail()
   ADMIN_ALERT_EMAIL?: string;
 
@@ -149,6 +163,7 @@ export class EnvironmentVariables {
   ADMIN_ALERT_PHONE?: string;
 
   @IsOptional()
+  @ValidateIf((o) => Boolean(o.SMS_PROVIDER))
   @IsEnum(['notifylk', 'textlk'])
   SMS_PROVIDER?: string;
 
@@ -222,7 +237,21 @@ export class EnvironmentVariables {
 }
 
 export function validateEnv(config: Record<string, unknown>) {
-  const validated = plainToInstance(EnvironmentVariables, config, {
+  const cleanedConfig = { ...config };
+  for (const key of Object.keys(cleanedConfig)) {
+    const val = cleanedConfig[key];
+    if (typeof val === 'string') {
+      const trimmed = val.trim().replace(/^["']|["']$/g, '');
+      if (trimmed === '') {
+        delete cleanedConfig[key];
+        cleanedConfig[key] = undefined;
+      } else {
+        cleanedConfig[key] = trimmed;
+      }
+    }
+  }
+
+  const validated = plainToInstance(EnvironmentVariables, cleanedConfig, {
     enableImplicitConversion: true,
   });
 

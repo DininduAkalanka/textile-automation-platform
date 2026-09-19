@@ -1,4 +1,5 @@
 import logging
+import secrets
 from contextlib import asynccontextmanager
 
 import asyncpg
@@ -72,8 +73,13 @@ def require_internal_key(
     The AI service is not a public API. Its only client is the NestJS gateway,
     which holds the shared secret. Without this, anyone who found the service's
     URL could burn the LLM budget (doc 09 §8).
+
+    audit §11.4: Use constant-time comparison (secrets.compare_digest) to prevent timing attacks.
     """
-    if x_internal_key != settings.internal_api_key:
+    if not secrets.compare_digest(
+        x_internal_key.encode("utf-8"),
+        settings.internal_api_key.encode("utf-8"),
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid internal key"
         )
