@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 import { useCategories } from '@/hooks/use-categories';
+import { api } from '@/lib/api';
+import { Category } from '@/types';
 
 /* ── Types ────────────────────────────────────────────────── */
 export interface SubCategoryLink {
@@ -235,17 +237,45 @@ export const CATEGORIES_DATA: CategoryItem[] = [
 /* ── Hook to retrieve combined static + dynamic categories ──── */
 export function useNavCategories(): CategoryItem[] {
   const { data: dbCategories } = useCategories();
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (dbCategories && dbCategories.length > 0) {
+      setCategories(dbCategories);
+    } else {
+      api
+        .getCategories()
+        .then((res) => {
+          if (mounted && res && res.length > 0) {
+            setCategories(res);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [dbCategories]);
 
   return useMemo(() => {
+    const effectiveCategories =
+      dbCategories && dbCategories.length > 0 ? dbCategories : categories;
+
     // Fixed initial items
     const navItems: CategoryItem[] = [
       CATEGORIES_DATA[0], // HOME
       CATEGORIES_DATA[1], // NEW ARRIVALS
     ];
 
-    if (dbCategories && dbCategories.length > 0) {
-      // Find top-level categories (parentId is null or empty)
-      const topLevel = dbCategories.filter((c) => !c.parentId);
+    if (effectiveCategories && effectiveCategories.length > 0) {
+      // Find top-level categories (parentId is null or empty), filtering out legacy test generated IDs
+      const topLevel = effectiveCategories.filter(
+        (c) =>
+          !c.parentId &&
+          !/^DEPT_/i.test(c.name) &&
+          !/^DEPT_/i.test(c.slug || ''),
+      );
 
       topLevel.forEach((cat) => {
         const catSlug = (cat.slug || cat.name).toLowerCase();
@@ -265,7 +295,7 @@ export function useNavCategories(): CategoryItem[] {
           });
         } else {
           // Dynamic category created in Admin panel (e.g. "School")!
-          const children = dbCategories.filter((c) => c.parentId === cat.id);
+          const children = effectiveCategories.filter((c) => c.parentId === cat.id);
           navItems.push({
             id: cat.slug || cat.id,
             label: cat.name.toUpperCase(),
@@ -292,7 +322,7 @@ export function useNavCategories(): CategoryItem[] {
     }
 
     return CATEGORIES_DATA;
-  }, [dbCategories]);
+  }, [dbCategories, categories]);
 }
 
 /* ── Fashion Bug Style Category Navigation Bar Component ──── */
