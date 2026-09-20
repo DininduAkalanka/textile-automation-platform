@@ -311,6 +311,10 @@ export interface CartItem {
   product: Product;
   quantity: number;
   /**
+   * Chosen ready-made size (e.g. 'S', 'M', 'L', 'XL').
+   */
+  selectedSize?: string;
+  /**
    * BR3. Present only for products whose type requires it (uniform/custom, or
    * requires_measurement). Snapshotted onto the order item at checkout so a later
    * edit to the customer's saved measurements never rewrites what was stitched.

@@ -133,7 +133,12 @@ export default function ProductDetailPage() {
         .then((prod) => {
           setProduct(prod);
           // Set initial size if available in attributes
-          if (prod?.attributes?.size) {
+          if (prod?.attributes?.sizeStock && typeof prod.attributes.sizeStock === 'object') {
+            const stockMap = prod.attributes.sizeStock as Record<string, number>;
+            const availableSizes = Object.keys(stockMap);
+            const inStockSize = availableSizes.find((s) => Number(stockMap[s]) > 0);
+            setSelectedSize(inStockSize || availableSizes[0] || 'S');
+          } else if (prod?.attributes?.size) {
             const rawSize = String(prod.attributes.size).split(',')[0].trim();
             if (rawSize) setSelectedSize(rawSize);
           }
@@ -224,28 +229,36 @@ export default function ProductDetailPage() {
     galleryImages.push(primaryImgUrl);
   }
 
-  // Size list parsing
+  // Size list and per-size stock parsing
+  const sizeStock: Record<string, number> | null = 
+    product.attributes?.sizeStock && typeof product.attributes.sizeStock === 'object'
+      ? (product.attributes.sizeStock as Record<string, number>)
+      : null;
+
   const parsedSizes = product.attributes?.size
-    ? String(product.attributes.size).split(',').map(s => s.trim()).filter(Boolean)
-    : ['S', 'M', 'L', 'XL', 'XXL'];
+    ? String(product.attributes.size).split(',').map((s) => s.trim()).filter(Boolean)
+    : (sizeStock ? Object.keys(sizeStock) : ['S', 'M', 'L', 'XL', 'XXL']);
   const sizeOptions = parsedSizes.length > 0 ? parsedSizes : ['S', 'M', 'L', 'XL', 'XXL'];
 
-  // Mark largest size as sold out when stock is very low for realistic commercial fidelity
-  const outOfStockSizes = product.stockQuantity <= 6 && sizeOptions.length > 3
-    ? [sizeOptions[sizeOptions.length - 1]]
-    : [];
+  // Current stock for selected size (or total product stock if non-sized)
+  const currentSizeStock = sizeStock && selectedSize in sizeStock
+    ? Number(sizeStock[selectedSize] ?? 0)
+    : product.stockQuantity;
+  const isSelectedSizeOutOfStock = sizeStock ? currentSizeStock <= 0 : product.stockQuantity <= 0;
 
   const effectivePrice = priceNum + (isGiftBoxAdded ? 1450 : 0);
   const subtotalFormatted = (effectivePrice * quantity).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    if (isSelectedSizeOutOfStock) return;
+    addItem(product, quantity, selectedSize);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
   const handleBuyNow = () => {
-    addItem(product, quantity);
+    if (isSelectedSizeOutOfStock) return;
+    addItem(product, quantity, selectedSize);
     router.push('/checkout');
   };
 
@@ -639,18 +652,18 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* 4. Urgency Scarcity Stock Meter (Thilakawardhana pattern) */}
-          {product.stockQuantity > 0 && product.stockQuantity <= 15 && (
+          {/* 4. Urgency Scarcity Stock Meter */}
+          {currentSizeStock > 0 && currentSizeStock <= 15 && (
             <div className="pt-1">
               <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
                 <span className="text-red-600 animate-pulse">
-                  Please hurry! Only {product.stockQuantity} left in stock
+                  Please hurry! Only {currentSizeStock} left in stock for size {selectedSize}
                 </span>
               </div>
               <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
                 <div 
                   className="bg-[#CC0000] h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, Math.max(15, (product.stockQuantity / 20) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(15, (currentSizeStock / 20) * 100))}%` }}
                 />
               </div>
             </div>
@@ -673,29 +686,62 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {/* Square Size Pills - Thilakawardhana specification */}
+            {/* Square Size Pills - with real-time stock indicator */}
             <div className="flex flex-wrap gap-2">
               {sizeOptions.map((sz) => {
-                const isOutOfStock = outOfStockSizes.includes(sz);
+                const szStock = sizeStock && sz in sizeStock ? Number(sizeStock[sz]) : null;
+                const isOutOfStock = szStock !== null ? szStock <= 0 : product.stockQuantity <= 0;
+                const isLow = szStock !== null && szStock > 0 && szStock <= 5;
                 const isSelected = selectedSize === sz;
                 return (
                   <button
                     key={sz}
                     type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => setSelectedSize(sz)}
-                    className={`w-11 h-11 text-xs font-semibold border transition-all flex items-center justify-center relative rounded-sm ${
+                    onClick={() => {
+                      setSelectedSize(sz);
+                      if (szStock !== null && szStock > 0 && quantity > szStock) {
+                        setQuantity(szStock);
+                      }
+                    }}
+                    className={`min-w-[48px] h-12 px-2 text-xs font-semibold border transition-all flex flex-col items-center justify-center relative rounded-md ${
                       isSelected
-                        ? 'border-2 border-neutral-950 text-neutral-950 bg-white font-bold shadow-sm'
+                        ? 'border-2 border-neutral-950 text-neutral-950 bg-white font-bold shadow-sm ring-1 ring-neutral-950'
                         : isOutOfStock
-                        ? 'bg-neutral-50 text-neutral-400 border-neutral-200 cursor-not-allowed overflow-hidden before:absolute before:inset-0 before:border-t-2 before:border-red-400 before:rotate-45 pointer-events-none'
+                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:border-neutral-300 cursor-pointer'
                         : 'bg-white text-neutral-700 border-neutral-300 hover:border-neutral-900'
                     }`}
                   >
-                    {sz}
+                    <span className={isOutOfStock ? 'line-through opacity-60' : ''}>{sz}</span>
+                    {isOutOfStock ? (
+                      <span className="text-[9px] font-bold text-red-500 uppercase leading-none mt-0.5">Out</span>
+                    ) : isLow ? (
+                      <span className="text-[9px] font-bold text-amber-600 uppercase leading-none mt-0.5">{szStock} left</span>
+                    ) : szStock !== null ? (
+                      <span className="text-[9px] text-neutral-400 font-normal leading-none mt-0.5">{szStock}</span>
+                    ) : null}
                   </button>
                 );
               })}
+            </div>
+
+            {/* Size Stock Feedback Pill */}
+            <div className="mt-2.5">
+              {isSelectedSizeOutOfStock ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0" />
+                  <span>Out of stock in size <strong>{selectedSize}</strong>. Please choose another size or inquire via WhatsApp below.</span>
+                </div>
+              ) : currentSizeStock <= 5 ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span>Only <strong>{currentSizeStock} left</strong> in size <strong>{selectedSize}</strong> — order soon!</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-neutral-50 text-neutral-600 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>In Stock ({currentSizeStock} available in size {selectedSize})</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -705,10 +751,10 @@ export default function ProductDetailPage() {
             <span className="font-semibold text-neutral-950">Rs. {subtotalFormatted}</span>
           </div>
 
-          {/* 8. Quantity & Primary Action Hierarchy (Thilakawardhana Pattern) */}
-          {product.stockQuantity > 0 && (
-            <div className="flex flex-col gap-3 pt-1">
-              {/* Quantity Label & Stepper on separate row */}
+          {/* 8. Quantity & Primary Action Hierarchy */}
+          <div className="flex flex-col gap-3 pt-1">
+            {/* Quantity Label & Stepper on separate row */}
+            {!isSelectedSizeOutOfStock && (
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
                   Quantity:
@@ -727,7 +773,7 @@ export default function ProductDetailPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                    onClick={() => setQuantity(Math.min(currentSizeStock, quantity + 1))}
                     aria-label="Increase quantity"
                     className="w-9 sm:w-10 h-full flex items-center justify-center text-neutral-600 hover:bg-neutral-100 font-bold transition-colors"
                   >
@@ -735,71 +781,81 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* Row 1: Theme Red ADD TO CART Button + Wishlist + Share */}
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  data-testid="add-to-cart-btn"
-                  onClick={handleAddToCart}
-                  className={`flex-1 h-12 rounded font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow-sm active:scale-[0.99] ${
-                    added ? 'bg-black' : 'bg-[#CC0000] hover:bg-[#b30000]'
-                  }`}
-                >
-                  {added ? '✓ Added to Cart!' : 'ADD TO CART'}
-                </button>
-
-                {/* Wishlist Button */}
-                <button
-                  type="button"
-                  onClick={() => toggleItem(product)}
-                  aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
-                  className={`w-12 h-12 rounded border flex items-center justify-center transition-colors shrink-0 ${
-                    isSaved
-                      ? 'border-[#CC0000] bg-red-50 text-[#CC0000]'
-                      : 'border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white'
-                  }`}
-                >
-                  <Heart size={20} fill={isSaved ? 'currentColor' : 'none'} />
-                </button>
-
-                {/* Share Button */}
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  aria-label="Share product"
-                  className="w-12 h-12 rounded border border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white flex items-center justify-center transition-colors shrink-0"
-                >
-                  {copiedLink ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
-                </button>
-              </div>
-
-              {/* Row 2: Express Checkout: BUY IT NOW Button (Thilakawardhana white with dark border) */}
+            {/* Row 1: Theme Red ADD TO CART Button + Wishlist + Share */}
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={handleBuyNow}
-                className="w-full h-12 rounded border-2 border-neutral-900 bg-white hover:bg-neutral-50 text-neutral-900 font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.99]"
+                data-testid="add-to-cart-btn"
+                onClick={handleAddToCart}
+                disabled={isSelectedSizeOutOfStock}
+                className={`flex-1 h-12 rounded font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow-sm active:scale-[0.99] ${
+                  isSelectedSizeOutOfStock
+                    ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                    : added
+                    ? 'bg-black'
+                    : 'bg-[#CC0000] hover:bg-[#b30000]'
+                }`}
               >
-                BUY IT NOW
+                {isSelectedSizeOutOfStock ? 'OUT OF STOCK' : added ? '✓ Added to Cart!' : 'ADD TO CART'}
               </button>
 
-              {/* Row 3: Elegant WhatsApp Inquiries Strip */}
-              <a
-                href={`https://wa.me/94717088445?text=${encodeURIComponent(
-                  `Hello Nandana Textile! I am interested in: ${product.name} (SKU: ${product.sku}, Size: ${selectedSize}, Qty: ${quantity}, Price: Rs. ${subtotalFormatted}). Is it available for delivery?`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-3 rounded border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              {/* Wishlist Button */}
+              <button
+                type="button"
+                onClick={() => toggleItem(product)}
+                aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
+                className={`w-12 h-12 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                  isSaved
+                    ? 'border-[#CC0000] bg-red-50 text-[#CC0000]'
+                    : 'border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white'
+                }`}
               >
-                <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
-                <svg className="w-4 h-4 fill-[#25D366] shrink-0" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.952 1.18-.175.201-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.796-1.496-1.78-1.671-2.08-.176-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.151-.175.201-.301.301-.501.101-.2.05-.376-.025-.526-.075-.15-.677-1.63-.927-2.233-.244-.588-.492-.508-.677-.517l-.577-.01c-.201 0-.526.075-.802.376-.276.301-1.053 1.029-1.053 2.51s1.078 2.912 1.229 3.113c.15.201 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.78-.727 2.031-1.429.25-.702.25-1.303.175-1.429-.075-.125-.276-.2-.577-.35zM12.04 2C6.52 2 2.03 6.49 2.03 12.01c0 1.95.56 3.84 1.63 5.48L2 22l4.67-1.62c1.58.99 3.42 1.54 5.37 1.54 5.52 0 10.01-4.49 10.01-10.01C22.05 6.49 17.56 2 12.04 2zm0 18.25c-1.74 0-3.41-.49-4.86-1.41l-.35-.22-2.77.96.98-2.7-.24-.38a8.212 8.212 0 0 1-1.28-4.49c0-4.56 3.71-8.27 8.27-8.27 4.56 0 8.27 3.71 8.27 8.27 0 4.56-3.71 8.24-8.27 8.24z" />
-                </svg>
-                <span>Have questions or sizing inquiry? Order via WhatsApp (+94 71 708 8445)</span>
-              </a>
+                <Heart size={20} fill={isSaved ? 'currentColor' : 'none'} />
+              </button>
+
+              {/* Share Button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                aria-label="Share product"
+                className="w-12 h-12 rounded border border-neutral-300 text-neutral-700 hover:border-neutral-900 bg-white flex items-center justify-center transition-colors shrink-0"
+              >
+                {copiedLink ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
+              </button>
             </div>
-          )}
+
+            {/* Row 2: Express Checkout: BUY IT NOW Button */}
+            <button
+              type="button"
+              disabled={isSelectedSizeOutOfStock}
+              onClick={handleBuyNow}
+              className={`w-full h-12 rounded border-2 font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.99] ${
+                isSelectedSizeOutOfStock
+                  ? 'border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                  : 'border-neutral-900 bg-white hover:bg-neutral-50 text-neutral-900'
+              }`}
+            >
+              {isSelectedSizeOutOfStock ? 'SIZE CURRENTLY UNAVAILABLE' : 'BUY IT NOW'}
+            </button>
+
+            {/* Row 3: Elegant WhatsApp Inquiries Strip */}
+            <a
+              href={`https://wa.me/94717088445?text=${encodeURIComponent(
+                `Hello Nandana Textile! I am interested in: ${product.name} (SKU: ${product.sku}, Size: ${selectedSize}, Qty: ${quantity}, Price: Rs. ${subtotalFormatted}). Is it available for delivery?`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-3 rounded border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+              <svg className="w-4 h-4 fill-[#25D366] shrink-0" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.952 1.18-.175.201-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.796-1.496-1.78-1.671-2.08-.176-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.151-.175.201-.301.301-.501.101-.2.05-.376-.025-.526-.075-.15-.677-1.63-.927-2.233-.244-.588-.492-.508-.677-.517l-.577-.01c-.201 0-.526.075-.802.376-.276.301-1.053 1.029-1.053 2.51s1.078 2.912 1.229 3.113c.15.201 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.78-.727 2.031-1.429.25-.702.25-1.303.175-1.429-.075-.125-.276-.2-.577-.35zM12.04 2C6.52 2 2.03 6.49 2.03 12.01c0 1.95.56 3.84 1.63 5.48L2 22l4.67-1.62c1.58.99 3.42 1.54 5.37 1.54 5.52 0 10.01-4.49 10.01-10.01C22.05 6.49 17.56 2 12.04 2zm0 18.25c-1.74 0-3.41-.49-4.86-1.41l-.35-.22-2.77.96.98-2.7-.24-.38a8.212 8.212 0 0 1-1.28-4.49c0-4.56 3.71-8.27 8.27-8.27 4.56 0 8.27 3.71 8.27 8.27 0 4.56-3.71 8.24-8.27 8.24z" />
+              </svg>
+              <span>Have questions or sizing inquiry? Order via WhatsApp (+94 71 708 8445)</span>
+            </a>
+          </div>
 
           {/* 9. Gift Packaging Upsell Box (Thilakawardhana Reference with Photography) */}
           <div className="mt-1 border border-neutral-200 rounded-lg p-3 bg-white shadow-xs">
@@ -964,19 +1020,24 @@ export default function ProductDetailPage() {
       {/* ── Sticky Mobile Add-to-Cart Bar (for seamless one-thumb checkout on phone screens) ── */}
       <div id="mobile-sticky-buy-bar" className="show-mobile fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-neutral-500 truncate">{product.name}</p>
+          <p className="text-xs text-neutral-500 truncate">{product.name} ({selectedSize})</p>
           <p className="text-sm font-bold text-neutral-900">
             Rs. {priceNum.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
           </p>
         </div>
         <button
           type="button"
+          disabled={isSelectedSizeOutOfStock}
           onClick={handleAddToCart}
           className={`h-11 px-6 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center text-white transition-all shadow active:scale-95 shrink-0 ${
-            added ? 'bg-black' : 'bg-[#CC0000] hover:bg-[#b30000]'
+            isSelectedSizeOutOfStock
+              ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+              : added
+              ? 'bg-black'
+              : 'bg-[#CC0000] hover:bg-[#b30000]'
           }`}
         >
-          {added ? '✓ Added' : 'ADD TO CART'}
+          {isSelectedSizeOutOfStock ? 'OUT OF STOCK' : added ? '✓ Added' : 'ADD TO CART'}
         </button>
       </div>
 

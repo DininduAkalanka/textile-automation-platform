@@ -88,6 +88,7 @@ export class InventoryController {
       dto.type,
       req.user.sub,
       dto.note,
+      dto.size,
     );
   }
 

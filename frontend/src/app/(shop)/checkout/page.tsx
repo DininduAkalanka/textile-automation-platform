@@ -180,6 +180,7 @@ export default function CheckoutPage() {
         productId: item.product.id,
         quantity: item.quantity,
         measurements: item.measurements,
+        selectedAttributes: item.selectedSize ? { size: item.selectedSize } : undefined,
       }));
 
       const resolvedPhone = address.phone || phone;
@@ -392,7 +393,7 @@ export default function CheckoutPage() {
         {showMobileSummary && (
           <div className="p-4 border-t border-[var(--clr-border)] bg-[var(--clr-surface-2)] space-y-3 animate-fade-in">
             {items.map((item) => (
-              <div key={item.product.id} className="flex justify-between items-center text-xs">
+              <div key={`${item.product.id}-${item.selectedSize || 'default'}`} className="flex justify-between items-center text-xs">
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
                     {item.product.images && item.product.images[0] ? (
@@ -411,7 +412,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[var(--clr-text)] font-semibold text-xs">{item.product.name}</p>
-                    <p className="text-[11px] text-[var(--clr-text-3)] font-mono">Qty: {item.quantity}</p>
+                    <p className="text-[11px] text-[var(--clr-text-3)] font-mono">
+                      Qty: {item.quantity} {item.selectedSize ? `· Size: ${item.selectedSize}` : ''}
+                    </p>
                   </div>
                 </div>
                 <span className="shrink-0 font-bold text-xs">{fmt(Number(item.product.price) * item.quantity)}</span>
@@ -718,7 +721,7 @@ export default function CheckoutPage() {
                   Order Items ({items.length} {items.length === 1 ? 'item' : 'items'})
                 </h3>
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between items-center py-2.5 border-b border-[var(--clr-border)] last:border-b-0">
+                  <div key={`${item.product.id}-${item.selectedSize || 'default'}`} className="flex justify-between items-center py-2.5 border-b border-[var(--clr-border)] last:border-b-0">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
                         {item.product.images && item.product.images[0] ? (
@@ -737,7 +740,9 @@ export default function CheckoutPage() {
                       </div>
                       <div className="min-w-0">
                         <p style={{ fontWeight: 500, fontSize: '0.9375rem' }} className="truncate">{item.product.name}</p>
-                        <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>Qty: {item.quantity} × {fmt(Number(item.product.price))}</p>
+                        <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
+                          Qty: {item.quantity} {item.selectedSize ? `· Size: ${item.selectedSize}` : ''} × {fmt(Number(item.product.price))}
+                        </p>
                       </div>
                     </div>
                     <p style={{ fontWeight: 600 }} className="shrink-0">{fmt(Number(item.product.price) * item.quantity)}</p>
@@ -778,8 +783,10 @@ export default function CheckoutPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
             {items.map((item) => (
-              <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                <span style={{ color: 'var(--clr-text-2)' }}>{item.product.name} × {item.quantity}</span>
+              <div key={`${item.product.id}-${item.selectedSize || 'default'}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--clr-text-2)' }}>
+                  {item.product.name} {item.selectedSize ? `(${item.selectedSize})` : ''} × {item.quantity}
+                </span>
                 <span>{fmt(Number(item.product.price) * item.quantity)}</span>
               </div>
             ))}

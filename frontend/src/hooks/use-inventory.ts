@@ -77,16 +77,19 @@ export function useAdjustStock() {
       change,
       type,
       note,
+      size,
     }: {
       productId: string;
       change: number;
       type: AdjustmentType;
       note?: string;
-    }) => inventoryService.adjust(productId, change, type, note),
+      size?: string;
+    }) => inventoryService.adjust(productId, change, type, note, size),
 
-    onSuccess: (item, { change }) => {
+    onSuccess: (item, { change, size }) => {
+      const sizeNote = size ? ` [Size: ${size}]` : '';
       toast.success(
-        `${item.name}: ${change > 0 ? '+' : ''}${change} — ${item.available} in stock`,
+        `${item.name}${sizeNote}: ${change > 0 ? '+' : ''}${change} — ${item.available} in stock`,
       );
       invalidate();
     },

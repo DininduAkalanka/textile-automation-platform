@@ -45,9 +45,10 @@ export const inventoryService = {
     change: number,
     type: AdjustmentType,
     note?: string,
+    size?: string,
   ) =>
     unwrap<InventoryItem>(
-      http.put(`/inventory/${productId}/adjust`, { change, type, note }),
+      http.put(`/inventory/${productId}/adjust`, { change, type, note, size }),
     ),
 
   setMinimum: (productId: string, minimum: number) =>

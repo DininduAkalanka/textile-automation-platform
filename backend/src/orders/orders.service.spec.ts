@@ -17,7 +17,7 @@ import { NotificationDispatchService } from '../notifications/notification-dispa
 describe('OrdersService — reserve on create (D3)', () => {
   let service: OrdersService;
   let prisma: {
-    product: { findMany: jest.Mock };
+    product: { findMany: jest.Mock; update: jest.Mock };
     user: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -51,6 +51,7 @@ describe('OrdersService — reserve on create (D3)', () => {
     tx = {
       order: { create: jest.fn() },
       orderStatusHistory: { create: jest.fn() },
+      product: { update: jest.fn() },
     };
     inventory = {
       reserve: jest.fn(),
@@ -59,7 +60,7 @@ describe('OrdersService — reserve on create (D3)', () => {
       restock: jest.fn(),
     };
     prisma = {
-      product: { findMany: jest.fn() },
+      product: { findMany: jest.fn(), update: jest.fn() },
       // Checkout gate: default to a verified customer so the create() tests
       // below exercise the reservation path, not the gate.
       user: {
@@ -171,6 +172,79 @@ describe('OrdersService — reserve on create (D3)', () => {
     await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('throws BadRequestException when selected size is out of stock', async () => {
+    prisma.product.findMany.mockResolvedValue([
+      makeProduct({
+        stockQuantity: 10,
+        attributes: {
+          sizeStock: { S: 5, M: 0, L: 5 },
+        },
+      }),
+    ]);
+
+    await expect(
+      service.create('u1', {
+        items: [
+          {
+            productId: 'p1',
+            quantity: 1,
+            selectedAttributes: { size: 'M' },
+          },
+        ],
+        shippingAddress: { line1: '1 Galle Rd' },
+      } as any),
+    ).rejects.toThrow(
+      'Insufficient stock for size "M" of "Cotton Shirt". Available: 0',
+    );
+  });
+
+  it('decrements sizeStock and records selectedAttributes on OrderItem when size has sufficient stock', async () => {
+    const prod = makeProduct({
+      stockQuantity: 10,
+      attributes: {
+        sizeStock: { S: 5, M: 3, L: 2 },
+      },
+    });
+    prisma.product.findMany.mockResolvedValue([prod]);
+    tx.product.update.mockResolvedValue({});
+    tx.order.create.mockResolvedValue({ id: 'o1', orderNumber: 'TXL-1' });
+
+    await service.create('u1', {
+      items: [
+        {
+          productId: 'p1',
+          quantity: 2,
+          selectedAttributes: { size: 'M' },
+        },
+      ],
+      shippingAddress: { line1: '1 Galle Rd' },
+    } as any);
+
+    expect(tx.order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          items: {
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                productId: 'p1',
+                quantity: 2,
+                selectedAttributes: { size: 'M' },
+              }),
+            ]),
+          },
+        }),
+      }),
+    );
+    expect(tx.product.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: {
+        attributes: {
+          sizeStock: { S: 5, M: 1, L: 2 },
+        },
+      },
+    });
   });
 
   describe('guestCheckout', () => {

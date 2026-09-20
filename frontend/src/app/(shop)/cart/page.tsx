@@ -130,7 +130,7 @@ export default function CartPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {items.map((item) => (
             <div
-              key={item.product.id}
+              key={`${item.product.id}-${item.selectedSize || 'default'}`}
               className="card flex flex-col gap-3.5 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
             >
               {/* Image + details */}
@@ -179,11 +179,18 @@ export default function CartPage() {
                   >
                     {item.product.name}
                   </Link>
-                  {item.product.category && (
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                      {item.product.category.name}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {item.product.category && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        {item.product.category.name}
+                      </span>
+                    )}
+                    {item.selectedSize && (
+                      <span className="inline-flex items-center text-[11px] font-semibold text-neutral-800 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                        Size: {item.selectedSize}
+                      </span>
+                    )}
+                  </div>
                   <p style={{ fontSize: '0.875rem', fontWeight: 600, marginTop: '0.375rem', color: 'var(--clr-text-2)' }}>
                     Rs.&nbsp;{Number(item.product.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
                   </p>
@@ -221,7 +228,7 @@ export default function CartPage() {
                 {/* Quantity */}
                 <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--color-border)', borderRadius: '0.5rem', overflow: 'hidden', background: 'white' }}>
                   <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize)}
                     style={{ width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
                     aria-label="Decrease quantity"
                   >
@@ -231,7 +238,7 @@ export default function CartPage() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)}
                     style={{ width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
                     aria-label="Increase quantity"
                   >
@@ -246,7 +253,7 @@ export default function CartPage() {
                   </p>
 
                   <button
-                    onClick={() => removeItem(item.product.id)}
+                    onClick={() => removeItem(item.product.id, item.selectedSize)}
                     style={{
                       background: 'none',
                       border: 'none',

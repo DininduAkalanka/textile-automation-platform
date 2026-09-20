@@ -37,12 +37,20 @@ export function AdjustDialog({
   onClose: () => void;
 }) {
   const [type, setType] = useState<AdjustmentType>('PURCHASE');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState('');
   const [note, setNote] = useState('');
 
   const adjust = useAdjustStock();
 
   if (!item) return null;
+
+  const availableSizes =
+    item.sizes && item.sizes.length > 0
+      ? item.sizes
+      : item.sizeStock
+      ? Object.keys(item.sizeStock)
+      : [];
 
   const option = ADJUSTMENT_OPTIONS.find((o) => o.value === type)!;
   const magnitude = Number.parseInt(quantity, 10);
@@ -63,15 +71,25 @@ export function AdjustDialog({
   const resulting = item.available + (hasQuantity ? change : 0);
   const resultingSellable = resulting - item.reserved;
 
-  // The two floors, in the same order the server checks them.
+  // Size-level calculation if a specific size is selected
+  const currentSizeStock =
+    selectedSize && item.sizeStock && selectedSize in item.sizeStock
+      ? Number(item.sizeStock[selectedSize] ?? 0)
+      : null;
+  const resultingSizeStock =
+    currentSizeStock !== null ? currentSizeStock + (hasQuantity ? change : 0) : null;
+  const sizeBelowZero = hasQuantity && resultingSizeStock !== null && resultingSizeStock < 0;
+
+  // The floors, in the same order the server checks them.
   const belowZero = hasQuantity && resulting < 0;
   const belowReserved = hasQuantity && !belowZero && resulting < item.reserved;
-  const blocked = belowZero || belowReserved;
+  const blocked = belowZero || belowReserved || sizeBelowZero;
 
   const willBeLow = !blocked && hasQuantity && resulting <= item.minimum;
 
   function reset() {
     setType('PURCHASE');
+    setSelectedSize('');
     setQuantity('');
     setNote('');
   }
@@ -80,7 +98,13 @@ export function AdjustDialog({
     if (!hasQuantity || blocked || !item) return;
 
     adjust.mutate(
-      { productId: item.productId, change, type, note: note.trim() || undefined },
+      {
+        productId: item.productId,
+        change,
+        type,
+        size: selectedSize || undefined,
+        note: note.trim() || undefined,
+      },
       {
         onSuccess: () => {
           reset();
@@ -137,6 +161,34 @@ export function AdjustDialog({
             </div>
             <p className="mt-1.5 text-[11px] text-[#928E82]">{option.hint}</p>
           </fieldset>
+
+          {/* ─── Target Size (if product has sizes) ───────────────────────── */}
+          {availableSizes.length > 0 && (
+            <div>
+              <label
+                htmlFor="adjust-size"
+                className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#928E82]"
+              >
+                Target Size
+              </label>
+              <select
+                id="adjust-size"
+                value={selectedSize}
+                onChange={(e) => setSelectedSize(e.target.value)}
+                className="w-full rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-sm text-[#0F0F0F] outline-none transition-colors focus:border-[#0F0F0F]"
+              >
+                <option value="">All Sizes / Aggregate</option>
+                {availableSizes.map((sz) => {
+                  const szStock = item.sizeStock?.[sz];
+                  return (
+                    <option key={sz} value={sz}>
+                      Size {sz} {szStock !== undefined ? `(${szStock} in stock${szStock === 0 ? ' — OUT' : ''})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
 
           {/* ─── How many ────────────────────────────────────────────────── */}
           <div>
@@ -226,6 +278,15 @@ export function AdjustDialog({
               </div>
             </div>
 
+            {selectedSize && currentSizeStock !== null && (
+              <div className="mt-3 border-t border-[#EAE8E1] pt-2.5 flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#4A4740]">Size {selectedSize} Stock:</span>
+                <span className="font-mono">
+                  {currentSizeStock} → <strong className={sizeBelowZero ? 'text-[#CC0000]' : 'text-[#0F0F0F]'}>{resultingSizeStock}</strong>
+                </span>
+              </div>
+            )}
+
             {item.reserved > 0 && (
               <p className="mt-3 border-t border-[#EAE8E1] pt-2.5 text-[11px] text-[#928E82]">
                 {item.reserved} unit{item.reserved === 1 ? ' is' : 's are'} reserved
@@ -238,7 +299,9 @@ export function AdjustDialog({
           {blocked && (
             <p className="flex items-start gap-2 text-xs font-medium text-[#CC0000]">
               <TriangleAlert size={14} className="mt-px shrink-0" aria-hidden />
-              {belowZero
+              {sizeBelowZero
+                ? `That would leave size ${selectedSize} at ${resultingSizeStock}. Stock cannot go below zero.`
+                : belowZero
                 ? `That would leave ${resulting} in stock. Stock cannot go below zero.`
                 : `That would leave ${resulting} available, but ${item.reserved} are already promised to customers.`}
             </p>
