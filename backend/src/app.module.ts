@@ -1,4 +1,8 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -18,6 +22,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { AppController } from './app.controller';
 import { validateEnv } from './common/config/env.validation';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { MetricsModule } from './metrics/metrics.module';
+import { MetricsMiddleware } from './metrics/metrics.middleware';
 
 @Module({
   imports: [
@@ -53,6 +59,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     SocialModule,
     UploadsModule,
     ReviewsModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -63,4 +70,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MetricsMiddleware).forRoutes('*');
+  }
+}

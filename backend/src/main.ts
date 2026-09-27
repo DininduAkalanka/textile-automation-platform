@@ -29,7 +29,9 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Global prefix (versioned API — doc 07 §2/§16)
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['metrics'],
+  });
 
   // Uploaded product images. Served OUTSIDE the API prefix (static assets
   // ignore setGlobalPrefix) at /uploads/<file>, so the admin UI — and later
