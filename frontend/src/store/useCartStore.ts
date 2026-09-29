@@ -7,10 +7,15 @@ interface CartState {
   items: CartItem[];
   isOpen: boolean;
 
-  addItem: (product: Product, quantity?: number, selectedSize?: string) => void;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    selectedSize?: string,
+    measurements?: MeasurementSet,
+  ) => void;
   removeItem: (productId: string, selectedSize?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string) => void;
-  setMeasurements: (productId: string, measurements: MeasurementSet) => void;
+  setMeasurements: (productId: string, measurements: MeasurementSet, selectedSize?: string) => void;
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (open: boolean) => void;
@@ -30,7 +35,12 @@ export const useCartStore = create<CartState>()(
       items: [],
       isOpen: false,
 
-      addItem: (product: Product, quantity = 1, selectedSize?: string) => {
+      addItem: (
+        product: Product,
+        quantity = 1,
+        selectedSize?: string,
+        measurements?: MeasurementSet,
+      ) => {
         const items = get().items;
         const existingIndex = items.findIndex(
           (item) =>
@@ -43,10 +53,11 @@ export const useCartStore = create<CartState>()(
           updatedItems[existingIndex] = {
             ...updatedItems[existingIndex],
             quantity: updatedItems[existingIndex].quantity + quantity,
+            ...(measurements ? { measurements } : {}),
           };
           set({ items: updatedItems });
         } else {
-          set({ items: [...items, { product, quantity, selectedSize }] });
+          set({ items: [...items, { product, quantity, selectedSize, measurements }] });
         }
       },
 
@@ -82,10 +93,13 @@ export const useCartStore = create<CartState>()(
         });
       },
 
-      setMeasurements: (productId: string, measurements: MeasurementSet) => {
+      setMeasurements: (productId: string, measurements: MeasurementSet, selectedSize?: string) => {
         set({
           items: get().items.map((item) =>
-            item.product.id === productId ? { ...item, measurements } : item,
+            item.product.id === productId &&
+            (selectedSize !== undefined ? item.selectedSize === selectedSize : true)
+              ? { ...item, measurements }
+              : item,
           ),
         });
       },
@@ -110,7 +124,7 @@ export const useCartStore = create<CartState>()(
       // the order regardless of what this returns.
       itemsMissingMeasurements: () =>
         get().items.filter(
-          (item) => !isComplete(item.product, item.measurements),
+          (item) => !isComplete(item.product, item.measurements, item.selectedSize),
         ),
 
       canCheckout: () =>

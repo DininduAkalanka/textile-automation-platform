@@ -98,7 +98,7 @@ describe('Worker Journey E2E Flow', () => {
                   unit: 'cm',
                   values: {
                     chest: 100, waist: 84, shoulder: 46, sleeveLength: 61,
-                    shirtLength: 71, trouserWaist: 84, hip: 98, trouserLength: 101,
+                    shirtLength: 71, frockLength: 85, trouserWaist: 84, hip: 98, trouserLength: 101,
                   },
                 },
               },
@@ -141,7 +141,11 @@ describe('Worker Journey E2E Flow', () => {
                 cy.contains('[data-testid="admin-task-card"]', orderNumber).click();
                 cy.getByTestId('assign-worker-select')
                   .should('be.visible')
-                  .select('Sunil Perera — Cutting');
+                  .find('option:contains("Sunil Perera — Cutting")')
+                  .first()
+                  .then(($opt) => {
+                    cy.getByTestId('assign-worker-select').select($opt.val() as string);
+                  });
                 cy.wait('@assignWorker');
 
                 // The drawer's own empty-state copy flips once assignment lands.

@@ -212,4 +212,142 @@ describe('BR3 measurement validation', () => {
       expect(keys).not.toContain('trouserLength');
     });
   });
+
+  describe('standard ready-to-wear sizes vs custom sizes', () => {
+    it('accepts a uniform ordered with a standard numeric size and no custom measurements', () => {
+      expect(
+        validateMeasurements(
+          "Boy's School Uniform Shirt - Short Sleeve",
+          ProductType.UNIFORM,
+          true,
+          null,
+          '24',
+        ),
+      ).toEqual([]);
+    });
+
+    it('accepts a uniform ordered with a standard chest range size and no custom measurements', () => {
+      expect(
+        validateMeasurements(
+          "Boy's School Uniform Shirt - Long Sleeve",
+          ProductType.UNIFORM,
+          true,
+          null,
+          'Chest 30 to 42',
+        ),
+      ).toEqual([]);
+    });
+
+    it('accepts a uniform ordered with a standard size and valid custom measurements', () => {
+      expect(
+        validateMeasurements(
+          "Boy's School Uniform Shirt - Short Sleeve",
+          ProductType.UNIFORM,
+          true,
+          validUniform,
+          '24',
+        ),
+      ).toEqual([]);
+    });
+
+    it('rejects a uniform ordered with size "custom" and no measurements', () => {
+      const errors = validateMeasurements(
+        'School Uniform',
+        ProductType.UNIFORM,
+        true,
+        null,
+        'custom',
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatch(/requires measurements/i);
+    });
+  });
+
+  describe('product-specific tailor shop garment requirements', () => {
+    it('requires only shirt fields for a uniform shirt (no trouser measurements)', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        "Boy's School Uniform Shirt - Short Sleeve",
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toEqual(['chest', 'waist', 'shoulder', 'sleeveLength', 'shirtLength']);
+      expect(keys).not.toContain('trouserLength');
+      expect(keys).not.toContain('trouserWaist');
+      expect(keys).not.toContain('hip');
+    });
+
+    it('requires only short fields for uniform shorts (no shirt measurements)', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        "Boy's School Uniform Short - Elasticated",
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toEqual(['trouserWaist', 'hip', 'trouserLength']);
+      expect(keys).not.toContain('chest');
+      expect(keys).not.toContain('sleeveLength');
+      expect(keys).not.toContain('shoulder');
+    });
+
+    it('requires only frock fields for uniform frocks / dresses (no trouser measurements)', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        "Girl's School Uniform Frock (5 Pleat)",
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toEqual(['chest', 'waist', 'shoulder', 'frockLength', 'sleeveLength']);
+      expect(keys).not.toContain('trouserLength');
+      expect(keys).not.toContain('trouserWaist');
+    });
+
+    it('requires only trouser fields for work trousers or formal pants', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        'Industrial Heavy Canvas Work Trousers',
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toEqual(['trouserWaist', 'hip', 'trouserLength']);
+      expect(keys).not.toContain('chest');
+      expect(keys).not.toContain('shoulder');
+    });
+
+    it('requires skirt fields for uniform skirts', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        'Tendenza Front Dart Detailed Pencil Skirt',
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toEqual(['trouserWaist', 'hip', 'trouserLength']);
+    });
+
+    it('requires both top and bottom fields for two-piece suits or scrub sets', () => {
+      const fields = fieldsFor(
+        ProductType.UNIFORM,
+        'Clinical Grade Hospital Scrub Set',
+      );
+      const keys = fields.map((f) => f.key);
+      expect(keys).toContain('chest');
+      expect(keys).toContain('trouserLength');
+      expect(keys).toHaveLength(8);
+    });
+
+    it('validates a shirt with only shirt measurements when bespoke size is selected', () => {
+      const errors = validateMeasurements(
+        "Boy's School Uniform Shirt - Short Sleeve",
+        ProductType.UNIFORM,
+        true,
+        {
+          personName: 'Kasun Fernando',
+          values: {
+            chest: 60,
+            waist: 55,
+            shoulder: 30,
+            sleeveLength: 20,
+            shirtLength: 50,
+          },
+        },
+        'custom',
+      );
+      expect(errors).toEqual([]);
+    });
+  });
 });

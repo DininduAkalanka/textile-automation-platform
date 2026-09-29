@@ -177,11 +177,15 @@ export class OrdersService {
     // one per round trip.
     const measurementErrors = dto.items.flatMap((item) => {
       const product = products.find((p) => p.id === item.productId)!;
+      const selectedSize = (item.selectedAttributes as any)?.size;
       return validateMeasurements(
         product.name,
         product.productType,
         product.requiresMeasurement,
         item.measurements ?? null,
+        selectedSize,
+        product.subCategory,
+        product.attributes,
       );
     });
 

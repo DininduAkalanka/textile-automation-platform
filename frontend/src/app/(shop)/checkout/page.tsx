@@ -7,7 +7,10 @@ import { api } from '@/lib/api';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { normalizeImageUrl } from '@/lib/image-url';
-import { ShieldCheck, Lock, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Sparkles, CheckCircle2, AlertCircle, Ruler } from 'lucide-react';
+import { MeasurementDialog } from '@/components/cart/measurement-dialog';
+import { isComplete, needsMeasurements, fieldsFor } from '@/lib/measurements';
+import { CartItem } from '@/types';
 
 type PaymentMethod = 'payhere' | 'cod' | 'installment';
 
@@ -91,12 +94,13 @@ function MethodCard({
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCartStore();
+  const { items, subtotal, clearCart, setMeasurements, itemsMissingMeasurements } = useCartStore();
   const { isAuthenticated, user, setAuth } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Address & Contact, 2: Payment, 3: Confirm
   const [showMobileSummary, setShowMobileSummary] = useState(false);
+  const [measuringItem, setMeasuringItem] = useState<CartItem | null>(null);
 
   const [method, setMethod] = useState<PaymentMethod>('payhere');
 
@@ -175,6 +179,19 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setLoading(true);
     setError('');
+
+    // Pre-check for any items missing required measurements
+    const missingItems = items.filter(
+      (item) => !isComplete(item.product, item.measurements, item.selectedSize),
+    );
+    if (missingItems.length > 0) {
+      setLoading(false);
+      const first = missingItems[0];
+      setError(`"${first.product.name}" requires measurements before placing your order.`);
+      setMeasuringItem(first);
+      return;
+    }
+
     try {
       const orderPayloadItems = items.map((item) => ({
         productId: item.product.id,
@@ -429,8 +446,24 @@ export default function CheckoutPage() {
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca' }}>
-          {error}
+        <div style={{ background: '#fef2f2', color: '#991b1b', padding: '0.875rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div className="flex items-center gap-2">
+            <AlertCircle size={18} className="shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+          {items.some((i) => !isComplete(i.product, i.measurements, i.selectedSize)) && (
+            <button
+              type="button"
+              onClick={() => {
+                const target = items.find((i) => !isComplete(i.product, i.measurements, i.selectedSize));
+                if (target) setMeasuringItem(target);
+              }}
+              className="btn btn-sm btn-primary"
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+            >
+              Add Measurements Now →
+            </button>
+          )}
         </div>
       )}
 
@@ -720,34 +753,76 @@ export default function CheckoutPage() {
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
                   Order Items ({items.length} {items.length === 1 ? 'item' : 'items'})
                 </h3>
-                {items.map((item) => (
-                  <div key={`${item.product.id}-${item.selectedSize || 'default'}`} className="flex justify-between items-center py-2.5 border-b border-[var(--clr-border)] last:border-b-0">
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
-                        {item.product.images && item.product.images[0] ? (
-                          <img
-                            src={normalizeImageUrl(item.product.images[0])}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
-                            <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
+                {items.map((item) => {
+                  const requires = needsMeasurements(item.product, item.selectedSize);
+                  const supportsMeasurements = fieldsFor(item.product).length > 0 || item.product.requiresMeasurement;
+                  return (
+                    <div key={`${item.product.id}-${item.selectedSize || 'default'}`} className="py-2.5 border-b border-[var(--clr-border)] last:border-b-0">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <div className="w-10 h-10 rounded-md overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300">
+                            {item.product.images && item.product.images[0] ? (
+                              <img
+                                src={normalizeImageUrl(item.product.images[0])}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400">
+                                <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="min-w-0">
+                            <p style={{ fontWeight: 500, fontSize: '0.9375rem' }} className="truncate">{item.product.name}</p>
+                            <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
+                              Qty: {item.quantity} {item.selectedSize ? `· Size: ${item.selectedSize}` : ''} × {fmt(Number(item.product.price))}
+                            </p>
+                          </div>
+                        </div>
+                        <p style={{ fontWeight: 600 }} className="shrink-0">{fmt(Number(item.product.price) * item.quantity)}</p>
                       </div>
-                      <div className="min-w-0">
-                        <p style={{ fontWeight: 500, fontSize: '0.9375rem' }} className="truncate">{item.product.name}</p>
-                        <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
-                          Qty: {item.quantity} {item.selectedSize ? `· Size: ${item.selectedSize}` : ''} × {fmt(Number(item.product.price))}
-                        </p>
-                      </div>
+
+                      {/* Tailoring & Measurements Info / Action */}
+                      {supportsMeasurements && (
+                        <div className="mt-2 pl-13 flex items-center justify-between gap-2 text-xs">
+                          {item.measurements ? (
+                            <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 inline-flex items-center gap-1.5">
+                              <span>✓ Tailored for: <strong>{item.measurements.personName}</strong></span>
+                              <button
+                                type="button"
+                                onClick={() => setMeasuringItem(item)}
+                                className="text-emerald-800 underline font-semibold hover:text-emerald-950 ml-1"
+                              >
+                                Edit
+                              </button>
+                            </span>
+                          ) : requires ? (
+                            <button
+                              type="button"
+                              onClick={() => setMeasuringItem(item)}
+                              className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-300 font-semibold inline-flex items-center gap-1 hover:bg-amber-100"
+                            >
+                              <Ruler size={13} />
+                              <span>⚠️ Measurements Required — Click to Add</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setMeasuringItem(item)}
+                              className="text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 underline text-[11px]"
+                            >
+                              <Ruler size={12} />
+                              <span>Add Custom Measurements (Optional)</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p style={{ fontWeight: 600 }} className="shrink-0">{fmt(Number(item.product.price) * item.quantity)}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Action Buttons */}
@@ -883,6 +958,19 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
+
+      <MeasurementDialog
+        product={measuringItem?.product ?? null}
+        existing={measuringItem?.measurements}
+        open={measuringItem !== null}
+        onOpenChange={(open) => !open && setMeasuringItem(null)}
+        onSave={(set) => {
+          if (measuringItem) {
+            setMeasurements(measuringItem.product.id, set, measuringItem.selectedSize);
+            setError('');
+          }
+        }}
+      />
     </div>
   );
 }

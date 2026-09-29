@@ -31,9 +31,13 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Cypress test artifacts
+# Test artifacts & coverage
 cypress/screenshots/
 cypress/videos/
 frontend/cypress/screenshots/
+coverage/
+*.lcov
+.nyc_output/
+
 # Temporary scratch files
 scratch/

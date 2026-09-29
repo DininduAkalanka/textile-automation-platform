@@ -13,25 +13,29 @@ const DialogClose = DialogPrimitive.Close;
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, style, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out" />
+    <DialogPrimitive.Overlay
+      style={{ zIndex: 99990 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+    />
     <DialogPrimitive.Content
       ref={ref}
+      style={{ zIndex: 99999, ...style }}
       className={cn(
         // twMerge treats `p-6` and a consumer's plain `p-0` override as the same
         // slot, so this must stay a single non-responsive utility — several
         // dialogs (product-form-dialog, adjust-dialog, etc.) rely on `p-0`
         // fully canceling it; a `sm:` variant here would leak through unmerged.
-        'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6 shadow-xl',
+        'fixed left-1/2 top-1/2 flex max-h-[88vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         className,
       )}
       {...props}
     >
       {children}
       {/* Radix handles focus trapping, Escape and restoring focus on close. */}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]">
-        <X className="h-4 w-4" aria-hidden />
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC0000]">
+        <X className="h-5 w-5" aria-hidden />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

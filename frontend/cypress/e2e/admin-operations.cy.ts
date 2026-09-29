@@ -35,6 +35,7 @@ describe('Admin Dashboard & Production Operations E2E', () => {
                             shoulder: 45,
                             sleeveLength: 60,
                             shirtLength: 70,
+                            frockLength: 85,
                             trouserWaist: 80,
                             hip: 95,
                             trouserLength: 100,

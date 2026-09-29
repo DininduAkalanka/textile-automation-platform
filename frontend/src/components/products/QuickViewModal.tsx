@@ -574,7 +574,7 @@ export default function QuickViewModal() {
               )}
 
               {/* Add to Bag or Custom Tailoring Action */}
-              {needsMeasurements(product) ? (
+              {needsMeasurements(product, selectedSize) ? (
                 <button
                   onClick={() => {
                     closeQuickView();

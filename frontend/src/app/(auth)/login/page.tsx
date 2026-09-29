@@ -106,6 +106,7 @@ export default function LoginPage() {
           <p className="mb-1.5 font-semibold text-white/70">Demo credentials</p>
           <p>Admin: admin@textileshop.com / Admin@123456</p>
           <p>Customer: customer@example.com / Customer@123456</p>
+          <p>Worker: worker1@textileshop.com / Worker@123456</p>
         </div>
       )}
     </AuthShell>

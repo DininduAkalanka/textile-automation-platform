@@ -3,8 +3,11 @@
 **Project:** Smart Textile Business Management & AI-Powered E-Commerce Platform  
 **Repository:** `DininduAkalanka/textile-automation-platform`  
 **Evaluation Target:** Academic Evaluation, Industrial Review & Production Go-Live  
-**Audit Date:** August 2026  
+**Audit Date:** August 2026 (Historical)  
 **Status:** ✅ **100% VERIFIED & PRODUCTION READY**
+
+> [!NOTE]
+> **Latest Audit Available:** For the comprehensive 413-test production QA engineering audit report covering all 9 Cypress specs (35 tests), PostgreSQL concurrency races, payment tamper guards, and 100 VU k6 load tests, see **[QA Final Test Report (September 2026)](QA_FINAL_TEST_REPORT.md)**.
 
 ---
 
