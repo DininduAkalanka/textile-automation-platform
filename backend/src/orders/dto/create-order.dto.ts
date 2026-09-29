@@ -31,6 +31,14 @@ export class OrderItemDto {
   @IsOptional()
   @IsObject()
   measurements?: Record<string, unknown>;
+
+  /**
+   * Chosen product variant attributes such as size (e.g. { size: 'M' }).
+   * Snapshotted onto the order_items row in database.
+   */
+  @IsOptional()
+  @IsObject()
+  selectedAttributes?: Record<string, unknown>;
 }
 
 export class AddressDto {

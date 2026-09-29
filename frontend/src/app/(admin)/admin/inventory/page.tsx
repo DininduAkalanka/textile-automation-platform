@@ -159,6 +159,32 @@ export default function InventoryPage() {
                         {item.sku}
                         {item.category ? ` · ${item.category}` : ''}
                       </p>
+                      {item.sizeStock && Object.keys(item.sizeStock).length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {Object.entries(item.sizeStock).map(([sz, qty]) => {
+                            const isOut = Number(qty) <= 0;
+                            const isLow = Number(qty) > 0 && Number(qty) <= (item.minimum || 5);
+                            return (
+                              <span
+                                key={sz}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-medium border',
+                                  isOut
+                                    ? 'border-red-200 bg-red-50 text-red-700'
+                                    : isLow
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : 'border-[#EAE8E1] bg-[#FAFAF8] text-[#4A4740]',
+                                )}
+                              >
+                                <span className="font-semibold">{sz}:</span>
+                                <span>{qty}</span>
+                                {isOut && <span className="font-bold text-[9px] uppercase text-red-600">OUT</span>}
+                                {isLow && !isOut && <span className="font-bold text-[9px] uppercase text-amber-600">LOW</span>}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <StockBadge status={item.status} />
                   </div>
@@ -291,6 +317,32 @@ export default function InventoryPage() {
                                   {item.sku}
                                   {item.category ? ` · ${item.category}` : ''}
                                 </span>
+                                {item.sizeStock && Object.keys(item.sizeStock).length > 0 && (
+                                  <span className="mt-1 flex flex-wrap gap-1">
+                                    {Object.entries(item.sizeStock).map(([sz, qty]) => {
+                                      const isOut = Number(qty) <= 0;
+                                      const isLow = Number(qty) > 0 && Number(qty) <= (item.minimum || 5);
+                                      return (
+                                        <span
+                                          key={sz}
+                                          className={cn(
+                                            'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-medium border',
+                                            isOut
+                                              ? 'border-red-200 bg-red-50 text-red-700'
+                                              : isLow
+                                              ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                              : 'border-[#EAE8E1] bg-[#FAFAF8] text-[#4A4740]',
+                                          )}
+                                        >
+                                          <span className="font-semibold">{sz}:</span>
+                                          <span>{qty}</span>
+                                          {isOut && <span className="font-bold text-[9px] uppercase text-red-600">OUT</span>}
+                                          {isLow && !isOut && <span className="font-bold text-[9px] uppercase text-amber-600">LOW</span>}
+                                        </span>
+                                      );
+                                    })}
+                                  </span>
+                                )}
                               </span>
                             </button>
                           </td>

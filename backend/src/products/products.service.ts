@@ -43,6 +43,17 @@ export class ProductsService {
     // movement are therefore created in the SAME transaction as the product, so
     // the ledger balances from the first instant (plan Session 2.1).
     return this.prisma.$transaction(async (tx) => {
+      let effectiveStock = dto.stockQuantity;
+      if (dto.attributes && typeof dto.attributes === 'object') {
+        const sizeStock = (dto.attributes as Record<string, any>).sizeStock as Record<string, number> | undefined;
+        if (sizeStock && typeof sizeStock === 'object') {
+          const sumSizeStock = Object.values(sizeStock).reduce((sum, q) => sum + (Number(q) || 0), 0);
+          if (sumSizeStock > 0 || Object.keys(sizeStock).length > 0) {
+            effectiveStock = sumSizeStock;
+          }
+        }
+      }
+
       const product = await tx.product.create({
         data: {
           name: dto.name,
@@ -50,7 +61,7 @@ export class ProductsService {
           description: dto.description,
           price: dto.price,
           compareAtPrice: dto.compareAtPrice,
-          stockQuantity: dto.stockQuantity,
+          stockQuantity: effectiveStock,
           sku: dto.sku,
           images: dto.images || [],
           attributes: dto.attributes || {},
@@ -73,7 +84,7 @@ export class ProductsService {
           productId: product.id,
           // Nothing is reserved yet, so the sellable cache
           // (products.stock_quantity) equals quantity_available here.
-          quantityAvailable: dto.stockQuantity,
+          quantityAvailable: effectiveStock,
           quantityReserved: 0,
           minimumStockLevel: 0,
         },
@@ -83,7 +94,7 @@ export class ProductsService {
         data: {
           inventoryId: inventory.id,
           type: MovementType.INITIAL,
-          quantityChange: dto.stockQuantity,
+          quantityChange: effectiveStock,
           note: 'Opening balance (product created)',
         },
       });
@@ -563,10 +574,34 @@ export class ProductsService {
       }
     }
 
-    return this.prisma.product.update({
-      where: { id },
-      data,
-      include: { category: true },
+    // Sync stockQuantity if sizeStock is provided
+    let newStockQuantity: number | undefined;
+    if (dto.attributes && typeof dto.attributes === 'object') {
+      const sizeStock = (dto.attributes as Record<string, any>).sizeStock as Record<string, number> | undefined;
+      if (sizeStock && typeof sizeStock === 'object') {
+        const sumSizeStock = Object.values(sizeStock).reduce((sum, q) => sum + (Number(q) || 0), 0);
+        if (sumSizeStock > 0 || Object.keys(sizeStock).length > 0) {
+          data.stockQuantity = sumSizeStock;
+          newStockQuantity = sumSizeStock;
+        }
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedProduct = await tx.product.update({
+        where: { id },
+        data,
+        include: { category: true },
+      });
+
+      if (newStockQuantity !== undefined) {
+        await tx.inventory.updateMany({
+          where: { productId: id },
+          data: { quantityAvailable: newStockQuantity },
+        });
+      }
+
+      return updatedProduct;
     });
   }
 

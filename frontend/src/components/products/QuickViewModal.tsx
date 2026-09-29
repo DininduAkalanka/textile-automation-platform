@@ -31,7 +31,7 @@ export default function QuickViewModal() {
     setMounted(true);
   }, []);
 
-  // Set default color when product changes
+  // Set default color and size when product changes
   useEffect(() => {
     if (quickViewProduct) {
       setQuantity(1);
@@ -41,6 +41,15 @@ export default function QuickViewModal() {
         setSelectedColor(quickViewProduct.attributes.color);
       } else {
         setSelectedColor('');
+      }
+
+      if (quickViewProduct.attributes?.sizeStock && typeof quickViewProduct.attributes.sizeStock === 'object') {
+        const stockMap = quickViewProduct.attributes.sizeStock as Record<string, number>;
+        const inStock = Object.keys(stockMap).find((s) => Number(stockMap[s]) > 0);
+        setSelectedSize(inStock || Object.keys(stockMap)[0] || 'M');
+      } else if (quickViewProduct.attributes?.size) {
+        const first = String(quickViewProduct.attributes.size).split(',')[0].trim();
+        if (first) setSelectedSize(first);
       }
     }
   }, [quickViewProduct]);
@@ -67,20 +76,30 @@ export default function QuickViewModal() {
     ? product.images.map((img) => normalizeImageUrl(img))
     : [`/images/prod1.png`]; // Fallback
 
+  const sizeStock: Record<string, number> | null = 
+    product.attributes?.sizeStock && typeof product.attributes.sizeStock === 'object'
+      ? (product.attributes.sizeStock as Record<string, number>)
+      : null;
+
+  const parsedSizes = product.attributes?.size
+    ? String(product.attributes.size).split(',').map((s) => s.trim()).filter(Boolean)
+    : (sizeStock ? Object.keys(sizeStock) : ['S', 'M', 'L', 'XL']);
+  const availableSizes = parsedSizes.length > 0 ? parsedSizes : ['S', 'M', 'L', 'XL'];
+
+  const currentSizeStock = sizeStock && selectedSize in sizeStock
+    ? Number(sizeStock[selectedSize] ?? 0)
+    : Number(product.stockQuantity ?? 0);
+  const isSelectedSizeOutOfStock = sizeStock ? currentSizeStock <= 0 : Number(product.stockQuantity ?? 0) <= 0;
+
   const handleAddToCart = () => {
+    if (isSelectedSizeOutOfStock) return;
     setCartState('adding');
     setTimeout(() => {
       // Pass selected attributes to cart item
       addItem(
-        {
-          ...product,
-          attributes: {
-            ...product.attributes,
-            selectedSize,
-            selectedColor,
-          },
-        },
-        quantity
+        product,
+        quantity,
+        selectedSize,
       );
       setCartState('added');
       setTimeout(() => setCartState('idle'), 1800);
@@ -434,47 +453,67 @@ export default function QuickViewModal() {
                 </div>
               )}
 
-              {/* Sizes (Simulated generic catalog sizes for preview) */}
+              {/* Sizes */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: 'var(--clr-text-2)' }}>
                     Size: <strong style={{ color: 'var(--clr-text)' }}>{selectedSize}</strong>
                   </span>
-                  <a
-                    href="#size-guide"
-                    style={{ fontSize: '0.72rem', color: 'var(--clr-brand)', textDecoration: 'underline', fontFamily: 'var(--font-mono)' }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert('Size Guide: Standard Regular Fit. S: 36", M: 38", L: 40", XL: 42".');
-                    }}
-                  >
-                    Size Guide
-                  </a>
+                  {isSelectedSizeOutOfStock ? (
+                    <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>
+                      Out of stock in size {selectedSize}
+                    </span>
+                  ) : currentSizeStock <= 5 ? (
+                    <span style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>
+                      Only {currentSizeStock} left in {selectedSize}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                      In stock ({currentSizeStock} available)
+                    </span>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {['S', 'M', 'L', 'XL'].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        fontFamily: 'var(--font-mono)',
-                        border: selectedSize === size ? '2.2px solid var(--clr-text)' : '1px solid var(--clr-border)',
-                        background: selectedSize === size ? 'var(--clr-text)' : 'transparent',
-                        color: selectedSize === size ? 'white' : 'var(--clr-text)',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {availableSizes.map((size) => {
+                    const szStock = sizeStock && size in sizeStock ? Number(sizeStock[size]) : null;
+                    const isOut = szStock !== null ? szStock <= 0 : Number(product.stockQuantity ?? 0) <= 0;
+                    const isLow = szStock !== null && szStock > 0 && szStock <= 5;
+                    const isSelected = selectedSize === size;
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSize(size);
+                          if (szStock !== null && szStock > 0 && quantity > szStock) {
+                            setQuantity(szStock);
+                          }
+                        }}
+                        style={{
+                          minWidth: '2.75rem',
+                          height: '2.75rem',
+                          padding: '0 0.5rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)',
+                          border: isSelected ? '2.2px solid var(--clr-text)' : '1px solid var(--clr-border)',
+                          background: isSelected ? 'var(--clr-text)' : isOut ? '#f5f5f5' : 'transparent',
+                          color: isSelected ? 'white' : isOut ? '#a3a3a3' : 'var(--clr-text)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          transition: 'all 0.15s ease',
+                          textDecoration: isOut ? 'line-through' : 'none',
+                        }}
+                      >
+                        <span>{size}</span>
+                        {isOut && <span style={{ fontSize: '9px', lineHeight: 1, color: isSelected ? '#fca5a5' : '#ef4444' }}>OUT</span>}
+                        {isLow && !isOut && <span style={{ fontSize: '9px', lineHeight: 1, color: isSelected ? '#fef08a' : '#d97706' }}>{szStock}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -484,53 +523,55 @@ export default function QuickViewModal() {
           <div style={{ borderTop: '1px solid var(--clr-border-2)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               {/* Qty Selector */}
-              <div
-                className="self-start sm:self-auto"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  border: '1px solid var(--clr-border)',
-                  height: '2.75rem',
-                  padding: '0 0.5rem',
-                }}
-              >
-                <button
-                  disabled={quantity <= 1}
-                  onClick={() => setQuantity((q) => q - 1)}
+              {!isSelectedSizeOutOfStock && (
+                <div
+                  className="self-start sm:self-auto"
                   style={{
-                    width: '1.75rem',
-                    height: '100%',
-                    fontSize: '1rem',
-                    color: quantity <= 1 ? 'var(--clr-text-3)' : 'var(--clr-text)',
-                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: '1px solid var(--clr-border)',
+                    height: '2.75rem',
+                    padding: '0 0.5rem',
                   }}
                 >
-                  −
-                </button>
-                <span
-                  style={{
-                    width: '2.25rem',
-                    textAlign: 'center',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  style={{
-                    width: '1.75rem',
-                    height: '100%',
-                    fontSize: '1rem',
-                    color: 'var(--clr-text)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  +
-                </button>
-              </div>
+                  <button
+                    disabled={quantity <= 1}
+                    onClick={() => setQuantity((q) => q - 1)}
+                    style={{
+                      width: '1.75rem',
+                      height: '100%',
+                      fontSize: '1rem',
+                      color: quantity <= 1 ? 'var(--clr-text-3)' : 'var(--clr-text)',
+                      cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    −
+                  </button>
+                  <span
+                    style={{
+                      width: '2.25rem',
+                      textAlign: 'center',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity((q) => Math.min(currentSizeStock, q + 1))}
+                    style={{
+                      width: '1.75rem',
+                      height: '100%',
+                      fontSize: '1rem',
+                      color: 'var(--clr-text)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              )}
 
               {/* Add to Bag or Custom Tailoring Action */}
               {needsMeasurements(product) ? (
@@ -570,20 +611,20 @@ export default function QuickViewModal() {
               ) : (
                 <button
                   onClick={handleAddToCart}
-                  disabled={cartState === 'adding' || product.stockQuantity <= 0}
+                  disabled={cartState === 'adding' || isSelectedSizeOutOfStock}
                   className="w-full sm:w-auto"
                   style={{
                     flex: 1,
                     height: '2.75rem',
-                    background: cartState === 'added' ? '#16a34a' : 'var(--clr-brand)',
-                    color: 'white',
+                    background: isSelectedSizeOutOfStock ? '#d4d4d4' : cartState === 'added' ? '#16a34a' : 'var(--clr-brand)',
+                    color: isSelectedSizeOutOfStock ? '#737373' : 'white',
                     border: 'none',
                     fontSize: '0.78rem',
                     fontWeight: 700,
                     fontFamily: 'var(--font-mono)',
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
-                    cursor: product.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
+                    cursor: isSelectedSizeOutOfStock ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -591,18 +632,18 @@ export default function QuickViewModal() {
                     transition: 'background 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    if (cartState === 'idle' && product.stockQuantity > 0) {
+                    if (cartState === 'idle' && !isSelectedSizeOutOfStock) {
                       e.currentTarget.style.background = 'var(--clr-brand-dark)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (cartState === 'idle' && product.stockQuantity > 0) {
+                    if (cartState === 'idle' && !isSelectedSizeOutOfStock) {
                       e.currentTarget.style.background = 'var(--clr-brand)';
                     }
                   }}
                 >
-                  {product.stockQuantity <= 0 ? (
-                    'Out of Stock'
+                  {isSelectedSizeOutOfStock ? (
+                    `Out of Stock in Size ${selectedSize}`
                   ) : cartState === 'adding' ? (
                     <>
                       <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

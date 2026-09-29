@@ -53,4 +53,13 @@ export class AdjustStockDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  /**
+   * Optional size variant being adjusted (e.g. 'M', 'S', 'XL').
+   * When specified, the per-size stock matrix inside attributes.sizeStock is updated.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  size?: string;
 }

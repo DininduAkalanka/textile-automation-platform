@@ -47,6 +47,7 @@ interface FormState {
   costPrice: string;
   stockQuantity: string;
   sizes: string;
+  sizeStock: Record<string, number>;
   images: string[];
 }
 
@@ -66,11 +67,13 @@ function emptyForm(): FormState {
     costPrice: '',
     stockQuantity: '',
     sizes: '',
+    sizeStock: {},
     images: [],
   };
 }
 
 function formFromProduct(p: Product): FormState {
+  const rawSizeStock = (p.attributes?.sizeStock as Record<string, number>) || {};
   return {
     name: p.name,
     sku: p.sku,
@@ -85,7 +88,10 @@ function formFromProduct(p: Product): FormState {
     compareAtPrice: p.compareAtPrice != null ? String(p.compareAtPrice) : '',
     costPrice: p.costPrice != null ? String(p.costPrice) : '',
     stockQuantity: String(p.stockQuantity),
-    sizes: (p.attributes?.size || p.attributes?.sizes) ? String(p.attributes?.size || p.attributes?.sizes) : '',
+    sizes: (p.attributes?.size || p.attributes?.sizes)
+      ? String(p.attributes?.size || p.attributes?.sizes)
+      : (Object.keys(rawSizeStock).length > 0 ? Object.keys(rawSizeStock).join(', ') : ''),
+    sizeStock: rawSizeStock,
     images: p.images ?? [],
   };
 }
@@ -184,6 +190,27 @@ function ProductFormInner({
     Number.isFinite(stockNum) &&
     stockNum >= 0;
 
+  const parsedSizes = form.sizes
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  function updateSizeStock(sz: string, val: string) {
+    const num = Number.parseInt(val, 10);
+    const updated = {
+      ...form.sizeStock,
+      [sz]: Number.isFinite(num) && num >= 0 ? num : 0,
+    };
+    setForm((f) => {
+      const sum = parsedSizes.reduce((total, s) => total + (updated[s] ?? 0), 0);
+      return {
+        ...f,
+        sizeStock: updated,
+        stockQuantity: String(sum),
+      };
+    });
+  }
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -255,6 +282,15 @@ function ProductFormInner({
       attributes.size = form.sizes.trim();
     } else {
       delete attributes.size;
+    }
+    if (parsedSizes.length > 0) {
+      const cleanSizeStock: Record<string, number> = {};
+      for (const s of parsedSizes) {
+        cleanSizeStock[s] = Number(form.sizeStock[s] || 0);
+      }
+      attributes.sizeStock = cleanSizeStock;
+    } else {
+      delete attributes.sizeStock;
     }
     if (form.color.trim()) {
       attributes.color = form.color.trim();
@@ -453,6 +489,39 @@ function ProductFormInner({
                     Comma-separated (e.g. S, M, L, XL or Free Size)
                   </p>
                 </div>
+
+                {parsedSizes.length > 0 && (
+                  <div className="col-span-1 sm:col-span-2 rounded-xl border border-[#EAE8E1] bg-[#FAFAF8] p-3.5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#0F0F0F]">
+                        Per-Size Stock Breakdown
+                      </span>
+                      <span className="text-[11px] text-[#928E82]">
+                        Total: <strong className="text-[#0F0F0F]">{form.stockQuantity || '0'}</strong> units
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {parsedSizes.map((sz) => (
+                        <div key={sz} className="rounded-lg bg-white border border-[#EAE8E1] p-2">
+                          <label className="block text-[10px] font-bold text-[#6E6A5E] uppercase mb-1">
+                            Size {sz}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={form.sizeStock[sz] ?? ''}
+                            onChange={(e) => updateSizeStock(sz, e.target.value)}
+                            placeholder="0"
+                            className="w-full rounded border border-[#EAE8E1] px-2 py-1 text-xs font-mono font-semibold text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10px] text-[#928E82]">
+                      Entering stock per size automatically calculates total stock and enables size-specific live inventory for customers.
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass} htmlFor="pf-unit">Unit</label>

@@ -150,6 +150,23 @@ export class OrdersService {
           `Insufficient stock for "${product.name}". Available: ${product.stockQuantity}`,
         );
       }
+
+      // Check size stock if item has size specified and product has sizeStock
+      const selectedSize = item.selectedAttributes?.size
+        ? String(item.selectedAttributes.size).trim()
+        : null;
+      if (selectedSize && product.attributes) {
+        const sizeStock = (product.attributes as Record<string, any>)?.sizeStock as
+          | Record<string, number>
+          | undefined;
+        if (sizeStock && typeof sizeStock[selectedSize] === 'number') {
+          if (sizeStock[selectedSize] < item.quantity) {
+            throw new BadRequestException(
+              `Insufficient stock for size "${selectedSize}" of "${product.name}". Available: ${sizeStock[selectedSize]}`,
+            );
+          }
+        }
+      }
     }
 
     // BR3 — custom orders require measurement data (doc 01 §7).
@@ -185,6 +202,9 @@ export class OrdersService {
         quantity: item.quantity,
         unitPrice,
         totalPrice,
+        selectedAttributes: (item.selectedAttributes ?? undefined) as
+          | Prisma.InputJsonValue
+          | undefined,
         // Snapshotted onto the line, so a later edit to the customer's saved
         // measurements never rewrites what was actually cut and stitched.
         measurements: (item.measurements ?? undefined) as
@@ -235,6 +255,27 @@ export class OrdersService {
           newOrder.id,
           product?.name,
         );
+
+        // Decrement sizeStock in product.attributes if size is specified
+        const selectedSize = item.selectedAttributes?.size
+          ? String(item.selectedAttributes.size).trim()
+          : null;
+        if (selectedSize && product?.attributes) {
+          const currentAttrs = (product.attributes as Record<string, any>) || {};
+          const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
+          if (typeof sizeStock[selectedSize] === 'number') {
+            sizeStock[selectedSize] = Math.max(0, sizeStock[selectedSize] - item.quantity);
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                attributes: {
+                  ...currentAttrs,
+                  sizeStock,
+                },
+              },
+            });
+          }
+        }
       }
 
       // Opening transition (null -> PENDING) for the tracking timeline (D4).
@@ -446,6 +487,30 @@ export class OrdersService {
             item.quantity,
             orderId,
           );
+        }
+
+        // Return size stock if size was specified
+        const selectedAttrs = item.selectedAttributes as Record<string, any> | null;
+        const size = selectedAttrs?.size ? String(selectedAttrs.size).trim() : null;
+        if (size) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+            select: { attributes: true },
+          });
+          const currentAttrs = (product?.attributes as Record<string, any>) || {};
+          const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
+          if (typeof sizeStock[size] === 'number') {
+            sizeStock[size] += item.quantity;
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                attributes: {
+                  ...currentAttrs,
+                  sizeStock,
+                },
+              },
+            });
+          }
         }
       }
 

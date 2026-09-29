@@ -29,6 +29,8 @@ export interface InventoryItem {
   minimum: number;
   status: StockStatus;
   updatedAt: string;
+  sizeStock?: Record<string, number> | null;
+  sizes?: string[] | null;
 }
 
 export interface Movement {

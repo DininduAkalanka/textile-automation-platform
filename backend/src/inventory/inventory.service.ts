@@ -282,6 +282,7 @@ export class InventoryService {
     type: MovementType,
     adminId: string,
     note?: string,
+    size?: string,
   ) {
     if (!InventoryService.ADJUSTABLE.includes(type)) {
       throw new BadRequestException(
@@ -304,22 +305,6 @@ export class InventoryService {
       /**
        * SELECT ... FOR UPDATE. The lock is not about the write — it is about the
        * TRUTH OF THE RECORD.
-       *
-       * The guarded UPDATE below is already race-safe on its own: its WHERE clause
-       * is re-evaluated against the live row, so it cannot oversell no matter what
-       * commits underneath it. The first version of this method relied on exactly
-       * that and read the "before" state with an ordinary unlocked SELECT.
-       *
-       * That was wrong, and subtly. Prisma runs at READ COMMITTED, so between an
-       * unlocked read and the UPDATE, a customer's checkout can commit a RESERVE.
-       * The write would still be correct — but `before.quantityReserved` would be
-       * stale, and it is written straight into the audit log. The audit log would
-       * then record a prior state that never existed, and the error message would
-       * quote a reserved figure that was already out of date when it was printed.
-       *
-       * An inventory ledger whose audit trail is only true when nobody else is
-       * shopping is not an audit trail. So: take the row lock first, and everything
-       * below reads a state that cannot move under us.
        */
       const locked = await tx.$queryRaw<
         Array<{
@@ -352,13 +337,7 @@ export class InventoryService {
            AND quantity_available + ${change}::int >= quantity_reserved
         RETURNING id, quantity_available AS available`;
 
-      // Deliberately NOT pre-checked in TypeScript. The guarded UPDATE above is the
-      // ONE place BR4 is enforced at the application layer; adding a second check
-      // here would mean deleting the SQL guard no longer changes any observable
-      // behaviour, and the mutation test that pins it would silently stop testing
-      // anything. One guard, one test, one thing that can break.
       if (rows.length !== 1) {
-        // We hold the lock, so these figures are exact rather than merely recent.
         const wouldBe = before.available + change;
         throw new BadRequestException(
           wouldBe < 0
@@ -368,13 +347,43 @@ export class InventoryService {
         );
       }
 
+      // Update size-specific stock if size is provided
+      let effectiveNote = note?.trim() || null;
+      if (size && size.trim()) {
+        const trimmedSize = size.trim();
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: { attributes: true },
+        });
+        const currentAttrs = (product?.attributes as Record<string, any>) || {};
+        const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
+        const currentSizeStock = typeof sizeStock[trimmedSize] === 'number' ? sizeStock[trimmedSize] : 0;
+        const newSizeStock = currentSizeStock + change;
+        if (newSizeStock < 0) {
+          throw new BadRequestException(
+            `Size "${trimmedSize}" currently has ${currentSizeStock} in stock. Adjusting by ${change} would leave it below zero.`,
+          );
+        }
+        sizeStock[trimmedSize] = newSizeStock;
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            attributes: {
+              ...currentAttrs,
+              sizeStock,
+            },
+          },
+        });
+        effectiveNote = `[Size: ${trimmedSize}]${effectiveNote ? ` ${effectiveNote}` : ''}`;
+      }
+
       await tx.inventoryMovement.create({
         data: {
           inventoryId: rows[0].id,
           type,
           quantityChange: change,
           userId: adminId, // every movement traces to an order OR an admin
-          note: note?.trim() || null,
+          note: effectiveNote,
         },
       });
 
@@ -384,12 +393,6 @@ export class InventoryService {
         data: { stockQuantity: { increment: change } },
       });
 
-      // Doc 09 §11.2: who changed inventory, and what it was before.
-      //
-      // Every figure here comes from the LOCKED read, so this records the state
-      // that actually preceded the write — not one that merely preceded the read.
-      // `reserved` is unchanged by an adjustment (only orders move it), and because
-      // we hold the row lock, nobody moved it behind our back either.
       await tx.auditLog.create({
         data: {
           userId: adminId,
@@ -405,16 +408,11 @@ export class InventoryService {
             reserved: before.reserved,
             type,
             change,
-            note: note ?? null,
+            note: effectiveNote,
           },
         },
       });
 
-      // Called for BOTH directions, deliberately. A PURCHASE that lifts stock back
-      // over the minimum must RE-ARM the alert (checkLowStock clears the flag when
-      // it sees stock has recovered). Guarding this with `if (change < 0)` looks
-      // like an optimisation and is actually a bug: the flag would stay stuck at
-      // true forever, and the next time the product ran low, nobody would be told.
       await this.checkLowStock(tx, rows[0].id);
 
       return this.findOne(productId, tx);
@@ -506,6 +504,7 @@ export class InventoryService {
               name: true,
               sku: true,
               category: { select: { name: true } },
+              attributes: true,
             },
           },
         },
@@ -550,6 +549,7 @@ export class InventoryService {
             name: true,
             sku: true,
             category: { select: { name: true } },
+            attributes: true,
           },
         },
       },
@@ -637,6 +637,7 @@ export class InventoryService {
             name: true,
             sku: true,
             category: { select: { name: true } },
+            attributes: true,
           },
         },
       },
@@ -657,9 +658,18 @@ export class InventoryService {
       name: string;
       sku: string;
       category: { name: string } | null;
+      attributes?: any;
     };
   }) {
     const sellable = row.quantityAvailable - row.quantityReserved;
+    const attrs = (row.product.attributes as Record<string, any>) || {};
+    const sizeStock = (attrs.sizeStock as Record<string, number>) || null;
+    const sizes = attrs.size
+      ? String(attrs.size)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null;
 
     return {
       productId: row.product.id,
@@ -682,6 +692,8 @@ export class InventoryService {
             ? ('LOW' as const)
             : ('OK' as const),
       updatedAt: row.updatedAt,
+      sizeStock,
+      sizes,
     };
   }
 }
