@@ -835,7 +835,26 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
               ) : null}
+            {/* Size Stock Feedback Pill */}
+            <div className="mt-2.5">
+              {isSelectedSizeOutOfStock ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0" />
+                  <span>Out of stock in size <strong>{selectedSize}</strong>. Please choose another size or inquire via WhatsApp below.</span>
+                </div>
+              ) : currentSizeStock <= 5 ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span>Only <strong>{currentSizeStock} left</strong> in size <strong>{selectedSize}</strong> — order soon!</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-neutral-50 text-neutral-600 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>In Stock ({currentSizeStock} available in size {selectedSize})</span>
+                </div>
+              )}
             </div>
+          </div>
 
           {/* 7. Live Subtotal Display */}
           <div className="pt-2 text-xs sm:text-sm text-neutral-800 flex items-center gap-1.5">
