@@ -47,6 +47,7 @@ export interface Product {
   images: string[];
   attributes: Record<string, any>;
   categoryId?: string;
+  subCategory?: string;
   category?: Category;
   isActive: boolean;
   /** Drives BR3 and the D8 production gate. */

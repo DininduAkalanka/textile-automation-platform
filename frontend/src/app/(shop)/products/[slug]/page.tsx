@@ -33,6 +33,8 @@ import { useProductReviews } from '@/hooks/use-reviews';
 import { ProductRail } from '@/components/products/ProductRail';
 import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { normalizeImageUrl } from '@/lib/image-url';
+import { MeasurementDialog } from '@/components/cart/measurement-dialog';
+import { MeasurementSet, fieldsFor } from '@/lib/measurements';
 
 // ── Comprehensive Sri Lankan Sizing Tables ──────────────────────
 const SIZE_CHART_INCHES = [
@@ -73,6 +75,8 @@ export default function ProductDetailPage() {
   const [showBnplInfo, setShowBnplInfo] = useState(false);
   const [showStoreInfo, setShowStoreInfo] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [customMeasurements, setCustomMeasurements] = useState<MeasurementSet | null>(null);
+  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -250,15 +254,23 @@ export default function ProductDetailPage() {
   const subtotalFormatted = (effectivePrice * quantity).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
   const handleAddToCart = () => {
+    if (selectedSize === 'Custom' && !customMeasurements) {
+      setShowMeasurementModal(true);
+      return;
+    }
     if (isSelectedSizeOutOfStock) return;
-    addItem(product, quantity, selectedSize);
+    addItem(product, quantity, selectedSize, customMeasurements ?? undefined);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
   const handleBuyNow = () => {
+    if (selectedSize === 'Custom' && !customMeasurements) {
+      setShowMeasurementModal(true);
+      return;
+    }
     if (isSelectedSizeOutOfStock) return;
-    addItem(product, quantity, selectedSize);
+    addItem(product, quantity, selectedSize, customMeasurements ?? undefined);
     router.push('/checkout');
   };
 
@@ -676,14 +688,26 @@ export default function ProductDetailPage() {
               <span className="text-xs font-bold text-neutral-900 uppercase tracking-wide">
                 Size: <span className="font-semibold text-neutral-700">{selectedSize}</span>
               </span>
-              <button
-                type="button"
-                onClick={() => setShowSizeGuide(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-[var(--clr-brand)] transition-colors"
-              >
-                <Ruler size={14} />
-                <span>Size Guide</span>
-              </button>
+              <div className="flex items-center gap-3">
+                {(fieldsFor(product).length > 0 || product.requiresMeasurement) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMeasurementModal(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-[var(--clr-brand)] transition-colors"
+                  >
+                    <Ruler size={14} />
+                    <span>{customMeasurements ? 'Edit Measurements' : 'Custom Tailoring'}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowSizeGuide(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-[var(--clr-brand)] transition-colors"
+                >
+                  <Ruler size={14} />
+                  <span>Size Guide</span>
+                </button>
+              </div>
             </div>
 
             {/* Square Size Pills - with real-time stock indicator */}
@@ -722,8 +746,95 @@ export default function ProductDetailPage() {
                   </button>
                 );
               })}
+
+              {/* Optional Custom Size Pill for Uniform/Custom Products */}
+              {(fieldsFor(product).length > 0 || product.requiresMeasurement) && (
+                <button
+                  key="custom-size-pill"
+                  type="button"
+                  data-testid="size-pill-custom"
+                  onClick={() => {
+                    setSelectedSize('Custom');
+                    if (!customMeasurements) {
+                      setShowMeasurementModal(true);
+                    }
+                  }}
+                  className={`min-w-[64px] h-12 px-2.5 text-xs font-semibold border transition-all flex flex-col items-center justify-center relative rounded-md ${
+                    selectedSize === 'Custom'
+                      ? 'border-2 border-[var(--clr-brand)] text-[var(--clr-brand)] bg-red-50/50 font-bold shadow-sm ring-1 ring-[var(--clr-brand)]'
+                      : 'bg-white text-neutral-700 border-dashed border-neutral-400 hover:border-neutral-900'
+                  }`}
+                >
+                  <span>Custom</span>
+                  <span className="text-[9px] font-medium text-neutral-500 uppercase leading-none mt-0.5">
+                    {customMeasurements ? 'Measured' : 'Tailor'}
+                  </span>
+                </button>
+              )}
             </div>
 
+            {/* Size Stock Feedback Pill */}
+            <div className="mt-2.5">
+              {selectedSize === 'Custom' ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-purple-50 text-purple-700 text-xs font-medium border border-purple-200">
+                  <Sparkles size={14} className="text-purple-600 shrink-0" />
+                  <span>Custom Tailored Fit — Garment stitched to your exact body measurements.</span>
+                </div>
+              ) : isSelectedSizeOutOfStock ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0" />
+                    <span>Out of stock in size <strong>{selectedSize}</strong>. Please choose another size or inquire via WhatsApp below.</span>
+                  </div>
+                ) : currentSizeStock <= 5 ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    <span>Only <strong>{currentSizeStock} left</strong> in size <strong>{selectedSize}</strong> — order soon!</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-neutral-50 text-neutral-600 text-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span>In Stock ({currentSizeStock} available in size {selectedSize})</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Tailoring Notification & Quick Action */}
+              {customMeasurements ? (
+                <div className="mt-2.5 flex items-center justify-between px-3 py-2 rounded-md bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <Check size={14} className="text-emerald-600" />
+                    Custom tailoring active for: <strong>{customMeasurements.personName}</strong>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowMeasurementModal(true)}
+                      className="text-emerald-700 font-semibold underline hover:text-emerald-900"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomMeasurements(null)}
+                      className="text-neutral-400 hover:text-neutral-600"
+                      title="Remove custom tailoring (use standard size)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (fieldsFor(product).length > 0 || product.requiresMeasurement) ? (
+                <div className="mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-md bg-neutral-50 border border-neutral-200 text-[11px] text-neutral-600">
+                  <span>Standard size selected. Need bespoke tailor-fit?</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMeasurementModal(true)}
+                    className="text-[var(--clr-brand)] font-semibold hover:underline"
+                  >
+                    Enter Measurements →
+                  </button>
+                </div>
+              ) : null}
             {/* Size Stock Feedback Pill */}
             <div className="mt-2.5">
               {isSelectedSizeOutOfStock ? (
@@ -1461,6 +1572,17 @@ export default function ProductDetailPage() {
           )}
         </div>
       )}
+
+      {/* Custom Tailoring Measurements Dialog */}
+      <MeasurementDialog
+        product={product}
+        existing={customMeasurements ?? undefined}
+        open={showMeasurementModal}
+        onOpenChange={setShowMeasurementModal}
+        onSave={(set) => {
+          setCustomMeasurements(set);
+        }}
+      />
 
     </div>
   );

@@ -6,10 +6,10 @@ import { AlertTriangle, Ruler, ShoppingBag } from 'lucide-react';
 
 import { MeasurementDialog } from '@/components/cart/measurement-dialog';
 import { Button } from '@/components/ui/button';
-import { isComplete, needsMeasurements } from '@/lib/measurements';
+import { isComplete, needsMeasurements, fieldsFor } from '@/lib/measurements';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { useCartStore } from '@/store/useCartStore';
-import { Product } from '@/types';
+import { CartItem, Product } from '@/types';
 
 export default function CartPage() {
   const {
@@ -24,7 +24,7 @@ export default function CartPage() {
     canCheckout,
   } = useCartStore();
 
-  const [measuring, setMeasuring] = useState<Product | null>(null);
+  const [measuring, setMeasuring] = useState<CartItem | null>(null);
 
   const missing = itemsMissingMeasurements();
   const checkoutAllowed = canCheckout();
@@ -197,27 +197,31 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* BR3: Measurement action (full width on mobile, inline on desktop) */}
-              {needsMeasurements(item.product) && (
+              {/* Measurement action for items supporting measurements */}
+              {(fieldsFor(item.product).length > 0 || item.product.requiresMeasurement) && (
                 <div className="w-full sm:w-auto">
                   <button
                     data-testid="cart-add-measurements-btn"
-                    onClick={() => setMeasuring(item.product)}
+                    onClick={() => setMeasuring(item)}
                     className="w-full sm:w-auto"
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
                       cursor: 'pointer', fontSize: '0.75rem',
                       borderRadius: '0.5rem', padding: '0.5rem 0.875rem',
-                      ...(isComplete(item.product, item.measurements)
+                      ...(item.measurements
                         ? { fontWeight: 500, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0' }
-                        : { fontWeight: 600, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d' }),
+                        : needsMeasurements(item.product, item.selectedSize)
+                        ? { fontWeight: 600, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d' }
+                        : { fontWeight: 500, color: '#4b5563', background: '#f3f4f6', border: '1px solid #e5e7eb' }),
                     }}
                   >
                     <Ruler size={13} aria-hidden />
                     <span>
-                      {isComplete(item.product, item.measurements)
-                        ? `Measured — ${item.measurements?.personName}`
-                        : 'Add Custom Measurements'}
+                      {item.measurements
+                        ? `Tailored — ${item.measurements?.personName}`
+                        : needsMeasurements(item.product, item.selectedSize)
+                        ? 'Add Custom Measurements (Required)'
+                        : 'Add Custom Measurements (Optional)'}
                     </span>
                   </button>
                 </div>
@@ -420,14 +424,12 @@ export default function CartPage() {
       )}
 
       <MeasurementDialog
-        product={measuring}
-        existing={
-          items.find((i) => i.product.id === measuring?.id)?.measurements
-        }
+        product={measuring?.product ?? null}
+        existing={measuring?.measurements}
         open={measuring !== null}
         onOpenChange={(open) => !open && setMeasuring(null)}
         onSave={(set) => {
-          if (measuring) setMeasurements(measuring.id, set);
+          if (measuring) setMeasurements(measuring.product.id, set, measuring.selectedSize);
         }}
       />
     </div>

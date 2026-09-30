@@ -5,9 +5,9 @@
 ---
 
 [![CI](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/ci.yml)
-[![Cypress E2E](https://img.shields.io/badge/Cypress%20E2E-13%2F13%20Passing%20(100%25)-brightgreen.svg)](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md)
-[![k6 Load Tested](https://img.shields.io/badge/k6%20Load%20Tested-p95%20192ms-blue.svg)](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md)
-[![Jest Unit Tests](https://img.shields.io/badge/Unit%20Tests-147%20Passing-success.svg)](backend)
+[![Cypress E2E](https://img.shields.io/badge/Cypress%20E2E-35%2F35%20Passing%20(100%25)-brightgreen.svg)](docs/QA_FINAL_TEST_REPORT.md)
+[![Automated Tests](https://img.shields.io/badge/Automated%20Tests-413%20Passing%20(100%25)-success.svg)](docs/QA_FINAL_TEST_REPORT.md)
+[![k6 Load Tested](https://img.shields.io/badge/k6%20Load%20Tested-100%20VUs%20%7C%20p95%20302ms-blue.svg)](docs/QA_FINAL_TEST_REPORT.md)
 [![Security Audit](https://img.shields.io/badge/Security%20Audit-OWASP%20Top%2010%20Hardened-teal.svg)](docs/SECURITY_REVIEW.md)
 [![Docker Ready](https://img.shields.io/badge/Docker%20Compose-5%20Services%20Orchestrated-2496ED.svg)](docker-compose.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg)](frontend)
@@ -16,7 +16,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688.svg)](ai)
 
 > **Enterprise Production Platform** · High-performance, scalable textile business management and e-commerce infrastructure.  
-> Comprehensive Documentation: [QA & Performance Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
+> Comprehensive Documentation: **[QA Final Audit Report (413 Tests)](docs/QA_FINAL_TEST_REPORT.md)** · [Historical QA Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
 
 ---
 
@@ -273,13 +273,13 @@ The platform includes integration with Sri Lanka's **PayHere** payment gateway:
 
 ---
 
-## Quality Assurance & Verification (Cypress & k6)
+## Quality Assurance & Verification (Cypress, Jest, Pytest & k6)
 
-The repository implements a comprehensive testing pyramid verified via continuous integration. Full test logs and metrics are documented in [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md).
+The platform implements an exhaustive testing pyramid verified through automated suites in CI and local Docker environments. Full audit evidence, logs, and metrics are documented in the **[QA Final Audit Report](docs/QA_FINAL_TEST_REPORT.md)** (with historical results in [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md)).
 
-### 1. Cypress Headless End-to-End Test Suite (13/13 Passed — 100%)
+### 1. Cypress Headless End-to-End Test Suite (35/35 Passed — 100%)
 
-Executes full browser automation across five core business journeys:
+Executes full browser automation across all 9 critical user journeys and admin workflows:
 
 ```bash
 # Run headless (CI mode)
@@ -292,11 +292,16 @@ npm run test:e2e:open
 
 | Test Specification | Covered Business Flows | Tests | Status |
 | :--- | :--- | :---: | :---: |
-| `admin-operations.cy.ts` | Executive Dashboard metrics, Orders management, Production Kanban, Inventory Ledger | 4 / 4 | PASS (100%) |
-| `ai.cy.ts` | Customer Shopping Assistant (RAG chat) & Admin Business Intelligence insights | 2 / 2 | PASS (100%) |
-| `customer-journey.cy.ts` | Customer registration, Catalog search, Cart state, Bespoke measurements, COD checkout | 3 / 3 | PASS (100%) |
-| `payment-online.cy.ts` | PayHere card checkout simulation & idempotent server-to-server webhook verification | 1 / 1 | PASS (100%) |
-| `security.cy.ts` | Route guards, RBAC enforcement across 4 roles, and IDOR defense validation | 3 / 3 | PASS (100%) |
+| `admin-crud.cy.ts` | Category CRUD, Product lifecycle, Image uploads, Admin entity operations | 11 / 11 | **PASS (100%)** |
+| `admin-operations.cy.ts` | Executive Dashboard metrics, Orders management, Production Kanban, Inventory Ledger | 4 / 4 | **PASS (100%)** |
+| `ai.cy.ts` | Customer Shopping Assistant (RAG chat) & Admin Business Intelligence insights | 2 / 2 | **PASS (100%)** |
+| `catalog-and-media-lifecycle.cy.ts` | Dynamic navigation update, Image upload permissions, Mobile responsive viewport | 3 / 3 | **PASS (100%)** |
+| `customer-crud.cy.ts` | Catalog browsing, Order history, Cart modifications (+/-), Full checkout | 4 / 4 | **PASS (100%)** |
+| `customer-journey.cy.ts` | Customer registration, UI OTP verification, Bespoke garment tailoring, Order cancellation | 4 / 4 | **PASS (100%)** |
+| `payment-online.cy.ts` | PayHere card checkout simulation & idempotent server-to-server webhook verification | 1 / 1 | **PASS (100%)** |
+| `security.cy.ts` | Route guards, RBAC enforcement across 4 roles, and IDOR defense validation | 3 / 3 | **PASS (100%)** |
+| `worker-journey.cy.ts` | Worker task queue, Kanban pipeline advancement (Cutting->Sewing->Finishing->QC), Worker claim isolation | 3 / 3 | **PASS (100%)** |
+| **Total E2E Tests** | **Comprehensive Full-System Browser Automation** | **35 / 35** | **PASS (100%)** |
 
 ### 2. Grafana k6 Load & Concurrency Stress Testing
 
@@ -304,25 +309,36 @@ Audits non-functional requirement **NFR-001** (response times < 2000ms under loa
 
 ```bash
 # Simulate 100 concurrent shopping customer sessions
-docker run --rm -i -v "${PWD}/scripts/load:/scripts" -e API_URL=http://host.docker.internal:3001/api/v1 grafana/k6 run /scripts/scenarios.js
+docker run --rm -i -v "${PWD}/scripts/load:/scripts" -e API_URL=http://host.docker.internal:3001/api/v1 grafana/k6 run --vus 100 --duration 1m /scripts/scenarios.js
 
 # Stress test 100 simultaneous signed payment webhook bursts
 docker run --rm -i -v "${PWD}/scripts/load:/scripts" -e API_URL=http://host.docker.internal:3001/api/v1 grafana/k6 run /scripts/webhook-spike.js
 ```
 
-- **NFR-001 Performance Benchmark**: Achieved `p(95) = 192ms` under 100 concurrent users (Target: < 2000ms — **10x faster than requirement**).
-- **Webhook Spike Throughput**: Sustained **262 requests/second** with **0.00% failure rate** and zero database locking deadlocks.
+- **NFR-001 Benchmark (100 Concurrent Users)**: 4,479 requests, 5,902 checks, **0.00% error rate**, **p(95) = 302.33ms** (Target: < 2000ms — **6.6x faster than requirement**), **p(99) = 652.38ms**.
+- **Webhook Spike Throughput**: Sustained **293 requests/second** with **0.00% failure rate** and zero database locking deadlocks.
 
-### 3. Backend Unit & Ledger Reconcile Tests (Jest)
+### 3. Backend Unit, Integration & Concurrency Tests (Jest + PostgreSQL 16)
 
 ```bash
 cd backend
-# Run 16 test suites covering 147 unit tests
+# Run 16 unit test suites (163 tests)
 npm test
+
+# Run 14 integration test suites with real PostgreSQL 16 (169 tests)
+npm run test:integration
+
+# Execute concurrency stock reservation race (10x repeated Promise.all transactions)
+npx jest --config ./test/jest-e2e.json test/stock-race.e2e-spec.ts --runInBand
 
 # Verify inventory ledger double-entry mathematical balance
 npm run reconcile
 ```
+
+- **Unit Tests:** 16 suites, 163 tests passed.
+- **Integration Tests:** 14 suites, 169 tests passed against real PostgreSQL 16.
+- **AI Microservice Tests:** 3 Pytest suites, 46 tests passed (Holt-Winters forecasting, prompt injection defense, allowed-set grounding).
+- **Total Automated Functional Tests:** **413 / 413 Passing (100% Pass Rate)**.
 
 ---
 
@@ -411,8 +427,8 @@ All architectural specifications, designs, and operational runbooks are maintain
 | **12 — Deployment Architecture** | [`docs/12_DEPLOYMENT_ARCHITECTURE.md.txt`](docs/12_DEPLOYMENT_ARCHITECTURE.md.txt) | Containerization, cloud topology, edge delivery, environment staging. |
 | **13 — Testing Strategy** | [`docs/13_TESTING_STRATEGY.md.txt`](docs/13_TESTING_STRATEGY.md.txt) | Testing pyramid: unit, integration, E2E browser automation, k6 load testing. |
 | **Production Runbook** | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Operations manual, deployment checklists, backup/restore drills, incident recovery. |
-| **Security Review** | [`docs/SECURITY_REVIEW.md`](docs/SECURITY_REVIEW.md) | Formal security audit, threat modeling, pen-test verification. |
-| **QA & Performance Report** | [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) | Official test execution logs, timings, Cypress passes, k6 graphs. |
+| **QA Final Test Report** | [`docs/QA_FINAL_TEST_REPORT.md`](docs/QA_FINAL_TEST_REPORT.md) | **Comprehensive Production QA Engineering Audit**: 413 automated tests (Cypress, Jest, Pytest), PostgreSQL concurrency race, webhook tamper security, AI grounding, and 100 VU k6 load testing. |
+| **Historical QA Report** | [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) | Previous test execution logs, timings, Cypress passes, k6 graphs. |
 | **Database Schema (DBML)** | [`docs/database.dbml`](docs/database.dbml) | DBML schema definition renderable visually at [dbdiagram.io](https://dbdiagram.io/d). |
 | **System Demonstration Script** | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Structured operational demonstration script for stakeholders and system evaluators. |
 

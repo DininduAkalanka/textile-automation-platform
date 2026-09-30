@@ -41,7 +41,7 @@ export function MeasurementDialog({
   onOpenChange,
   onSave,
 }: MeasurementDialogProps) {
-  const fields = fieldsFor(product?.productType);
+  const fields = fieldsFor(product);
 
   type FormValues = {
     personName: string;
@@ -104,16 +104,25 @@ export function MeasurementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <div className="pr-8">
-          <DialogTitle className="text-base sm:text-lg">Measurements — {product.name}</DialogTitle>
-          <DialogDescription className="mt-1 text-xs sm:text-sm">
+      <DialogContent className="max-w-xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
+        {/* Modal Header */}
+        <div className="border-b border-neutral-100 px-6 py-4 pr-12 bg-white shrink-0">
+          <DialogTitle className="text-base sm:text-lg font-bold text-neutral-900">
+            Measurements — {product.name}
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-xs sm:text-sm text-neutral-500">
             All measurements in centimetres. We stitch to these exactly, so please
             double-check them.
           </DialogDescription>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+        {/* Scrollable Form Body */}
+        <form
+          id="measurement-form"
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4"
+          noValidate
+        >
           <FormField
             label="Who is this for?"
             placeholder="e.g. Nimal Perera"
@@ -142,21 +151,27 @@ export function MeasurementDialog({
               />
             ))}
           </div>
-
-          <div className="mt-2 flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button data-testid="save-measurements-btn" type="submit" className="flex-1">
-              Save measurements
-            </Button>
-          </div>
         </form>
+
+        {/* Modal Footer */}
+        <div className="border-t border-neutral-100 bg-neutral-50/80 px-6 py-3.5 flex gap-3 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            data-testid="save-measurements-btn"
+            type="submit"
+            form="measurement-form"
+            className="flex-1 bg-[#0F0F0F] text-white hover:bg-black font-semibold"
+          >
+            Save measurements
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
