@@ -272,9 +272,9 @@ export function fieldsFor(
  * Returns true if a size string represents a standard ready-to-wear size
  * (e.g. "20", "24", "Chest 30 to 42", "M", "L", etc.) rather than bespoke / custom tailoring.
  */
-export function isStandardSize(size?: string | null): boolean {
-  if (!size || typeof size !== 'string') return false;
-  const s = size.trim().toLowerCase();
+export function isStandardSize(size?: string | number | null): boolean {
+  if (size === null || size === undefined) return false;
+  const s = String(size).trim().toLowerCase();
   return (
     s.length > 0 &&
     s !== 'custom' &&

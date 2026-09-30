@@ -291,11 +291,11 @@ export function fieldsFor(
 
 /**
  * Returns true if a size string represents a standard ready-to-wear size
- * (e.g. "20", "24", "Chest 30 to 42", "M", "L", etc.) rather than bespoke / custom tailoring.
+ * (e.g. "20", 20, "24", "Chest 30 to 42", "M", "L", etc.) rather than bespoke / custom tailoring.
  */
-export function isStandardSize(size?: string | null): boolean {
-  if (!size || typeof size !== 'string') return false;
-  const s = size.trim().toLowerCase();
+export function isStandardSize(size?: string | number | null): boolean {
+  if (size === null || size === undefined) return false;
+  const s = String(size).trim().toLowerCase();
   return (
     s.length > 0 &&
     s !== 'custom' &&
@@ -309,15 +309,15 @@ export function isStandardSize(size?: string | null): boolean {
  * Validates one line item's measurements. Returns the reasons it is invalid;
  * an empty array means it passed.
  *
- * If a customer selected a standard ready-to-wear size (e.g., Size 24 or Chest 30 to 42),
- * bespoke body measurements are not mandatory unless the customer optionally provided them.
+ * If a customer selected a standard ready-to-wear size (e.g., Size 20, 24 or Chest 30 to 42),
+ * bespoke body measurements are never mandatory.
  */
 export function validateMeasurements(
   productName: string,
   productType: ProductType,
   requiresMeasurement: boolean,
   submitted: unknown,
-  selectedSize?: string | null,
+  selectedSize?: string | number | null,
   subCategory?: string | null,
   attributes?: any,
 ): string[] {
@@ -332,15 +332,13 @@ export function validateMeasurements(
     }
   }
 
-  const fields = fieldsFor(productType, productName, subCategory, attributes, requiresMeasurement);
-
-  // If a standard off-the-shelf size was chosen (e.g. 24, Chest 30 to 42, S, M, L),
-  // custom body measurements are NOT mandatory unless measurements were partially submitted.
+  // If a standard off-the-shelf size was chosen (e.g. "20", 20, 24, Chest 30 to 42, S, M, L),
+  // custom body measurements are NEVER mandatory and must never block payment.
   if (isStandardSize(selectedSize)) {
-    if (submitted === null || submitted === undefined) {
-      return [];
-    }
+    return [];
   }
+
+  const fields = fieldsFor(productType, productName, subCategory, attributes, requiresMeasurement);
 
   // Nothing to check: not a measured product and not flagged as one.
   if (!requiresMeasurement && fields.length === 0) return [];
