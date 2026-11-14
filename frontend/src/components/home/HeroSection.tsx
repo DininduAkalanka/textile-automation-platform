@@ -15,41 +15,48 @@ export interface HeroSlide {
 const HERO_SLIDES: HeroSlide[] = [
   {
     id: 1,
+    title: 'Nandana Textiles - Heritage Elegance & Bespoke Tailoring',
+    href: '/products',
+    image: '/images/hero/hero-banner-nandana-flagship.png',
+    alt: 'Nandana Textiles - Sri Lanka Premier Fabric & Bespoke Tailoring Atelier',
+  },
+  {
+    id: 2,
     title: 'Ethnic Fusion & The Silk Element',
     href: '/products?category=women',
     image: '/images/hero/hero-banner-silk-sarees.png',
     alt: 'Ethnic Fusion - The Silk Element Luxury Sarees & Festive Fashion',
   },
   {
-    id: 2,
+    id: 3,
     title: 'A True Modern Classic',
     href: '/products?category=women',
     image: '/images/hero/hero-banner-modern-classic.png',
     alt: 'A True Modern Classic - Contemporary Sri Lankan Fashion',
   },
   {
-    id: 3,
+    id: 4,
     title: 'SAVAGE Contemporary Streetwear & Youth Fashion',
     href: '/products?category=teenagers',
     image: '/images/hero/hero-banner-savage.png',
     alt: 'SAVAGE - Wings of Freedom Graphic Tees & Urban Streetwear',
   },
   {
-    id: 4,
+    id: 5,
     title: 'The Workwear Edit - Tailored & Timeless',
     href: '/products?category=uniforms',
     image: '/images/hero/hero-banner-tendenza.png',
     alt: 'The Workwear Edit - Tailored Suiting & Corporate Apparel',
   },
   {
-    id: 5,
+    id: 6,
     title: 'Contemporary Denim & Youth Weaves',
     href: '/products?category=teenagers',
     image: '/images/hero/hero-banner-denim.png',
     alt: 'Denim Collection - Everyday Casual Fit',
   },
   {
-    id: 6,
+    id: 7,
     title: 'Golden Escape Resort & Linen Collection',
     href: '/products?category=women',
     image: '/images/hero/hero-banner-golden-escape.png',
@@ -78,7 +85,7 @@ export function HeroSection() {
     setCurrent(index);
   }, []);
 
-  // Autoplay with pause on hover
+  // Autoplay with pause on hover/interaction (Fashion Bug 5000ms cadence)
   useEffect(() => {
     if (isPaused) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -87,7 +94,7 @@ export function HeroSection() {
 
     timerRef.current = setInterval(() => {
       nextSlide();
-    }, 5500);
+    }, 5000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -106,9 +113,9 @@ export function HeroSection() {
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    if (distance > 50) {
+    if (distance > 45) {
       nextSlide();
-    } else if (distance < -50) {
+    } else if (distance < -45) {
       prevSlide();
     }
     touchStartX.current = null;
@@ -135,18 +142,14 @@ export function HeroSection() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full overflow-hidden bg-neutral-100 select-none group/banner focus:outline-none"
+      className="relative w-full overflow-hidden bg-neutral-950 select-none group/banner focus:outline-none"
     >
-      {/* Editorial Storefront Brand Badge & Primary SEO Heading */}
-      <div className="absolute top-3 left-3 sm:top-5 sm:left-6 z-20 pointer-events-none">
-        <h1 className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white/95 bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded border border-white/20 shadow-sm inline-block">
-          Nandana Textile &bull; Sri Lanka
-        </h1>
-      </div>
+      {/* Accessible semantic heading for SEO without visual obstruction */}
+      <h1 className="sr-only">Nandana Textile &bull; Sri Lanka Premier Online Fashion & Fabric Store</h1>
 
-      {/* Full-width responsive banner viewport matching Fashion Bug & Thilakawardhana standards (1920x630 aspect ratio for 100% full fit without cropping) */}
-      <div className="relative w-full aspect-[1920/630] overflow-hidden bg-neutral-950">
-        {/* Sliding Track */}
+      {/* ── Responsive Viewport: Exact Fashion Bug 1880x720 Ratio (Zero-Cropping on Mobile & Desktop) ── */}
+      <div className="relative w-full aspect-[1880/720] overflow-hidden bg-neutral-950">
+        {/* Sliding Track with Smooth Easing */}
         <div
           className="flex h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
           style={{
@@ -172,7 +175,7 @@ export function HeroSection() {
                   priority={idx === 0}
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   sizes="100vw"
-                  quality={92}
+                  quality={95}
                   className="object-cover object-center w-full h-full"
                 />
               </Link>
@@ -180,7 +183,7 @@ export function HeroSection() {
           ))}
         </div>
 
-        {/* Side Floating Circular Navigation Arrows (Thilakawardhana signature layout) */}
+        {/* ── Side Floating Circular Navigation Arrows (Desktop hover only; hidden on mobile to avoid UI clutter) ──── */}
         <button
           type="button"
           onClick={(e) => {
@@ -189,7 +192,7 @@ export function HeroSection() {
             prevSlide();
           }}
           aria-label="Previous banner"
-          className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/75 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
+          className="hidden md:flex absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-white/85 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg items-center justify-center transition-all opacity-0 group-hover/banner:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
         >
           <svg
             width="18"
@@ -213,7 +216,7 @@ export function HeroSection() {
             nextSlide();
           }}
           aria-label="Next banner"
-          className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/75 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg flex items-center justify-center transition-all opacity-85 hover:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
+          className="hidden md:flex absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-white/85 hover:bg-white text-neutral-800 border border-neutral-300/80 shadow-md hover:shadow-lg items-center justify-center transition-all opacity-0 group-hover/banner:opacity-100 active:scale-95 cursor-pointer backdrop-blur-[2px]"
         >
           <svg
             width="18"
@@ -229,9 +232,9 @@ export function HeroSection() {
           </svg>
         </button>
 
-        {/* Signature Bottom Center Pagination Dots */}
+        {/* ── Sleek Responsive Bottom Center Pagination (Compact on mobile) ───── */}
         <div
-          className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full"
+          className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-full"
           role="tablist"
           aria-label="Slide pagination"
         >
@@ -247,10 +250,10 @@ export function HeroSection() {
                 e.stopPropagation();
                 goToSlide(i);
               }}
-              className={`rounded-full transition-all duration-300 cursor-pointer ${
+              className={`rounded-full transition-all duration-300 cursor-pointer shadow-sm ${
                 i === current
-                  ? 'w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#CC0000] shadow-sm scale-110'
-                  : 'w-2 h-2 sm:w-2.5 sm:h-2.5 bg-neutral-800/40 hover:bg-neutral-800/70'
+                  ? 'w-4 sm:w-7 h-1.5 sm:h-2 bg-[#CC0000]'
+                  : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/75 hover:bg-white'
               }`}
             />
           ))}

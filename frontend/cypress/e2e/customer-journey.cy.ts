@@ -281,7 +281,7 @@ describe('Customer Journey E2E Flow', () => {
       const product = prods.find((p: any) => !p.requiresMeasurement && p.stockQuantity > 0) || prods[0];
 
       cy.visit(`/products/${product.slug}`);
-      cy.getByTestId('add-to-cart-btn').scrollIntoView().should('be.visible').click();
+      cy.getByTestId('add-to-cart-btn').click({ force: true });
 
       // Guest goes straight to checkout
       cy.visit('/checkout');

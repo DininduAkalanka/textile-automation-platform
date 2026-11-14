@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     siteName: 'Nandana Textile',
     images: [
       {
-        url: '/images/hero/hero-banner-web2.jpg',
+        url: '/images/hero/hero-banner-nandana-flagship.png',
         width: 1920,
-        height: 600,
-        alt: 'Nandana Textile Collection',
+        height: 630,
+        alt: 'Nandana Textiles Flagship Showroom & Bespoke Atelier',
       },
     ],
     locale: 'en_LK',
