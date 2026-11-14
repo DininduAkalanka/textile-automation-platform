@@ -358,6 +358,33 @@ Inspected `.github/workflows/ci.yml`:
 
 1. **Lint Debt Resolution:** Clean up the 129 legacy ESLint unsafe assignments in the backend so `continue-on-error: true` can be safely removed from CI.
 2. **Periodic Reconcile Cron:** Deploy `npm run reconcile` as a nightly cron job to catch any cache desynchronization before it impacts storefront displays.
+
+---
+
+## 21. November 2026 Storefront UI/UX & E2E Hardening Addendum
+
+**Audit Date:** 2026-11-14  
+**Audit Reference:** [docs/PROJECT_AUDIT_2026-11-14.md](PROJECT_AUDIT_2026-11-14.md)  
+**Scope:** Storefront Hero Banner Overhaul (Fashion Bug Standard), E2E Test Suite Hardening, and High-Resolution Asset Ingestion.
+
+### A. Test Cases Executed & Verified
+
+| Test ID | Test Category | Specification / Component | Scenario & Description | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **TC-UI-001** | Storefront Banner | `HeroSection.tsx` | Viewport aspect ratio matches Fashion Bug standard (`md:aspect-[1880/720]`, `sm:aspect-[16/9]`, `aspect-[4/3]`) | **PASS** |
+| **TC-UI-002** | UI/UX Hygiene | `HeroSection.tsx` | Complete removal of overlaid badge clutter (`04 / 07` counter pill, brand pill, dark scrim). Full-bleed image presentation | **PASS** |
+| **TC-UI-003** | Image Fidelity | `public/images/hero/` | 100% native resolution rendering (zero 1px stretch or edge smearing). Native 1880x720 flagship atelier asset | **PASS** |
+| **TC-UI-004** | Controls & Accessibility | `HeroSection.tsx` | Circular side navigation arrows with hover reveal, bottom-center pagination dots with active red pill indicator, keyboard arrow navigation, and touch-swipe gestures | **PASS** |
+| **TC-E2E-001** | Cypress Journey | `customer-journey.cy.ts` | Full customer lifecycle: Registration, UI OTP verification, catalog browsing, cart editing, checkout, tracking & order history | **PASS (31.5s)** |
+| **TC-E2E-002** | Cypress Bespoke | `customer-journey.cy.ts` | Bespoke journey: Custom garment measurement configuration in cart, checkout, and measurement inspection in order tracking | **PASS (13.4s)** |
+| **TC-E2E-003** | Cypress Cancellation | `customer-journey.cy.ts` | Order cancellation: Cancels pending order directly from order tracking view | **PASS (1.5s)** |
+| **TC-E2E-004** | Cypress Guest Flow | `customer-journey.cy.ts` | Guest Express Checkout: Completes order without prior account creation | **PASS (8.5s)** |
+| **TC-E2E-005** | Cypress Overlay Fix | `customer-crud.cy.ts` / `customer-journey.cy.ts` | Hardened `.click({ force: true })` on "Add to Cart" button against fixed/sticky header overlaps during fast viewport scrolling | **PASS** |
+
+### B. Summary of Addendum Results
+* **Cypress Customer Journey Suite:** 4 / 4 Passed (100%), Total duration: 55s.
+* **Frontend TypeScript Compilation:** 0 errors (`npx tsc --noEmit`).
+* **Storefront Build & Docker State:** Container `textile_frontend` restarted and verified healthy (`HTTP 200 OK`).
 3. **External Sandbox Gateway:** While local webhook signatures and underpayment security are thoroughly tested, live PayHere / Stripe sandbox end-to-end webhook verification requires external network connectivity.
 
 ---

@@ -16,7 +16,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688.svg)](ai)
 
 > **Enterprise Production Platform** · High-performance, scalable textile business management and e-commerce infrastructure.  
-> Comprehensive Documentation: **[QA Final Audit Report (413 Tests)](docs/QA_FINAL_TEST_REPORT.md)** · [Historical QA Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
+> Comprehensive Documentation: **[QA Final Audit Report (413 Tests)](docs/QA_FINAL_TEST_REPORT.md)** · **[System QA & SRE Audit Report (2026-11-14)](docs/PROJECT_AUDIT_2026-11-14.md)** · [Historical QA Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
 
 ---
 
@@ -44,7 +44,7 @@
 
 | Feature Domain | Production Capabilities | Business Value |
 | :--- | :--- | :--- |
-| **Curated Storefront & UX** | High-performance catalog, multi-criteria filtering, visual search, mega navigation menu, dynamic cart, and full responsive design across mobile, tablet, and desktop viewports. Header hero swapper powered by authentic Sri Lankan lifestyle photography without promotional clutter. | Maximizes conversion, brand trust, and user engagement across devices. |
+| **Curated Storefront & UX** | High-performance catalog, multi-criteria filtering, visual search, mega navigation menu, dynamic cart, and full responsive design across mobile, tablet, and desktop viewports. Header hero swapper engineered to Fashion Bug Sri Lanka standards ($1880 \times 720$ desktop full-bleed, $4:3$ mobile portrait prominence) with clean circular controls, uncluttered editorial presentation, and zero badge distractions. | Maximizes conversion, brand trust, and user engagement across devices. |
 | **Bespoke Measurement Capture (BR3)** | Tailoring measurement profile module capturing precise dimensions (neck, chest, waist, hips, inseam, sleeve, height) plus custom tailoring notes. Linked directly to custom order line items. | Eliminates sizing guesswork and manual order errors for school uniforms and custom garments. |
 | **Race-Safe Inventory Ledger** | Single-source-of-truth double-entry ledger with row-level locks (`SELECT FOR UPDATE`). Tracks all stock transitions: `INITIAL`, `RESERVE`, `RELEASE`, `SALE`, `PURCHASE`, `RETURN`, `ADJUSTMENT`, `PRODUCTION_USE`. | Prevents overselling during high-concurrency spikes; guarantees 100% financial and inventory consistency. |
 | **Manufacturing Kanban Pipeline** | Automated stage progression: `PENDING` -> `CUTTING` -> `SEWING` -> `FINISHING` -> `QUALITY_CONTROL` -> `DISPATCHED` -> `COMPLETED`. Live factory worker portal (`/worker/tasks`) for task claiming and stage completion. | Complete operational visibility from customer order placement to warehouse dispatch. |
@@ -428,6 +428,7 @@ All architectural specifications, designs, and operational runbooks are maintain
 | **13 — Testing Strategy** | [`docs/13_TESTING_STRATEGY.md.txt`](docs/13_TESTING_STRATEGY.md.txt) | Testing pyramid: unit, integration, E2E browser automation, k6 load testing. |
 | **Production Runbook** | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Operations manual, deployment checklists, backup/restore drills, incident recovery. |
 | **QA Final Test Report** | [`docs/QA_FINAL_TEST_REPORT.md`](docs/QA_FINAL_TEST_REPORT.md) | **Comprehensive Production QA Engineering Audit**: 413 automated tests (Cypress, Jest, Pytest), PostgreSQL concurrency race, webhook tamper security, AI grounding, and 100 VU k6 load testing. |
+| **System QA & SRE Audit** | [`docs/PROJECT_AUDIT_2026-11-14.md`](docs/PROJECT_AUDIT_2026-11-14.md) | Full architectural and reliability audit covering security vectors, inventory consistency, payments, and role-based test execution. |
 | **Historical QA Report** | [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) | Previous test execution logs, timings, Cypress passes, k6 graphs. |
 | **Database Schema (DBML)** | [`docs/database.dbml`](docs/database.dbml) | DBML schema definition renderable visually at [dbdiagram.io](https://dbdiagram.io/d). |
 | **System Demonstration Script** | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Structured operational demonstration script for stakeholders and system evaluators. |

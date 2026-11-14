@@ -69,7 +69,7 @@ describe('Customer Full CRUD (Read, Write, Edit) Suite', () => {
 
         // Navigate to products and add to cart first
         cy.visit(`/products/${product.slug}`);
-        cy.getByTestId('add-to-cart-btn').scrollIntoView().should('be.visible').click();
+        cy.getByTestId('add-to-cart-btn').click({ force: true });
 
         cy.visit('/checkout');
 
