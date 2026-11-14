@@ -1,0 +1,122 @@
+name: Render Services Keep-Alive & Health Monitor
+
+# SRE Keep-Alive Strategy:
+# Render Free instances spin down after 15 minutes of inactivity (50s cold start).
+# Render provides 750 free instance hours per month across all free services.
+# Running 2 services 24/7 (1,488h) exhausts the 750h quota in ~15 days.
+#
+# This workflow runs every 14 minutes between 03:00 UTC and 17:00 UTC
+# (8:30 AM to 10:30 PM Sri Lanka / IST - active e-commerce shopping hours):
+# 14 hours/day * 30 days = 420 hours per service.
+# Both services combined stay safely within the 750h free tier while
+# guaranteeing ZERO cold starts throughout daytime business hours!
+
+on:
+  schedule:
+    - cron: '*/14 3-17 * * *'
+  workflow_dispatch:
+    inputs:
+      custom_backend_url:
+        description: 'Optional custom backend URL to ping'
+        required: false
+        type: string
+      custom_ai_url:
+        description: 'Optional custom AI service URL to ping'
+        required: false
+        type: string
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: true
+
+jobs:
+  keepalive:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Resolve Service URLs
+        id: config
+        run: |
+          BACKEND_URL="${{ inputs.custom_backend_url || secrets.RENDER_BACKEND_URL }}"
+          AI_URL="${{ inputs.custom_ai_url || secrets.RENDER_AI_URL }}"
+
+          # Strip trailing slashes if present
+          BACKEND_URL="${BACKEND_URL%/}"
+          AI_URL="${AI_URL%/}"
+
+          echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "ai_url=$AI_URL" >> $GITHUB_OUTPUT
+
+      # ── 1. Backend API Keep-Alive ───────────────────────────────────────────
+      - name: Ping NestJS Backend API (:3001)
+        if: steps.config.outputs.backend_url != ''
+        run: |
+          TARGET="${{ steps.config.outputs.backend_url }}/api/v1/health"
+          echo "Pinging Backend: $TARGET"
+          
+          # Max time 60s to accommodate potential cold start wakeup
+          RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" --max-time 60 "$TARGET" || echo -e "\n000\n0")
+          
+          BODY=$(echo "$RESPONSE" | head -n -2)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n 2 | head -n 1)
+          LATENCY=$(echo "$RESPONSE" | tail -n 1)
+          
+          echo "Status: HTTP $HTTP_CODE | Latency: ${LATENCY}s"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Backend API is active and healthy."
+          elif [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "000" ]; then
+            echo "⚠️ Backend warming up (code $HTTP_CODE). Retrying after 15s..."
+            sleep 15
+            RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$TARGET" || echo "000")
+            echo "Retry Status: HTTP $RETRY_CODE"
+            if [ "$RETRY_CODE" = "200" ]; then
+              echo "✅ Backend successfully woken up."
+            else
+              echo "::warning ::Backend returned HTTP $RETRY_CODE on retry."
+            fi
+          else
+            echo "::warning ::Backend returned unexpected HTTP $HTTP_CODE"
+          fi
+
+      - name: Backend Secret Notice
+        if: steps.config.outputs.backend_url == ''
+        run: |
+          echo "::notice ::RENDER_BACKEND_URL secret is not set yet. Add it in Repo Settings -> Secrets -> Actions to activate backend keep-alive."
+
+      # ── 2. AI Microservice Keep-Alive ───────────────────────────────────────
+      - name: Ping FastAPI AI Service (:8000)
+        if: steps.config.outputs.ai_url != ''
+        run: |
+          TARGET="${{ steps.config.outputs.ai_url }}/health"
+          echo "Pinging AI Service: $TARGET"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" --max-time 60 "$TARGET" || echo -e "\n000\n0")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n 2 | head -n 1)
+          LATENCY=$(echo "$RESPONSE" | tail -n 1)
+          
+          echo "Status: HTTP $HTTP_CODE | Latency: ${LATENCY}s"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ FastAPI AI Microservice is active and healthy."
+          elif [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "000" ]; then
+            echo "⚠️ AI service warming up (code $HTTP_CODE). Retrying after 15s..."
+            sleep 15
+            RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$TARGET" || echo "000")
+            echo "Retry Status: HTTP $RETRY_CODE"
+            if [ "$RETRY_CODE" = "200" ]; then
+              echo "✅ AI service successfully woken up."
+            else
+              echo "::warning ::AI service returned HTTP $RETRY_CODE on retry."
+            fi
+          else
+            echo "::warning ::AI service returned unexpected HTTP $HTTP_CODE"
+          fi
+
+      - name: AI Service Secret Notice
+        if: steps.config.outputs.ai_url == ''
+        run: |
+          echo "::notice ::RENDER_AI_URL secret is not set yet. Add it in Repo Settings -> Secrets -> Actions to activate AI keep-alive."
