@@ -74,8 +74,23 @@ export class AiService {
   ) {
     this.baseUrl =
       this.config.get<string>('AI_SERVICE_URL') ?? 'http://ai:8000';
-    this.internalKey =
-      this.config.get<string>('INTERNAL_API_KEY') ?? 'local-dev-internal-key';
+
+    // audit §11.4: In production, remove silent fallback to 'local-dev-internal-key'.
+    // In non-production, keep dev default fallback but log a warning once.
+    const isProduction =
+      this.config.get<string>('NODE_ENV') === 'production';
+    const configuredKey = this.config.get<string>('INTERNAL_API_KEY');
+
+    if (isProduction) {
+      this.internalKey = configuredKey ?? '';
+    } else {
+      if (!configuredKey || configuredKey === 'local-dev-internal-key') {
+        this.logger.warn(
+          'INTERNAL_API_KEY is using dev default fallback (audit §11.4). Set a secure key in production.',
+        );
+      }
+      this.internalKey = configuredKey ?? 'local-dev-internal-key';
+    }
     // Long enough for a real answer, short enough that a cold service does not
     // hold the customer hostage — after this we fall back and they get products.
     this.timeoutMs = Number(this.config.get('AI_TIMEOUT_MS') ?? 12_000);
