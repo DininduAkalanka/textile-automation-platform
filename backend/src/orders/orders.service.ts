@@ -576,6 +576,7 @@ export class OrdersService {
           data: {
             userId: order.userId,
             type: 'order.status_changed',
+            targetId: orderId,
             title: copy.title,
             body: copy.body,
           },
@@ -637,6 +638,7 @@ export class OrdersService {
           data: {
             userId: order.userId,
             type: 'order.status_changed',
+            targetId: orderId,
             title: copy.title,
             body: copy.body,
           },
@@ -683,6 +685,7 @@ export class OrdersService {
           data: {
             userId: order.userId,
             type: 'order.status_changed',
+            targetId: orderId,
             title: copy.title,
             body: copy.body,
           },
@@ -765,6 +768,7 @@ export class OrdersService {
           data: {
             userId: locked[0].user_id,
             type: 'order.status_changed',
+            targetId: orderId,
             title: copy.title,
             body: copy.body,
           },

@@ -32,6 +32,10 @@ export class InventoryQueryDto {
   @IsUUID()
   categoryId?: string;
 
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
+
   /**
    * The global ValidationPipe runs with `enableImplicitConversion`, and that
    * coerces booleans with `!!value` — under which the STRING "false" is truthy
@@ -41,7 +45,7 @@ export class InventoryQueryDto {
    * So the flag is parsed explicitly here: only a literal "true" means true.
    */
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ obj, key }) => obj[key] === true || obj[key] === 'true')
   @IsBoolean()
   lowStockOnly?: boolean;
 }

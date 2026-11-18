@@ -208,9 +208,9 @@ export class InventoryService {
   private async checkLowStock(tx: Tx, inventoryId: string): Promise<void> {
     const inventory = await tx.inventory.findUnique({
       where: { id: inventoryId },
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true, isActive: true } } },
     });
-    if (!inventory) return;
+    if (!inventory || !inventory.product.isActive) return;
 
     const isLow = inventory.quantityAvailable <= inventory.minimumStockLevel;
 
@@ -237,6 +237,7 @@ export class InventoryService {
         data: admins.map((admin) => ({
           userId: admin.id,
           type: 'inventory.low_stock',
+          targetId: inventory.productId,
           title: `Low stock: ${inventory.product.name}`,
           body:
             `${inventory.quantityAvailable} left (minimum ${inventory.minimumStockLevel}). ` +
@@ -441,13 +442,7 @@ export class InventoryService {
 
       await tx.inventory.update({
         where: { productId },
-        data: {
-          minimumStockLevel: minimum,
-          // Raising the threshold can put a product below it. Re-arm so the check
-          // below can fire; otherwise a product could sit under a NEW minimum and
-          // never be reported.
-          lowStockNotified: false,
-        },
+        data: { minimumStockLevel: minimum },
       });
 
       await tx.auditLog.create({
@@ -475,11 +470,16 @@ export class InventoryService {
     search?: string;
     categoryId?: string;
     lowStockOnly?: boolean;
+    productId?: string;
   }) {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
 
     const where: Prisma.InventoryWhereInput = {
+      productId: query.productId,
+      ...(query.lowStockOnly && {
+        quantityAvailable: { lte: this.prisma.inventory.fields.minimumStockLevel },
+      }),
       product: {
         isActive: true,
         ...(query.categoryId ? { categoryId: query.categoryId } : {}),
@@ -508,40 +508,27 @@ export class InventoryService {
             },
           },
         },
-        orderBy: { product: { name: 'asc' } },
+        orderBy: [{ product: { name: 'asc' } }, { productId: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
       this.prisma.inventory.count({ where }),
     ]);
 
-    // "Low" is available <= minimum, which Prisma cannot express as a
-    // column-to-column comparison in a where clause, so it is applied here.
-    // The page is at most 100 rows, so the cost is nil — and pushing it into raw
-    // SQL would cost the type safety of the include above.
-    const shaped = rows.map((row) => this.shape(row));
-    const items = query.lowStockOnly
-      ? shaped.filter((item) => item.status !== 'OK')
-      : shaped;
-
     return {
-      items,
+      items: rows.map((row) => this.shape(row)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 
   /** Everything at or below its minimum. Drives the sidebar badge and the alert chip. */
   async lowStock() {
-    const rows = await this.prisma.$queryRaw<Array<{ product_id: string }>>`
-      SELECT i.product_id
-        FROM inventory i
-        JOIN products p ON p.id = i.product_id
-       WHERE p.is_active
-         AND i.quantity_available <= i.minimum_stock_level
-       ORDER BY (i.quantity_available - i.minimum_stock_level) ASC`;
-
     const items = await this.prisma.inventory.findMany({
-      where: { productId: { in: rows.map((r) => r.product_id) } },
+      where: {
+        product: { isActive: true },
+        quantityAvailable: { lte: this.prisma.inventory.fields.minimumStockLevel },
+      },
+      orderBy: [{ product: { name: 'asc' } }, { productId: 'asc' }],
       include: {
         product: {
           select: {
