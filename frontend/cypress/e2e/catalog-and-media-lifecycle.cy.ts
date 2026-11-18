@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+import { uploadProductImage } from '../support/upload-product-image';
+
 describe('Catalog Lifecycle, Dynamic Navigation & Media Upload E2E', () => {
   beforeEach(() => {
     // Authenticate as Admin before each test
@@ -69,25 +71,7 @@ describe('Catalog Lifecycle, Dynamic Navigation & Media Upload E2E', () => {
     cy.contains('button', 'Next: Media').should('not.be.disabled').click();
     cy.contains('Click to choose images').should('be.visible');
 
-    // Intercept image upload
-    cy.intercept('POST', '**/admin/uploads/image').as('uploadImage');
-
-    // Select file using a minimal valid PNG
-    const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-    cy.get('input[type="file"]').selectFile(
-      {
-        contents: Cypress.Buffer.from(pngBase64, 'base64'),
-        fileName: 'qa-upload.png',
-        mimeType: 'image/png',
-      },
-      { force: true }
-    );
-
-    // Assert upload was successful
-    cy.wait('@uploadImage').then((interception) => {
-      expect(interception.response?.statusCode).to.be.oneOf([200, 201]);
-      expect(interception.response?.body.data.url).to.include('/uploads/');
-    });
+    uploadProductImage('qa-upload.png');
 
     // Check thumbnail is visible
     cy.get('img[src*="/uploads/"]').should('be.visible');
