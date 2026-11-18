@@ -1,0 +1,39 @@
+name: Start local QA stack
+description: Migrate and seed the job database, then serve the API and production storefront on loopback.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+
+    - name: Start backend
+      shell: bash
+      working-directory: backend
+      run: |
+        npm ci --include=dev
+        npx --no-install prisma generate
+        npx --no-install prisma migrate deploy
+        npm run db:seed
+        npm run build
+        nohup node dist/main.js > backend.log 2>&1 < /dev/null &
+
+    - name: Build and start frontend
+      shell: bash
+      working-directory: frontend
+      env:
+        NODE_ENV: production
+      run: |
+        npm ci --include=dev
+        npm run build
+        nohup npm run start -- -H 127.0.0.1 -p 3000 > frontend.log 2>&1 < /dev/null &
+
+    - name: Wait for API readiness and storefront
+      shell: bash
+      run: |
+        curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 --max-time 5 "$PW_API_URL/health/ready" > /dev/null
+        curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 --max-time 5 "$PW_BASE_URL/" > /dev/null

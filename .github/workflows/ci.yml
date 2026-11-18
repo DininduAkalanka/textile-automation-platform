@@ -250,3 +250,10 @@ jobs:
             frontend/cypress/screenshots
             frontend/cypress/videos
 
+
+  e2e-playwright:
+    name: E2E Tests · Playwright
+    needs: [backend, frontend]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/playwright-nightly.yml

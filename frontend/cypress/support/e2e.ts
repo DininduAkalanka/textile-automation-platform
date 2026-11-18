@@ -15,11 +15,10 @@ Cypress.on('uncaught:exception', (err) => {
 
 // Guard against leaking any test traffic to live production onrender.com
 beforeEach(() => {
-  cy.intercept('*', (req) => {
-    if (req.url.includes('onrender.com')) {
-      req.destroy();
-      throw new Error(`SAFETY VIOLATION: Request attempted to live production domain: ${req.url}`);
-    }
+  // A handler on every request can decode multipart uploads as UTF-8 in Cypress.
+  cy.intercept({ hostname: /(^|\.)onrender\.com$/i }, (req) => {
+    req.destroy();
+    throw new Error(`SAFETY VIOLATION: Request attempted to live production domain: ${req.url}`);
   });
 });
 
