@@ -48,3 +48,9 @@ Import `test` and `expect` from `fixtures/test.ts`. Use a fresh browser context,
 Put the spec under a feature directory in `specs/`. Use `@smoke` for a short health check, `@critical` for a release-critical flow, `@cross-browser` for the WebKit subset and `@mobile` for Pixel 7. Reserve `@a11y`, `@security`, `@slow` and `@ai-live` for the corresponding coverage. Set `PW_FIREFOX=1` to enable the Firefox project after installing that browser. Run `node e2e-playwright/utils/inventory.mjs` from `frontend/` when changing routes.
 
 The guest smoke permits one Chromium resource error for the exact local refresh endpoint only when a corresponding POST received 401 without cookies or an Authorization header. A repeated refresh, an error at another URL, an uncaught exception or another console error fails the test.
+
+## GitHub Actions
+
+The CI workflow calls the Playwright browser job after the backend and frontend checks pass. Pull requests run Chromium tests tagged `@smoke` or `@critical`. Pushes to `main` run the configured Chromium, WebKit and mobile projects. The nightly workflow adds Firefox and repeats each selected test twice. Scheduled runs become active once the workflow reaches the default branch. The current suite contains one Chromium storefront smoke. WebKit and mobile will discover application cases when specs carry their respective tags.
+
+Each job gets its own Postgres service, migrates and seeds it, builds the app with the loopback API URL, and reconciles the inventory ledger after the tests. The run summary lists failures. The Actions run holds the HTML report and service logs, with traces and screenshots on failure.

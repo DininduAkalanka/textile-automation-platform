@@ -158,3 +158,11 @@ The existing PayHere case sends the checkout hash and accepts a pending order. A
 ## Running and maintaining the suite
 
 The [suite README](../frontend/e2e-playwright/README.md) contains single-container Docker commands for PowerShell and Bash, project selection, and the fixture and tag conventions. CI jobs, branch protection, live AI, visual snapshots and post-deploy tests are outside this checkpoint.
+
+## Follow-up on PR #39
+
+The checkpoint table above preserves the original baseline. Upload diagnostics in an isolated Docker stack showed that the same 70-byte PNG received HTTP 201 when sent directly. With a Cypress interception handler on the multipart request, its leading byte `89` arrived as the UTF-8 replacement sequence `EF BF BD` and the API correctly returned HTTP 400. The production-host guard now matches the production hostname only. The two upload cases observe browser XHR completion and retain the HTTP status, returned URL and UI assertions.
+
+The price-edit failure was a transaction rollback. An admin edit synthesized a zero-filled size map on an item that only had a size label. The product update copied that total to inventory despite an existing reservation. PostgreSQL rejected the write with constraint `inventory_non_negative`. The form now sends attributes only when edited, and stock adjustments go through the inventory ledger. A database regression checks the saved price, sellable units, physical balance, reservation and movement count.
+
+The PR also adds a dedicated Playwright check and scheduled workflow. The [PR checks](https://github.com/DininduAkalanka/textile-automation-platform/pull/39/checks) show the hosted results for each head revision.
