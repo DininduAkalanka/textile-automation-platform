@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
           loading={isLoading}
         />
         <StatCard
-          href="/admin/inventory"
+          href="/admin/inventory?lowStockOnly=true"
           label="Low stock"
           value={totals?.lowStockCount ?? '—'}
           icon={totals?.lowStockCount ? AlertTriangle : Package}

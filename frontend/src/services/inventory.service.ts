@@ -12,6 +12,7 @@ export interface InventoryFilters {
   page?: number;
   search?: string;
   categoryId?: string;
+  productId?: string;
   lowStockOnly?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const inventoryService = {
       http.get('/inventory', {
         params: {
           page: filters.page,
+          productId: filters.productId,
           search: filters.search || undefined,
           categoryId: filters.categoryId || undefined,
           // Only send the flag when it is on. The API parses it strictly (the

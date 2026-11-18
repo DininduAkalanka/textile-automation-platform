@@ -1,6 +1,7 @@
 /// <reference types="cypress" />
 
-export {};
+import { uploadProductImage } from '../support/upload-product-image';
+
 
 describe('Admin Full CRUD (Read, Write, Edit) Suite', () => {
   const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
@@ -151,20 +152,7 @@ describe('Admin Full CRUD (Read, Write, Edit) Suite', () => {
       cy.contains('button', 'Next: Media').should('not.be.disabled').click();
       cy.contains('Click to choose images').should('be.visible');
 
-      // Intercept upload
-      cy.intercept('POST', '**/admin/uploads/image').as('uploadImage');
-
-      const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-      cy.get('input[type="file"]').selectFile(
-        {
-          contents: Cypress.Buffer.from(pngBase64, 'base64'),
-          fileName: `item-${timestamp}.png`,
-          mimeType: 'image/png',
-        },
-        { force: true }
-      );
-
-      cy.wait('@uploadImage').its('response.statusCode').should('be.oneOf', [200, 201]);
+      uploadProductImage(`item-${timestamp}.png`);
 
       // Complete product creation
       cy.contains('button', /Create product/i).click();

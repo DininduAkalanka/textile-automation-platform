@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { notificationsService } from '@/services/notifications.service';
 
@@ -17,10 +17,13 @@ export const notificationKeys = {
  * watch simultaneously). `enabled` gates it on being signed in at all, so a
  * logged-out visitor never fires an authenticated poll that will 401 forever.
  */
-export function useNotifications(enabled: boolean) {
-  return useQuery({
-    queryKey: notificationKeys.list,
-    queryFn: () => notificationsService.list(1, 20),
+export function useNotifications(userId: string | undefined, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: [...notificationKeys.list, userId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => notificationsService.list(pageParam, 20),
+    getNextPageParam: ({ pagination }) =>
+      pagination.page < pagination.totalPages ? pagination.page + 1 : undefined,
     enabled,
     refetchInterval: enabled ? 30_000 : false,
     refetchOnWindowFocus: true,

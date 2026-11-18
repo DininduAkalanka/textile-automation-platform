@@ -13,6 +13,15 @@ Cypress.on('uncaught:exception', (err) => {
   return true;
 });
 
+// Guard against leaking any test traffic to live production onrender.com
+beforeEach(() => {
+  // A handler on every request can decode multipart uploads as UTF-8 in Cypress.
+  cy.intercept({ hostname: /(^|\.)onrender\.com$/i }, (req) => {
+    req.destroy();
+    throw new Error(`SAFETY VIOLATION: Request attempted to live production domain: ${req.url}`);
+  });
+});
+
 // Hydrate test token and user profile into AUT window.localStorage on every page navigation
 Cypress.on('window:before:load', (win) => {
   const token = Cypress.env('token');

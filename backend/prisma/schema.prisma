@@ -125,6 +125,8 @@ model User {
   // NULLs, so an email-only account and a phone-only account coexist.
   email         String?  @unique
   passwordHash  String   @map("password_hash")
+  resetTokenHash String? @unique @map("reset_token_hash")
+  resetExpiresAt DateTime? @map("reset_expires_at")
   firstName     String   @map("first_name")
   lastName      String   @map("last_name")
   phone         String?  @unique // canonical +947XXXXXXXX (see phone.util.ts)
@@ -542,6 +544,7 @@ model AuditLog {
 model Notification {
   id        String    @id @default(uuid()) @db.Uuid
   userId    String    @map("user_id") @db.Uuid
+  targetId  String?   @map("target_id") @db.Uuid
   type      String // "order.confirmed", "inventory.low_stock", …
   title     String
   body      String?   @db.Text

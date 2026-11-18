@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { VerificationChannel } from '@prisma/client';
+import { Prisma, VerificationChannel } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -156,13 +156,17 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    // Rotate: revoke the presented token, mint a fresh pair.
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date() },
+    // Serialize rotation with a password reset, which also locks the user before
+    // revoking their refresh tokens. A racing rotation cannot escape revocation.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${record.userId}::uuid FOR UPDATE`;
+      const rotated = await tx.refreshToken.updateMany({
+        where: { id: record.id, revokedAt: null, expiresAt: { gt: new Date() } },
+        data: { revokedAt: new Date() },
+      });
+      if (!rotated.count) throw new UnauthorizedException('Invalid refresh token');
+      return this.issueSession(record.user, userAgent, tx);
     });
-
-    return this.issueSession(record.user, userAgent);
   }
 
   async logout(rawToken?: string) {
@@ -260,14 +264,18 @@ export class AuthService {
 
   // ─── Helpers ────────────────────────────────────────────
 
-  private async issueSession(user: SessionUser, userAgent?: string) {
+  private async issueSession(
+    user: SessionUser,
+    userAgent?: string,
+    db: Pick<Prisma.TransactionClient, 'refreshToken'> = this.prisma,
+  ) {
     const accessToken = this.jwtService.sign(
       { sub: user.id, email: user.email, role: user.role },
       { expiresIn: ACCESS_TTL },
     );
 
     const refreshToken = randomBytes(32).toString('hex'); // 256-bit
-    await this.prisma.refreshToken.create({
+    await db.refreshToken.create({
       data: {
         userId: user.id,
         tokenHash: this.sha256(refreshToken),

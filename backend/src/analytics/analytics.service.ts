@@ -188,8 +188,8 @@ export class AnalyticsService {
           WHERE created_at >= date_trunc('day', now()))::int AS "ordersToday",
         (SELECT COUNT(*) FROM orders WHERE status = 'PENDING')::int
           AS "pendingOrders",
-        (SELECT COUNT(*) FROM inventory
-          WHERE quantity_available <= minimum_stock_level)::int
+        (SELECT COUNT(*) FROM inventory i JOIN products p ON p.id = i.product_id
+          WHERE p.is_active AND i.quantity_available <= i.minimum_stock_level)::int
           AS "lowStockCount",
         (SELECT COUNT(*) FROM orders)::int AS "totalOrders",
         (SELECT COUNT(*) FROM products WHERE is_active)::int AS "totalProducts"

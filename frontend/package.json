@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "cypress run",
-    "test:e2e:open": "cypress open"
+    "test:e2e:open": "cypress open",
+    "test:pw": "playwright test",
+    "test:pw:smoke": "playwright test --grep @smoke",
+    "test:pw:ui": "playwright test --ui",
+    "test:pw:headed": "playwright test --headed",
+    "pw:report": "playwright show-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -33,10 +38,13 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "10.1.0",
     "cypress": "^15.20.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",

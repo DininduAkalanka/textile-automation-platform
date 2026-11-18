@@ -31,6 +31,7 @@ describe('VerificationService', () => {
       count: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -45,6 +46,7 @@ describe('VerificationService', () => {
         count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       $transaction: jest.fn().mockImplementation(async (arg: any) => {
         if (typeof arg === 'function') return arg(prisma);
@@ -210,7 +212,7 @@ describe('VerificationService', () => {
         service.verifyCode('u1', VerificationChannel.EMAIL, '000000'),
       );
       expect(err.getResponse()).toMatchObject({ code: 'OTP_INVALID' });
-      expect(prisma.verificationCode.update).toHaveBeenCalledWith(
+      expect(prisma.verificationCode.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: { attempts: { increment: 1 } } }),
       );
       expect(prisma.user.update).not.toHaveBeenCalled();

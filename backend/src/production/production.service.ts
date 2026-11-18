@@ -442,6 +442,7 @@ export class ProductionService {
         data: {
           userId: order.userId,
           type: 'order.status_changed',
+          targetId: orderId,
           title: copy.title,
           body: copy.body,
         },
