@@ -25,7 +25,6 @@ export function useInventory(filters: InventoryFilters) {
     // any moment. A stale "12 available" that is really 4 is how an admin writes
     // off cloth that has already been sold.
     refetchInterval: 30_000,
-    placeholderData: (previous) => previous, // no flicker when paging or filtering
   });
 }
 
@@ -65,6 +64,7 @@ function useInvalidateInventory() {
   return () => {
     void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     void queryClient.invalidateQueries({ queryKey: ['products'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 }
 

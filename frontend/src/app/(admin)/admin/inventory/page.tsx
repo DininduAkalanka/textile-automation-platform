@@ -1,7 +1,8 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   ChevronDown,
   Loader2,
@@ -15,9 +16,7 @@ import { AdjustDialog } from '@/components/admin/inventory/adjust-dialog';
 import { MovementsTimeline } from '@/components/admin/inventory/movements-timeline';
 import { StockBadge } from '@/components/admin/inventory/stock-badge';
 import { useInventory, useLowStock, useSetMinimum } from '@/hooks/use-inventory';
-import { getToken } from '@/lib/token-store';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/useAuthStore';
 import { InventoryItem } from '@/types/inventory';
 
 /**
@@ -32,10 +31,31 @@ import { InventoryItem } from '@/types/inventory';
  * is precisely the stock that an admin must not write off.
  */
 export default function InventoryPage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
+  return (
+    <Suspense fallback={<p role="status">Loading inventory…</p>}>
+      <InventoryFilters />
+    </Suspense>
+  );
+}
 
-  const [search, setSearch] = useState('');
-  const [lowStockOnly, setLowStockOnly] = useState(false);
+function InventoryFilters() {
+  const params = useSearchParams();
+  return (
+    <InventoryTable
+      key={params.toString()}
+      productId={params.get('productId') || undefined}
+      lowStockOnly={params.get('lowStockOnly') === 'true'}
+      initialSearch={params.get('search') ?? ''}
+    />
+  );
+}
+
+function InventoryTable({ productId, lowStockOnly, initialSearch }: {
+  productId?: string;
+  lowStockOnly: boolean;
+  initialSearch: string;
+}) {
+  const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [adjusting, setAdjusting] = useState<InventoryItem | null>(null);
@@ -46,6 +66,7 @@ export default function InventoryPage() {
     page,
     search: search.trim() || undefined,
     lowStockOnly,
+    productId,
   });
   const { data: lowStock } = useLowStock();
   const setMinimum = useSetMinimum();
@@ -73,11 +94,8 @@ export default function InventoryPage() {
         </div>
 
         {lowCount > 0 && (
-          <button
-            onClick={() => {
-              setLowStockOnly((v) => !v);
-              setPage(1);
-            }}
+          <Link
+            href={lowStockOnly ? '/admin/inventory' : '/admin/inventory?lowStockOnly=true'}
             className={cn(
               'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] font-medium transition-all',
               lowStockOnly
@@ -87,12 +105,13 @@ export default function InventoryPage() {
           >
             <TriangleAlert size={14} aria-hidden />
             {lowCount} need{lowCount === 1 ? 's' : ''} reordering
-          </button>
+          </Link>
         )}
       </div>
 
       {/* ─── Filters ──────────────────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        {productId ? <p className="mr-auto text-sm text-[#6E6A5E]">Product from notification</p> : (
         <div className="relative min-w-[240px] flex-1">
           <Search
             size={14}
@@ -109,15 +128,16 @@ export default function InventoryPage() {
             className="w-full rounded-lg border border-[#EAE8E1] bg-white py-2 pl-9 pr-3 text-[13px] text-[#0F0F0F] outline-none transition-colors placeholder:text-[#B8B4A8] focus:border-[#0F0F0F]"
           />
         </div>
+        )}
 
-        {lowStockOnly && (
-          <button
-            onClick={() => setLowStockOnly(false)}
+        {(lowStockOnly || productId || initialSearch) && (
+          <Link
+            href="/admin/inventory"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#EAE8E1] bg-white px-3 py-2 text-[13px] text-[#6E6A5E] transition-colors hover:border-[#D5D2C8]"
           >
             <SlidersHorizontal size={13} aria-hidden />
-            Clear filter
-          </button>
+            {productId ? 'View all inventory' : 'Clear filter'}
+          </Link>
         )}
       </div>
 
@@ -133,11 +153,10 @@ export default function InventoryPage() {
         </div>
       ) : data && data.items.length === 0 ? (
         <div className="rounded-2xl border border-[#EAE8E1] bg-white py-16 text-center text-sm text-[#928E82]">
-          {lowStockOnly
-            ? 'Nothing needs reordering.'
-            : search
-              ? 'No products match that search.'
-              : 'No products yet.'}
+          {productId ? 'This product is no longer in active inventory.'
+            : search.trim() ? 'No products match these filters.'
+            : lowStockOnly ? 'Nothing needs reordering.'
+            : 'No products yet.'}
         </div>
       ) : (
         <>
@@ -163,7 +182,7 @@ export default function InventoryPage() {
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {Object.entries(item.sizeStock).map(([sz, qty]) => {
                             const isOut = Number(qty) <= 0;
-                            const isLow = Number(qty) > 0 && Number(qty) <= (item.minimum || 5);
+                            const isLow = Number(qty) > 0 && Number(qty) <= item.minimum;
                             return (
                               <span
                                 key={sz}
@@ -321,7 +340,7 @@ export default function InventoryPage() {
                                   <span className="mt-1 flex flex-wrap gap-1">
                                     {Object.entries(item.sizeStock).map(([sz, qty]) => {
                                       const isOut = Number(qty) <= 0;
-                                      const isLow = Number(qty) > 0 && Number(qty) <= (item.minimum || 5);
+                                      const isLow = Number(qty) > 0 && Number(qty) <= item.minimum;
                                       return (
                                         <span
                                           key={sz}

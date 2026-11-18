@@ -172,7 +172,7 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
                 }
 
                 return (
-                  <li key={item.href}>
+                  <li key={item.href} className="relative">
                     <Link
                       href={item.href}
                       className={cn(
@@ -204,14 +204,6 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
                           needs reordering sits on the thing you would click to
                           reorder it. It is absent when there is nothing to say,
                           which is what makes it worth looking at when it appears. */}
-                      {item.alertCount && lowCount > 0 && (
-                        <span
-                          className="ml-auto rounded-full bg-[#CC0000] px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-[0_0_10px_-1px_rgba(204,0,0,0.8)]"
-                          aria-label={`${lowCount} products need reordering`}
-                        >
-                          {lowCount}
-                        </span>
-                      )}
                       {item.reportedCount && reportedCount > 0 && (
                         <span
                           className="ml-auto rounded-full bg-[#CC0000] px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-[0_0_10px_-1px_rgba(204,0,0,0.8)]"
@@ -221,6 +213,15 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
                         </span>
                       )}
                     </Link>
+                    {item.alertCount && lowCount > 0 && (
+                      <Link
+                        href="/admin/inventory?lowStockOnly=true"
+                        aria-label={`View ${lowCount} products needing reordering`}
+                        className="absolute inset-y-0 right-0 flex items-center px-2.5"
+                      >
+                        <span className="rounded-full bg-[#CC0000] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{lowCount}</span>
+                      </Link>
+                    )}
                   </li>
                 );
               })}

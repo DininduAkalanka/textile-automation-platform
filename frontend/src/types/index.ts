@@ -370,11 +370,10 @@ export interface OrdersResponse {
   };
 }
 
-/** The bell, for both navbars (plan 7.1 task 4). `type` is a free-form producer
- *  tag — "order.status_changed", "inventory.low_stock" — never branched on in
- *  the UI; only `title`/`body` are ever rendered. */
+/** The target identifies the order or product named by the producer. */
 export interface Notification {
   id: string;
+  targetId: string | null;
   type: string;
   title: string;
   body: string | null;
