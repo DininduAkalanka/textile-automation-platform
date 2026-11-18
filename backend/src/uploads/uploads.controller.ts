@@ -139,8 +139,13 @@ function toUploadResponse(file: Express.Multer.File, req: Request) {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class UploadsController {
-  @Post()
   @Post('image')
+  @UseInterceptors(FileInterceptor('file', imageStorageOptions))
+  uploadImage(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+    return toUploadResponse(file, req);
+  }
+
+  @Post()
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
   upload(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
     return toUploadResponse(file, req);
@@ -156,10 +161,18 @@ export class UploadsController {
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
 export class ReviewUploadsController {
-  @Post()
   @Post('review-image')
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
   uploadReviewImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    return toUploadResponse(file, req);
+  }
+
+  @Post()
+  @UseInterceptors(FileInterceptor('file', imageStorageOptions))
+  upload(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
   ) {
