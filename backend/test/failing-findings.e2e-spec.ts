@@ -119,7 +119,7 @@ describe('Phase 5: Remediated Findings Verification (GREEN Suite)', () => {
       };
 
       jest.spyOn(prisma.verificationCode, 'findFirst').mockResolvedValue(activeCode as any);
-      
+
       let attemptsCounter = 4;
       jest.spyOn(prisma.verificationCode, 'updateMany').mockImplementation(async () => {
         if (attemptsCounter < 5) {
