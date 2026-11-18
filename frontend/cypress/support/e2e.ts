@@ -13,6 +13,16 @@ Cypress.on('uncaught:exception', (err) => {
   return true;
 });
 
+// Guard against leaking any test traffic to live production onrender.com
+beforeEach(() => {
+  cy.intercept('*', (req) => {
+    if (req.url.includes('onrender.com')) {
+      req.destroy();
+      throw new Error(`SAFETY VIOLATION: Request attempted to live production domain: ${req.url}`);
+    }
+  });
+});
+
 // Hydrate test token and user profile into AUT window.localStorage on every page navigation
 Cypress.on('window:before:load', (win) => {
   const token = Cypress.env('token');
