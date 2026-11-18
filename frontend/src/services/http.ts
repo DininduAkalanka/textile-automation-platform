@@ -40,9 +40,14 @@ export function getResolvedApiUrl(): string {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return LOCAL_API_URL;
     }
-    return PRODUCTION_API_URL;
+    // Only route to production Render if visiting the production frontend domain
+    if (hostname === 'textile-automation-platform.vercel.app') {
+      return PRODUCTION_API_URL;
+    }
+    // Default to local/relative API to prevent staging or LAN test runs from silently hitting live production (QA-013)
+    return LOCAL_API_URL;
   }
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  if (process.env.VERCEL_ENV === 'production') {
     return PRODUCTION_API_URL;
   }
   return LOCAL_API_URL;

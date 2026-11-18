@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,10 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Environment mode (production, development, test)
+    environment: str = "development"
+    ai_enforce_prod_secrets: bool = False
+
     # Read-only DB. If someone pastes the admin URL in here by mistake, the
     # service still cannot write, because it never issues a write statement --
     # but the role is the real guarantee.
@@ -27,6 +32,26 @@ class Settings(BaseSettings):
     # Shared secret with the NestJS gateway. The AI service is not exposed to the
     # internet; the API is its only client.
     internal_api_key: str = "local-dev-internal-key"
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """
+        Boot-time guard (QA-006): Disallows weak development defaults
+        when running in production or when AI_ENFORCE_PROD_SECRETS is enabled.
+        """
+        is_prod = (
+            self.environment.lower() in ("production", "prod")
+            or self.ai_enforce_prod_secrets
+        )
+        if is_prod:
+            if (
+                not self.internal_api_key
+                or self.internal_api_key == "local-dev-internal-key"
+            ):
+                raise ValueError(
+                    "Default development internal_api_key is prohibited in production"
+                )
+        return self
 
     # Provider-agnostic by design (plan Session 9.1, task 3). Switching provider
     # is an env change, not a code change.

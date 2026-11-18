@@ -15,6 +15,10 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  // Trust proxy for reverse proxies (Render / ALB / Vercel)
+  // Ensures req.ip correctly resolves the client IP for rate limiting and audit logging.
+  app.set('trust proxy', 1);
+
   // Security headers: HSTS, X-Content-Type-Options, frame-deny, etc.
   // (doc 09 §13, doc 05 §10). CSP is left off because this API serves JSON
   // only — the policy that matters belongs on the Next.js origin.
@@ -41,21 +45,37 @@ async function bootstrap() {
     index: false,
   });
 
-  // CORS. Allows configured FRONTEND_URL, all Vercel deployments, and local development.
-  const configuredFrontend = process.env.FRONTEND_URL;
+  // CORS configuration (QA-003): Strict exact-origin allowlist.
+  // Wildcard origins (*.vercel.app) are prohibited to prevent malicious third-party origins
+  // from making credentialed requests. Credentials (cookies) require SameSite=None; Secure.
+  const allowedOriginsSet = new Set<string>();
+  if (process.env.FRONTEND_URL) {
+    allowedOriginsSet.add(process.env.FRONTEND_URL.trim());
+  }
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    process.env.CORS_ALLOWED_ORIGINS.split(',').forEach((o) => {
+      const trimmed = o.trim();
+      if (trimmed) allowedOriginsSet.add(trimmed);
+    });
+  }
+  allowedOriginsSet.add('https://textile-automation-platform.vercel.app');
+
+  // Allow local development origins in non-production
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOriginsSet.add('http://localhost:3000');
+    allowedOriginsSet.add('http://localhost:3001');
+    allowedOriginsSet.add('http://127.0.0.1:3000');
+    allowedOriginsSet.add('http://127.0.0.1:3001');
+  }
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        origin === configuredFrontend ||
-        origin === 'https://textile-automation-platform.vercel.app' ||
-        origin.endsWith('.vercel.app') ||
-        origin === 'http://localhost:3000' ||
-        origin === 'http://localhost:3001'
-      ) {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin || allowedOriginsSet.has(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+      // Return clean denial without throwing an unhandled Error
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

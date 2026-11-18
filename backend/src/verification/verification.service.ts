@@ -75,10 +75,17 @@ export class VerificationService {
     const isBypassAllowed =
       process.env.NODE_ENV !== 'production' &&
       process.env.ALLOW_DEV_OTP_BYPASS === 'true';
+    const isDevLoggingAllowed =
+      process.env.NODE_ENV !== 'production' &&
+      process.env.ALLOW_DEV_OTP_LOGGING === 'true';
 
-    this.logger.log(
-      `\n======================================================\n📧 [DEV OTP CODE] ${channel} for ${destination}: ${code}${isBypassAllowed ? ' (or dev bypass code: 123456)' : ''}\n======================================================`,
-    );
+    if (isDevLoggingAllowed) {
+      this.logger.log(
+        `\n======================================================\n📧 [DEV OTP CODE] ${channel} for ${destination}: ${code}${isBypassAllowed ? ' (or dev bypass code: 123456)' : ''}\n======================================================`,
+      );
+    } else {
+      this.logger.log(`Dispatched verification OTP for ${channel}`);
+    }
 
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
     await this.prisma.verificationCode.create({
@@ -128,10 +135,26 @@ export class VerificationService {
       process.env.ALLOW_DEV_OTP_BYPASS === 'true' &&
       code === '123456';
     if (!isDevMatch && this.sha256(code) !== record.codeHash) {
-      await this.prisma.verificationCode.update({
-        where: { id: record.id },
-        data: { attempts: { increment: 1 } },
+      // Atomic increment under race conditions (QA-002)
+      // Only increments if current attempts < MAX_ATTEMPTS
+      const updateResult = await this.prisma.verificationCode.updateMany({
+        where: {
+          id: record.id,
+          attempts: { lt: MAX_ATTEMPTS },
+        },
+        data: {
+          attempts: { increment: 1 },
+        },
       });
+
+      // If no row was updated or if this increment reached the limit, lock out
+      if (updateResult.count === 0 || record.attempts + 1 >= MAX_ATTEMPTS) {
+        throw new BadRequestException({
+          code: 'OTP_LOCKED',
+          message: 'Too many incorrect attempts. Request a new code.',
+        });
+      }
+
       throw new BadRequestException({
         code: 'OTP_INVALID',
         message: 'Incorrect code. Please try again.',

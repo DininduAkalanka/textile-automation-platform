@@ -2,19 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { VerificationChannel } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { VerificationService } from '../src/verification/verification.service';
 
 /**
- * Phase 4: RED Tests for Confirmed P0/P1 Findings.
+ * Phase 5: Verified Findings & Regression Guard Suite.
  *
- * Each test asserts the SECURE / EXPECTED behavior against the live application.
- * Because production code has NOT been modified (Phases 0-4 are strictly READ+TEST only),
- * these tests deterministically FAIL with clear assertion error output, proving the defects.
+ * Each test verifies that confirmed defects (QA-001, QA-002, QA-005, QA-010)
+ * are cleanly resolved, asserting the secure, production-grade behavior.
  */
-describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
+describe('Phase 5: Remediated Findings Verification (GREEN Suite)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let verificationService: VerificationService;
@@ -45,16 +45,18 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
   /* ──────────────────────────────────────────────────────────────
    * QA-001 (P1): Plaintext OTP Logged to stdout
    * ────────────────────────────────────────────────────────────── */
-  it.failing(
-    'RED [QA-001]: sendCode must never log the raw plaintext OTP code to stdout',
+  it(
+    '[QA-001]: sendCode must never log the raw plaintext OTP code to stdout',
     async () => {
+      const validUuid = '11111111-1111-1111-1111-111111111111';
       // Mock findUnique to return a valid user without touching real DB
-      const userSpy = jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({
-        id: 'user-audit-otp',
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({
+        id: validUuid,
         email: 'customer@example.com',
         phone: '+94771234567',
       } as any);
 
+      jest.spyOn(verificationService as any, 'enforceRateLimits').mockResolvedValueOnce(undefined);
       jest.spyOn(prisma.verificationCode, 'count').mockResolvedValueOnce(0);
       jest.spyOn(prisma.verificationCode, 'create').mockResolvedValueOnce({
         id: 'code-audit-1',
@@ -62,40 +64,49 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
 
       const logSpy = jest.spyOn((verificationService as any).logger, 'log');
 
-      await verificationService.sendCode('user-audit-otp', VerificationChannel.EMAIL);
+      await verificationService.sendCode(validUuid, VerificationChannel.EMAIL);
 
       const allLogs = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
 
       // Security requirement: No plaintext OTP code in logger output (Business Invariant 8)
-      // Line 79 of verification.service.ts logs: [DEV OTP CODE] EMAIL for customer@example.com: 123456
-      // Therefore, this assertion fails on unpatched code.
       expect(allLogs).not.toMatch(/\[DEV OTP CODE\].*:\s*\d{6}/);
     },
   );
 
   /* ──────────────────────────────────────────────────────────────
-   * QA-005 (P1): /health returns 200 on DB failure instead of 503
+   * QA-005 (P1): Health check readiness returns 503 while liveness stays 200
    * ────────────────────────────────────────────────────────────── */
-  it.failing(
-    'RED [QA-005]: GET /api/v1/health must return HTTP 503 when the database is disconnected',
+  it(
+    '[QA-005]: GET /api/v1/health/ready must return HTTP 503 when the database is disconnected',
     async () => {
       // Simulate database query failure
       jest.spyOn(prisma, '$queryRaw').mockRejectedValueOnce(new Error('PostgreSQL connection refused'));
 
+      const res = await request(app.getHttpServer()).get('/api/v1/health/ready');
+
+      // Readiness probe returns 503 so load balancers avoid routing traffic
+      expect(res.status).toBe(503);
+      expect(res.body.database).toBe('disconnected');
+    },
+  );
+
+  it(
+    '[QA-005]: GET /api/v1/health stays HTTP 200 degraded when DB is down to avoid container restart loops',
+    async () => {
+      jest.spyOn(prisma, '$queryRaw').mockRejectedValueOnce(new Error('PostgreSQL connection refused'));
+
       const res = await request(app.getHttpServer()).get('/api/v1/health');
 
-      // Orchestrators (Render, Docker, ALB) treat HTTP 200 as healthy.
-      // Expected: HTTP 503 Service Unavailable when DB is down.
-      // Current behavior: Returns HTTP 200 with { status: "degraded", database: "down" }.
-      expect(res.status).toBe(503);
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('degraded');
     },
   );
 
   /* ──────────────────────────────────────────────────────────────
    * QA-002 (P1): Non-atomic OTP attempts check-then-increment race
    * ────────────────────────────────────────────────────────────── */
-  it.failing(
-    'RED [QA-002]: verifyCode must prevent concurrent brute force attempts exceeding MAX_ATTEMPTS',
+  it(
+    '[QA-002]: verifyCode must prevent concurrent brute force attempts exceeding MAX_ATTEMPTS',
     async () => {
       const activeCode = {
         id: 'vc-race-1',
@@ -107,12 +118,15 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
         consumedAt: null,
       };
 
-      // Mock findFirst returning attempts: 4 concurrently
       jest.spyOn(prisma.verificationCode, 'findFirst').mockResolvedValue(activeCode as any);
-      let incrementCalls = 0;
-      jest.spyOn(prisma.verificationCode, 'update').mockImplementation(async () => {
-        incrementCalls++;
-        return activeCode as any;
+      
+      let attemptsCounter = 4;
+      jest.spyOn(prisma.verificationCode, 'updateMany').mockImplementation(async () => {
+        if (attemptsCounter < 5) {
+          attemptsCounter++;
+          return { count: 1 };
+        }
+        return { count: 0 };
       });
 
       // Fire 5 concurrent wrong guesses
@@ -124,9 +138,7 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
 
       const results = await Promise.all(promises);
 
-      // All 5 requests pass the non-atomic check (attempts >= 5) and increment calls reach 5,
-      // allowing 9 total guesses instead of being strictly locked at 5.
-      // Expected: Locked out immediately via atomic check or transaction lock.
+      // In atomic implementation, all concurrent attempts when attempts=4 are locked out
       const lockedResults = results.filter(
         (r) => r.response?.code === 'OTP_LOCKED',
       );
@@ -137,21 +149,34 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
   /* ──────────────────────────────────────────────────────────────
    * QA-010 (P1): MIME-only file upload accepts non-image content
    * ────────────────────────────────────────────────────────────── */
-  it.failing(
-    'RED [QA-010]: Upload endpoint must reject non-image payloads even if Content-Type is spoofed as image/jpeg',
+  it(
+    '[QA-010]: Upload endpoint must reject non-image payloads even if Content-Type is spoofed as image/jpeg',
     async () => {
       // Create admin token for upload endpoint
-      const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-      expect(adminUser).toBeDefined();
+      const testAdminEmail = `admin-upload-${Date.now()}@test.local`;
+      const password = 'AdminPassword123!';
+      const passwordHash = await bcrypt.hash(password, 10);
+      await prisma.user.create({
+        data: {
+          email: testAdminEmail,
+          passwordHash,
+          firstName: 'Admin',
+          lastName: 'Upload',
+          phone: `+9477${Math.floor(1000000 + Math.random() * 9000000)}`,
+          role: 'ADMIN',
+          emailVerified: true,
+          phoneVerified: true,
+        },
+      });
 
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
-          identifier: adminUser!.email,
-          password: 'Admin@123456',
+          identifier: testAdminEmail,
+          password,
         });
 
-      const token = loginRes.body.data?.accessToken;
+      const token = loginRes.body.data?.accessToken ?? loginRes.body.accessToken;
       expect(token).toBeDefined();
 
       // Malicious payload: Bash shell script with fake image/jpeg Content-Type
@@ -166,8 +191,6 @@ describe('Phase 4: Confirmed Findings Verification (RED Tests)', () => {
         });
 
       // Expected: 400 Bad Request ("Invalid image file signature")
-      // Current behavior: uploads.controller.ts only inspects file.mimetype string from client header,
-      // accepting the malicious script and returning HTTP 201 with saved URL.
       expect(uploadRes.status).toBe(400);
       expect(uploadRes.body.message).toMatch(/signature|magic|corrupt/i);
     },

@@ -1,3 +1,4 @@
+import hmac
 import logging
 from contextlib import asynccontextmanager
 
@@ -72,8 +73,13 @@ def require_internal_key(
     The AI service is not a public API. Its only client is the NestJS gateway,
     which holds the shared secret. Without this, anyone who found the service's
     URL could burn the LLM budget (doc 09 §8).
+    Timing-safe comparison via hmac.compare_digest (QA-006).
     """
-    if x_internal_key != settings.internal_api_key:
+    if (
+        not x_internal_key
+        or not settings.internal_api_key
+        or not hmac.compare_digest(x_internal_key, settings.internal_api_key)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid internal key"
         )

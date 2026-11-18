@@ -38,22 +38,29 @@ jobs:
     steps:
       - name: Resolve Service URLs
         id: config
+        env:
+          INPUT_BACKEND_URL: ${{ inputs.custom_backend_url }}
+          INPUT_AI_URL: ${{ inputs.custom_ai_url }}
+          SECRET_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+          SECRET_AI_URL: ${{ secrets.RENDER_AI_URL }}
         run: |
-          BACKEND_URL="${{ inputs.custom_backend_url || secrets.RENDER_BACKEND_URL }}"
-          AI_URL="${{ inputs.custom_ai_url || secrets.RENDER_AI_URL }}"
+          BACKEND_URL="${INPUT_BACKEND_URL:-$SECRET_BACKEND_URL}"
+          AI_URL="${INPUT_AI_URL:-$SECRET_AI_URL}"
 
           # Strip trailing slashes if present
           BACKEND_URL="${BACKEND_URL%/}"
           AI_URL="${AI_URL%/}"
 
-          echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
-          echo "ai_url=$AI_URL" >> $GITHUB_OUTPUT
+          echo "backend_url=$BACKEND_URL" >> "$GITHUB_OUTPUT"
+          echo "ai_url=$AI_URL" >> "$GITHUB_OUTPUT"
 
       # ── 1. Backend API Keep-Alive ───────────────────────────────────────────
       - name: Ping NestJS Backend API (:3001)
         if: steps.config.outputs.backend_url != ''
+        env:
+          TARGET_BASE: ${{ steps.config.outputs.backend_url }}
         run: |
-          TARGET="${{ steps.config.outputs.backend_url }}/api/v1/health"
+          TARGET="${TARGET_BASE}/api/v1/health"
           echo "Pinging Backend: $TARGET"
           
           # Max time 60s to accommodate potential cold start wakeup
@@ -89,8 +96,10 @@ jobs:
       # ── 2. AI Microservice Keep-Alive ───────────────────────────────────────
       - name: Ping FastAPI AI Service (:8000)
         if: steps.config.outputs.ai_url != ''
+        env:
+          TARGET_BASE: ${{ steps.config.outputs.ai_url }}
         run: |
-          TARGET="${{ steps.config.outputs.ai_url }}/health"
+          TARGET="${TARGET_BASE}/health"
           echo "Pinging AI Service: $TARGET"
           
           RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" --max-time 60 "$TARGET" || echo -e "\n000\n0")

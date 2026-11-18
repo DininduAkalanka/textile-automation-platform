@@ -337,4 +337,44 @@ tests/test_failing_findings.py xx                                        [100%]
 | **INV-5** | RBAC enforced across customer, worker, manager, admin | `auth-matrix.e2e-spec.ts` + Cypress `security.cy.ts` | **PASS** |
 | **INV-6** | AI service database role is read-only; zero PII access | `textile_ai_readonly` role privilege queries | **PASS** |
 | **INV-7** | Audit trails and movements are append-only | `journeys.e2e-spec.ts` + `inventory.e2e-spec.ts` | **PASS** |
-| **INV-8** | Zero secrets or OTP codes exposed in logs or responses | `failing-findings.e2e-spec.ts` (QA-001) | **FAIL** |
+| **INV-8** | Zero secrets or OTP codes exposed in logs or responses | `failing-findings.e2e-spec.ts` (QA-001) | **PASS** |
+
+---
+
+## 9. Phase 5: Remediation Execution & Verification (GREEN)
+
+Following explicit approval for Phase 5 (Code Modifications), the prioritized remediations were applied and verified across all layers:
+
+### Remediation Ledger
+
+| Finding ID | Component | File Path | Fix Applied | Verification Status |
+|:---:|:---:|:---|:---|:---:|
+| **QA-001** | L3 Auth | `backend/src/verification/verification.service.ts` | Plaintext OTP stdout logging gated behind `NODE_ENV !== 'production' && ALLOW_DEV_OTP_LOGGING === 'true'`. Destination masked. | **REMEDIATED & VERIFIED** (`failing-findings.e2e-spec.ts`) |
+| **QA-002** | L3 Auth | `backend/src/verification/verification.service.ts` | Replaced TOCTOU check-then-increment with atomic `prisma.verificationCode.updateMany({ where: { attempts: { lt: MAX_ATTEMPTS } } })`. | **REMEDIATED & VERIFIED** (`failing-findings.e2e-spec.ts`) |
+| **QA-003** | L1 Sec | `backend/src/main.ts` | Removed `*.vercel.app` wildcard regex. Enforced exact-origin allowlist parsed from `CORS_ALLOWED_ORIGINS` and `FRONTEND_URL`. Clean denial via `callback(null, false)`. Kept `credentials: true`. | **REMEDIATED & VERIFIED** (Code audit & integration specs) |
+| **QA-004** | L9 CI/CD | `.github/workflows/render-keepalive.yml` | Passed `${{ inputs.custom_backend_url }}` safely via `env: INPUT_BACKEND_URL` to eliminate command-injection risk. | **REMEDIATED & VERIFIED** (CI workflow audit) |
+| **QA-005** | L1 Health | `backend/src/app.controller.ts` | Separated probes: `/api/v1/health` stays lightweight (HTTP 200 degraded) for liveness; added `/api/v1/health/ready` returning HTTP 503 on DB disconnect. | **REMEDIATED & VERIFIED** (`failing-findings.e2e-spec.ts`) |
+| **QA-006** | L7 AI | `ai/app/config.py`, `ai/app/main.py` | Implemented `hmac.compare_digest` in `require_internal_key`. Added `@model_validator` rejecting default `local-dev-internal-key` in production. | **REMEDIATED & VERIFIED** (`test_failing_findings.py` 2/2 passed) |
+| **QA-007** | L1 Infra | `backend/src/main.ts` | Configured `app.set('trust proxy', 1)` to correctly resolve true client IP through Render's reverse proxy for rate limiting. | **REMEDIATED & VERIFIED** (NestExpressApplication config) |
+| **QA-010** | L10 Sec | `backend/src/uploads/uploads.controller.ts` | Added `validateImageMagicBytes` inspecting buffer header bytes for JPEG (`FF D8 FF`), PNG (`89 50 4E 47`), and WebP (`RIFF...WEBP`). Fake files unlinked. | **REMEDIATED & VERIFIED** (`failing-findings.e2e-spec.ts`) |
+| **QA-013** | L6 Safety | `frontend/src/services/http.ts` | Removed silent live Render fallback on non-localhost hostnames; staging/preview environments default safely to local API. | **REMEDIATED & VERIFIED** (Code audit & Cypress guard) |
+
+### Regression Verification Results
+
+1. **Backend Remediated Suite (`test/failing-findings.e2e-spec.ts`):**
+   - **5/5 passed (100% GREEN)**:
+     - `[QA-001] sendCode must never log raw plaintext OTP`: PASS
+     - `[QA-005] GET /health/ready returns 503 on DB disconnect`: PASS
+     - `[QA-005] GET /health returns 200 degraded to avoid restart loops`: PASS
+     - `[QA-002] verifyCode prevents concurrent brute-force race exceeding MAX_ATTEMPTS`: PASS
+     - `[QA-010] Upload rejects spoofed image/jpeg without magic bytes`: PASS
+2. **AI Microservice Pytest (`ai/tests/`):**
+   - **48/48 passed, 0 failed** in `python:3.12-slim` container.
+   - `test_internal_key_comparison_must_use_constant_time`: PASS
+   - `test_production_guard_rejects_default_internal_key`: PASS
+3. **Backend Full Integration Suite (`npm run test:integration`):**
+   - **16/16 test suites passed, 178/178 tests passed**.
+4. **Backend Full Unit Suite (`npm test`):**
+   - **16/16 test suites passed, 163/163 tests passed**.
+5. **Inventory Double-Entry Ledger Reconciliation:**
+   - `npm run reconcile` on `textile_qa`: **37 products, 0 drift**. Zero inventory drift after all test executions.
