@@ -574,34 +574,12 @@ export class ProductsService {
       }
     }
 
-    // Sync stockQuantity if sizeStock is provided
-    let newStockQuantity: number | undefined;
-    if (dto.attributes && typeof dto.attributes === 'object') {
-      const sizeStock = (dto.attributes as Record<string, any>).sizeStock as Record<string, number> | undefined;
-      if (sizeStock && typeof sizeStock === 'object') {
-        const sumSizeStock = Object.values(sizeStock).reduce((sum, q) => sum + (Number(q) || 0), 0);
-        if (sumSizeStock > 0 || Object.keys(sizeStock).length > 0) {
-          data.stockQuantity = sumSizeStock;
-          newStockQuantity = sumSizeStock;
-        }
-      }
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const updatedProduct = await tx.product.update({
-        where: { id },
-        data,
-        include: { category: true },
-      });
-
-      if (newStockQuantity !== undefined) {
-        await tx.inventory.updateMany({
-          where: { productId: id },
-          data: { quantityAvailable: newStockQuantity },
-        });
-      }
-
-      return updatedProduct;
+    // Size attributes describe the catalog. Inventory adjustments own the stock
+    // balance, reservations and movement ledger.
+    return this.prisma.product.update({
+      where: { id },
+      data,
+      include: { category: true },
     });
   }
 

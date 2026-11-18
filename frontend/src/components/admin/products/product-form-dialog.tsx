@@ -283,7 +283,7 @@ function ProductFormInner({
     } else {
       delete attributes.size;
     }
-    if (parsedSizes.length > 0) {
+    if (parsedSizes.some((size) => Object.hasOwn(form.sizeStock, size))) {
       const cleanSizeStock: Record<string, number> = {};
       for (const s of parsedSizes) {
         cleanSizeStock[s] = Number(form.sizeStock[s] || 0);
@@ -319,8 +319,13 @@ function ProductFormInner({
         : undefined,
       costPrice: form.costPrice ? Number.parseFloat(form.costPrice) : undefined,
       images: form.images,
-      attributes,
     };
+    const original = product && formFromProduct(product);
+    if (!original || original.sizes !== form.sizes || original.color !== form.color ||
+        original.fabricType !== form.fabricType ||
+        JSON.stringify(original.sizeStock) !== JSON.stringify(form.sizeStock)) {
+      payload.attributes = attributes;
+    }
     if (!isEdit) {
       payload.stockQuantity = stockNum;
     }

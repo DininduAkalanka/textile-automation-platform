@@ -66,14 +66,11 @@ describe('Admin catalog management (plan Session 2.2)', () => {
 
   afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { userId: adminId } });
-    // Orders (and their cascaded items) before products — an order_item's FK to
-    // product is RESTRICT, and Order->user is RESTRICT too, so both must clear
-    // before the product/user rows they point at.
-    await prisma.order.deleteMany({
-      where: { orderNumber: { startsWith: TAG } },
-    });
     await prisma.inventoryMovement.deleteMany({
       where: { inventory: { product: { sku: { startsWith: TAG } } } },
+    });
+    await prisma.order.deleteMany({
+      where: { orderNumber: { startsWith: TAG } },
     });
     await prisma.product.deleteMany({ where: { sku: { startsWith: TAG } } });
     // Children before parents: a top-level category can't be removed while a
@@ -105,6 +102,26 @@ describe('Admin catalog management (plan Session 2.2)', () => {
       description: opts.description,
     });
   }
+
+  it('preserves reserved stock and movements when a catalog edit includes size metadata', async () => {
+    const product = await seedProduct({ label: 'price-edit', stock: 10 });
+    const order = await prisma.order.create({
+      data: { orderNumber: `${TAG}-reservation`, userId: adminId, subtotal: 1000, total: 1000 },
+    });
+    await prisma.$transaction((tx) => inventory.reserve(tx, product.id, 1, order.id));
+
+    const updated = await products.update(product.id, {
+      price: 7750,
+      attributes: { size: 'Free Size', sizeStock: { 'Free Size': 0 } },
+    });
+
+    expect(Number(updated.price)).toBe(7750);
+    expect(updated.stockQuantity).toBe(9);
+    const balance = await prisma.inventory.findUniqueOrThrow({ where: { productId: product.id } });
+    expect(balance.quantityAvailable).toBe(10);
+    expect(balance.quantityReserved).toBe(1);
+    expect(await prisma.inventoryMovement.count({ where: { inventoryId: balance.id } })).toBe(2);
+  });
 
   const seedCategory = (label: string, parentId?: string) =>
     products.createCategory({ name: `${TAG} ${label}`, parentId });
