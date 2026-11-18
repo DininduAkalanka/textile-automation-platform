@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Bell, CheckCheck } from 'lucide-react';
 
 import {
@@ -33,20 +35,22 @@ export function NotificationBell({ signedIn }: { signedIn: boolean }) {
   }, []);
 
   const [open, setOpen] = useState(false);
-  const { data } = useNotifications(mounted && signedIn);
+  const user = useAuthStore((state) => state.user);
+  const feed = useNotifications(user?.id, mounted && signedIn && Boolean(user));
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
   if (!mounted || !signedIn) return null;
 
-  const unreadCount = data?.unreadCount ?? 0;
-  const items = data?.items ?? [];
+  const unreadCount = feed.data?.pages[0].unreadCount ?? 0;
+  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
       >
@@ -85,16 +89,27 @@ export function NotificationBell({ signedIn }: { signedIn: boolean }) {
             <div className="max-h-96 overflow-y-auto">
               {items.length === 0 ? (
                 <p className="px-4 py-10 text-center text-sm text-neutral-400">
-                  Nothing yet.
+                  {feed.isPending ? 'Loading notifications…' : feed.isError ? 'Could not load notifications.' : 'Nothing yet.'}
                 </p>
               ) : (
                 items.map((n) => (
                   <NotificationRow
                     key={n.id}
                     notification={n}
-                    onRead={() => markRead.mutate(n.id)}
+                    admin={user?.role === 'ADMIN'}
+                    onActivate={(navigating) => {
+                      if (!n.readAt) markRead.mutate(n.id);
+                      if (navigating) setOpen(false);
+                    }}
                   />
                 ))
+              )}
+              {feed.hasNextPage && (
+                <button type="button" disabled={feed.isFetchingNextPage}
+                  onClick={() => void feed.fetchNextPage()}
+                  className="w-full px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
+                  {feed.isFetchingNextPage ? 'Loading…' : 'Show older notifications'}
+                </button>
               )}
             </div>
           </div>
@@ -106,22 +121,34 @@ export function NotificationBell({ signedIn }: { signedIn: boolean }) {
 
 function NotificationRow({
   notification,
-  onRead,
+  admin,
+  onActivate,
 }: {
   notification: Notification;
-  onRead: () => void;
+  admin: boolean;
+  onActivate: (navigating: boolean) => void;
 }) {
   const unread = notification.readAt === null;
+  const { type, targetId, title } = notification;
+  let href: string | undefined;
+  let action: string | undefined;
+  if (type === 'order.status_changed') {
+    const orders = admin ? '/admin/orders' : '/account/orders';
+    href = targetId ? `${orders}/${encodeURIComponent(targetId)}` : orders;
+    action = targetId ? 'View order' : 'View orders';
+  } else if (admin && type === 'inventory.low_stock') {
+    href = targetId
+      ? `/admin/inventory?productId=${encodeURIComponent(targetId)}`
+      : `/admin/inventory?search=${encodeURIComponent(title.replace(/^Low stock: /, ''))}`;
+    action = targetId ? 'View stock' : 'Find in inventory';
+  }
 
-  return (
-    <button
-      type="button"
-      onClick={() => unread && onRead()}
-      className={cn(
-        'flex w-full items-start gap-2.5 border-b border-neutral-50 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-neutral-50',
-        unread && 'bg-[#CC0000]/[0.03]',
-      )}
-    >
+  const className = cn(
+    'flex w-full items-start gap-2.5 border-b border-neutral-50 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-neutral-50',
+    unread && 'bg-[#CC0000]/[0.03]',
+  );
+  const content = (
+    <>
       <span
         aria-hidden
         className={cn(
@@ -145,9 +172,15 @@ function NotificationRow({
         )}
         <span className="mt-1 block text-[11px] text-neutral-400">
           {relativeTime(notification.createdAt)}
+          {action && <span className="ml-2 font-medium text-[#A80000]">{action} →</span>}
         </span>
       </span>
-    </button>
+    </>
+  );
+  return href ? (
+    <Link href={href} prefetch={false} className={className} onClick={() => onActivate(true)}>{content}</Link>
+  ) : (
+    <button type="button" disabled={!unread} className={className} onClick={() => onActivate(false)}>{content}</button>
   );
 }
 

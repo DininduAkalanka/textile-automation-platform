@@ -6,6 +6,12 @@ export const authService = {
   login: (input: LoginInput) =>
     unwrap<AuthResponse>(http.post('/auth/login', input)),
 
+  forgotPassword: (identifier: string) =>
+    unwrap<{ success: boolean }>(http.post('/auth/forgot-password', { identifier })),
+
+  resetPassword: (token: string, password: string) =>
+    unwrap<{ success: boolean }>(http.post('/auth/reset-password', { token, password })),
+
   register: (input: RegisterInput) =>
     unwrap<AuthResponse>(http.post('/auth/register', input)),
 

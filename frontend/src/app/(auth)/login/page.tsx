@@ -64,6 +64,10 @@ function LoginForm() {
         {...register('password')}
       />
 
+      <Link href="/forgot-password" className="-mt-2 self-end text-sm font-semibold text-[#FB6B6B] hover:underline">
+        Forgot password?
+      </Link>
+
       <Button
         data-testid="login-submit-btn"
         type="submit"
