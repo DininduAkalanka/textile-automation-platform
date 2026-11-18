@@ -25,6 +25,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "cypress/**",
+    "e2e-playwright/**",
+    "playwright-report/**",
+    "test-results/**",
+    "blob-report/**",
   ]),
 ]);
 
