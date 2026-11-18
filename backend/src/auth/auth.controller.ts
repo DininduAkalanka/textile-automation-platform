@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-recovery.dto';
+import { PasswordRecoveryService } from './password-recovery.service';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -41,6 +43,7 @@ const AUTH_THROTTLE = {
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly recovery: PasswordRecoveryService,
     private readonly verificationService: VerificationService,
   ) {}
 
@@ -84,6 +87,20 @@ export class AuthController {
     );
     this.setRefreshCookie(res, refreshToken);
     return result;
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.recovery.request(dto.identifier);
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.recovery.reset(dto.token, dto.password);
   }
 
   @Public()
