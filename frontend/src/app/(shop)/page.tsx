@@ -11,7 +11,6 @@ import {
   ShopTheLookSection,
   FabricShowcaseSection,
   WhyChooseUsSection,
-  BrandPartnersSection,
 } from '@/components/home';
 
 export const metadata: Metadata = {
@@ -103,13 +102,13 @@ export default function HomePage() {
         {/* 3. Five-Pillar Category Discovery: Women, Men, Teenagers, Uniforms, Fabrics */}
         <CategoryDiscovery />
 
-        {/* 4. Women's Wear Showcase: Thilakawardhana-style dedicated department rail */}
+        {/* 4. Women's Wear Showcase: dedicated department rail */}
         <WomensWearSection />
 
         {/* 5. Editorial Craftsmanship Campaign: Full-bleed lifestyle storytelling banner */}
         <EditorialCampaign />
 
-        {/* 6. Men's Wear Showcase: Thilakawardhana-style dedicated department rail */}
+        {/* 6. Men's Wear Showcase: dedicated department rail */}
         <MensWearSection />
 
         {/* 8. Best Sellers & Customer Favorites: Highest-rated catalog products */}
@@ -127,8 +126,10 @@ export default function HomePage() {
         {/* 10. Why Choose Us: 15+ years heritage, triple-point QC, 25-district reach */}
         <WhyChooseUsSection />
 
-        {/* 11. Featured Brand Partners: Restrained, authentic SVG brand identities */}
-        <BrandPartnersSection />
+        {/* Brand partners strip removed before handover: it showed other
+            companies' trademarks (U.S. Polo Assn., Giggles…) as "trusted label
+            partners". Re-add <BrandPartnersSection /> once it lists brands the
+            shop really stocks. */}
       </div>
     </>
   );

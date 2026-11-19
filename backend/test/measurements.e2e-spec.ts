@@ -437,7 +437,9 @@ describe('BR3 measurements at checkout', () => {
         ],
         shippingAddress: address,
         email: `${TAG}-guest-entry@example.test`,
-        phone: '+94770001122',
+        // Unique per run: since QA P0-1 a contact that already has an account
+        // is refused (LOGIN_REQUIRED) instead of being silently reused.
+        phone: `+9477${String(Date.now()).slice(-7)}`,
         fullName: 'Guest Entry Test',
         paymentMethod: PaymentMethod.STRIPE,
       }),

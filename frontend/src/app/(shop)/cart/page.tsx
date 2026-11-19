@@ -87,7 +87,7 @@ export default function CartPage() {
             </span>
             <div>
               <p className="font-semibold text-neutral-900">Islandwide Delivery</p>
-              <p className="text-[11px] text-neutral-500">Fast 2-4 business day shipping</p>
+              <p className="text-[11px] text-neutral-500">Free, usually 2–3 business days</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200/60">
@@ -98,8 +98,8 @@ export default function CartPage() {
               </svg>
             </span>
             <div>
-              <p className="font-semibold text-neutral-900">Interest-Free BNPL</p>
-              <p className="text-[11px] text-neutral-500">3 installments with KOKO / Mintpay</p>
+              <p className="font-semibold text-neutral-900">Pay in Installments</p>
+              <p className="text-[11px] text-neutral-500">3 monthly payments, no extra charge</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200/60">
@@ -109,8 +109,8 @@ export default function CartPage() {
               </svg>
             </span>
             <div>
-              <p className="font-semibold text-neutral-900">14-Day Exchange</p>
-              <p className="text-[11px] text-neutral-500">Hassle-free size or fit swaps</p>
+              <p className="font-semibold text-neutral-900">Easy Exchanges</p>
+              <p className="text-[11px] text-neutral-500">Within 7 working days of delivery</p>
             </div>
           </div>
         </div>

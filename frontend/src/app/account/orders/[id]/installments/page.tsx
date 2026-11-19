@@ -5,16 +5,38 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatLKR } from '@/lib/format';
+import { useAuthStore } from '@/store/useAuthStore';
 import { InstallmentSchedule } from '@/types';
+
+/** Redirect the browser to PayHere by auto-submitting a hidden form POST. */
+function postToPayHere(actionUrl: string, params: Record<string, string>) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = actionUrl;
+  Object.entries(params).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = String(value ?? '');
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
 
 export default function InstallmentsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = use(params);
   const searchParams = useSearchParams();
   const isSuccess = searchParams.get('success') === 'true';
+  // Set by PayHere's return_url. The money is confirmed by PayHere's
+  // server-to-server notify, which can land a few seconds after the redirect.
+  const returnedFromPayment = searchParams.get('paid');
+  const isAdmin = useAuthStore((s) => s.user?.role === 'ADMIN');
 
   const [schedule, setSchedule] = useState<InstallmentSchedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSchedule();
@@ -28,6 +50,34 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
       setError(err.message || 'Failed to load installment schedule');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** QA P1-7: the customer path to pay an installment — a PayHere checkout for it. */
+  const payNow = async (installmentId: string) => {
+    setBusyId(installmentId);
+    setError('');
+    try {
+      const { checkoutUrl, params: payhereParams } =
+        await api.createInstallmentPayherePayment(installmentId);
+      postToPayHere(checkoutUrl, payhereParams);
+    } catch (err: any) {
+      setError(err.message || 'Could not start the payment');
+      setBusyId(null);
+    }
+  };
+
+  /** Admin: record one installment received in cash / by bank transfer. */
+  const markReceived = async (installmentId: string) => {
+    setBusyId(installmentId);
+    setError('');
+    try {
+      await api.markInstallmentPaid(installmentId);
+      await loadSchedule();
+    } catch (err: any) {
+      setError(err.message || 'Could not record the payment');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -56,9 +106,25 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
   const paidCount = schedule.installments.filter((inst) => inst.status === 'COMPLETED').length;
   const totalCount = schedule.installments.length;
   const progressPercent = (paidCount / totalCount) * 100;
+  const isCancelled = schedule.orderStatus === 'CANCELLED';
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem', maxWidth: '860px', margin: '0 auto' }}>
+      {returnedFromPayment && (
+        <div data-testid="installment-payment-returned" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', borderRadius: 'var(--r-lg)', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+          Thank you — your payment for installment {returnedFromPayment} was submitted. It shows as paid as soon as PayHere confirms it (usually within a minute).{' '}
+          <button type="button" className="btn btn-sm btn-outline" style={{ marginLeft: '0.5rem' }} onClick={loadSchedule}>
+            Refresh
+          </button>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 'var(--r-lg)', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+          This order was cancelled. Its remaining installments are closed and cannot be paid.
+        </div>
+      )}
+
       {/* Success Banner */}
       {isSuccess && (
         <div style={{
@@ -76,7 +142,7 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
           <div>
             <h3 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#166534' }}>Order Placed Successfully!</h3>
             <p style={{ fontSize: '0.875rem', color: '#15803d' }}>
-              Your first installment has been processed. See the schedule below for upcoming payments.
+              Your installment plan is set up. Pay each installment from this page when it is due.
             </p>
           </div>
         </div>
@@ -232,18 +298,32 @@ export default function InstallmentsPage({ params }: { params: Promise<{ id: str
                   {formatLKR(inst.amount)}
                 </p>
 
-                {!isPaid && isNext && (
-                  // Online self-service payment for a single installment isn't
-                  // available — the previous "Pay Now" button called an
-                  // endpoint that let a customer mark their own payment paid
-                  // with no verification at all. Collecting this installment
-                  // now goes through the same admin-verified path as bank
-                  // transfer / COD (Admin → Payments → mark received).
-                  <span
-                    style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)', maxWidth: '160px', textAlign: 'right' }}
+                {!isPaid && isNext && !isCancelled && inst.status !== 'FAILED' && !isAdmin && (
+                  // QA P1-7: a real payment, not a self-reported one. The old
+                  // "Pay Now" let a customer mark their own installment paid;
+                  // this opens a PayHere checkout for exactly this amount, and
+                  // only PayHere's SIGNED notify marks it paid.
+                  <button
+                    type="button"
+                    data-testid={`installment-pay-${inst.installmentNo}`}
+                    className="btn btn-primary btn-sm"
+                    disabled={busyId === inst.id}
+                    onClick={() => payNow(inst.id)}
                   >
-                    Contact us to pay this installment
-                  </span>
+                    {busyId === inst.id ? 'Opening PayHere…' : 'Pay now with PayHere'}
+                  </button>
+                )}
+
+                {!isPaid && !isCancelled && inst.status !== 'FAILED' && isAdmin && (
+                  <button
+                    type="button"
+                    data-testid={`installment-mark-received-${inst.installmentNo}`}
+                    className="btn btn-outline btn-sm"
+                    disabled={busyId === inst.id}
+                    onClick={() => markReceived(inst.id)}
+                  >
+                    {busyId === inst.id ? 'Recording…' : 'Mark received'}
+                  </button>
                 )}
 
                 {isPaid && (

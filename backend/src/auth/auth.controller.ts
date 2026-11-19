@@ -11,6 +11,7 @@ import {
 import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-recovery.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { PasswordRecoveryService } from './password-recovery.service';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -165,6 +166,28 @@ export class AuthController {
   @Get('me')
   async me(@Request() req: RequestWithUser) {
     return this.authService.getProfile(req.user.sub);
+  }
+
+  /**
+   * The signed-in user changes their own password. All other sessions are
+   * signed out; this browser gets a fresh session (new refresh cookie).
+   */
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  async changePassword(
+    @Request() req: RequestWithUser,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { refreshToken, ...result } = await this.authService.changePassword(
+      req.user.sub,
+      dto.currentPassword,
+      dto.newPassword,
+      req.headers['user-agent'],
+    );
+    this.setRefreshCookie(res, refreshToken);
+    return result; // { user, accessToken }
   }
 
   // Retained alias for existing callers.

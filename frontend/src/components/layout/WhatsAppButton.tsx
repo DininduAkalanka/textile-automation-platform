@@ -76,7 +76,7 @@ export default function WhatsAppButton({ productContext }: Props) {
     { label: '📏 Size & Fit Advice', text: 'Hi! Could you help me choose the right size for my measurements?' },
     { label: '👔 Custom Uniform Quote', text: 'Hello, I would like to get a quote for custom school/corporate uniforms.' },
     { label: '🚚 Delivery & Tracking', text: 'Hi! Could you please update me on island-wide courier delivery times?' },
-    { label: '💳 Payment & BNPL', text: 'Hi! How do I pay using Koko, Mintpay or Cash on Delivery?' },
+    { label: '💳 Payment & Installments', text: 'Hi! How do I pay in installments or with Cash on Delivery?' },
   ];
 
   return (

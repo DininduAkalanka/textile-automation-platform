@@ -8,50 +8,75 @@ describe('Catalog Lifecycle, Dynamic Navigation & Media Upload E2E', () => {
     cy.loginByApi('admin@textileshop.com', 'Admin@123456');
   });
 
-  it('1. Admin creates a new category and it dynamically appears in Storefront navigation', () => {
+  it('1. A new category joins the storefront menu only once it has products to show', () => {
     const categoryName = `DynamicDept_${Date.now().toString().slice(-4)}`;
+    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
+    const menu = () => cy.get('nav[aria-label="Main Store Categories"]');
+    let token = '';
+    let categoryId = '';
+    let productId = '';
 
-    // Visit categories management
+    cy.loginByApi('admin@textileshop.com', 'Admin@123456').then(({ accessToken }) => {
+      token = accessToken;
+    });
+
+    // Admin creates the category through the real admin UI.
     cy.visit('/admin/categories');
     cy.contains('Categories').should('be.visible');
     cy.get('button[aria-label="Edit"]').should('have.length.at.least', 1);
-
-    // Open form
     cy.get('[data-testid="new-category-btn"]').should('be.visible').click();
     cy.get('#cf-name').should('be.visible').type(categoryName);
     cy.contains('button', /Create category/i).click();
-
-    // Verify it exists in admin category list
     cy.contains(categoryName).should('be.visible');
 
-    // Visit Storefront home
+    // Empty: a menu link would open a page with nothing in it, so it is hidden.
     cy.visit('/');
-    cy.get('nav[aria-label="Main Store Categories"]').should('be.visible');
-    
-    // Assert the new category appears in the top red category bar
-    cy.get('nav[aria-label="Main Store Categories"]')
-      .contains(categoryName.toUpperCase())
-      .scrollIntoView()
-      .should('be.visible');
+    menu().should('be.visible').and('contain.text', 'WOMEN');
+    menu().should('not.contain.text', categoryName.toUpperCase());
 
-    // Clean up created test category so it does not pollute the database
-    const apiUrl = Cypress.env('apiUrl') || 'http://localhost:3001/api/v1';
-    cy.request({
-      method: 'GET',
-      url: `${apiUrl}/categories`,
-    }).then((res) => {
+    // Add one active product to it: now it appears.
+    cy.request(`${apiUrl}/categories`).then((res) => {
       const categories = res.body.data || res.body;
-      const created = categories.find((c: any) => c.name === categoryName);
-      if (created) {
-        cy.loginByApi('admin@textileshop.com', 'Admin@123456').then(({ accessToken }) => {
-          cy.request({
-            method: 'DELETE',
-            url: `${apiUrl}/categories/${created.id}`,
-            headers: { Authorization: `Bearer ${accessToken}` },
-            failOnStatusCode: false,
-          });
-        });
-      }
+      categoryId = categories.find((c: { name: string }) => c.name === categoryName).id;
+      cy.request({
+        method: 'POST',
+        url: `${apiUrl}/products`,
+        headers: { Authorization: `Bearer ${token}` },
+        body: {
+          name: `${categoryName} Shirt`,
+          sku: `${categoryName}-SKU`,
+          price: 2500,
+          stockQuantity: 5,
+          categoryId,
+        },
+      }).then((created) => {
+        productId = (created.body.data || created.body).id;
+      });
+    });
+    cy.visit('/');
+    menu().contains(categoryName.toUpperCase()).scrollIntoView().should('be.visible');
+
+    // Archive that product: the category is empty for shoppers again.
+    cy.then(() =>
+      cy.request({ method: 'DELETE', url: `${apiUrl}/products/${productId}`, headers: { Authorization: `Bearer ${token}` } }),
+    );
+    cy.visit('/');
+    menu().should('contain.text', 'WOMEN').and('not.contain.text', categoryName.toUpperCase());
+
+    // Clean up so the test leaves nothing behind.
+    cy.then(() => {
+      cy.request({
+        method: 'DELETE',
+        url: `${apiUrl}/products/${productId}/permanent`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+      cy.request({
+        method: 'DELETE',
+        url: `${apiUrl}/categories/${categoryId}`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
     });
   });
 

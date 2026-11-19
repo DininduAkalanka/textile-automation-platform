@@ -4,10 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const SERVICE_PILLARS = [
-  { label: 'Island-Wide Delivery', note: 'Free on orders above Rs. 5,000 across all 25 districts' },
-  { label: 'Express Showroom Pickup', note: 'Usually ready in 2–4 hours at Veyangoda & Kurunegala' },
+  { label: 'Island-Wide Delivery', note: 'Free on every order, anywhere in Sri Lanka' },
+  { label: 'Showroom Collection', note: 'Collect your order from our Veyangoda showroom' },
   { label: '7-Day Hassle-Free Exchange', note: 'In-store or via nationwide courier collection' },
-  { label: 'Flexible Payment Methods', note: 'Cards, Koko BNPL 3-Installments & Cash on Delivery' },
+  { label: 'Flexible Payment Methods', note: 'Cards, 3 monthly installments & Cash on Delivery' },
 ];
 
 const SPOTLIGHT_DEPARTMENTS = [
@@ -43,7 +43,7 @@ const SPOTLIGHT_DEPARTMENTS = [
 export function TrustMetricsBar() {
   return (
     <section id="department-spotlight" aria-label="Featured Departments & Service Guarantees" className="w-full bg-white">
-      {/* ── 1. Minimalist Editorial Service Ribbon (Thilakawardhana Style) ── */}
+      {/* ── 1. Minimalist Editorial Service Ribbon ── */}
       <div className="border-b border-neutral-200/80 bg-neutral-50/70">
         <div className="container-wide py-3.5 sm:py-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200/70">
@@ -66,7 +66,7 @@ export function TrustMetricsBar() {
         </div>
       </div>
 
-      {/* ── 2. Thilakawardhana-Style Curated Department Spotlight ── */}
+      {/* ── 2. Curated Department Spotlight ── */}
       <div className="container-wide py-8 sm:py-12 border-b border-neutral-200/80">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {SPOTLIGHT_DEPARTMENTS.map((dept) => (

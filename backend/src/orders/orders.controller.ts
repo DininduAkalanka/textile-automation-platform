@@ -14,10 +14,13 @@ import {
 } from '@nestjs/common';
 import type { Response, Request as ExpressRequest } from 'express';
 import { Throttle } from '@nestjs/throttler';
+import { JwtService } from '@nestjs/jwt';
 import { OrdersService } from './orders.service';
 import { InvoiceService } from '../invoices/invoice.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { GUEST_CHECKOUT_THROTTLE_AT_LOAD } from '../common/config/limits';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { GuestCheckoutDto } from './dto/guest-checkout.dto';
+import { GuestCheckoutDto, GuestSendCodeDto } from './dto/guest-checkout.dto';
 import { OrderActionDto } from './dto/order-action.dto';
 import { AdminOrdersQueryDto } from './dto/admin-orders-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -37,7 +40,21 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly invoiceService: InvoiceService,
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * QA P1-8: a guest paying Cash on Delivery gets a one-time code here first.
+   * Public, so it shares the guest-checkout per-IP throttle; the service adds
+   * a per-contact cooldown and hourly cap on top.
+   */
+  @Public()
+  @Throttle({ default: { limit: GUEST_CHECKOUT_THROTTLE_AT_LOAD, ttl: 60_000 } })
+  @Post('guest-checkout/send-code')
+  sendGuestCode(@Body() dto: GuestSendCodeDto) {
+    return this.ordersService.sendGuestCode(dto);
+  }
 
   /**
    * F-01 fix: set the refresh token as an httpOnly cookie — identical to the
@@ -47,26 +64,29 @@ export class OrdersController {
    * the raw refreshToken to any XSS on the page (audit finding F-01).
    *
    * F-07: @Public() allows unauthenticated access — guests have no JWT yet.
+   * QA P0-1: only a brand-new guest account ever gets a session here.
    */
   @Public()
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Throttle({ default: { limit: GUEST_CHECKOUT_THROTTLE_AT_LOAD, ttl: 60_000 } })
   @Post('guest-checkout')
   async guestCheckout(
     @Body() dto: GuestCheckoutDto,
     @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { order, session } = await this.ordersService.guestCheckout(
-      dto,
-      req.headers['user-agent'],
-    );
+    const { order, session } = await this.ordersService.guestCheckout(dto, {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+      authenticatedUserId: await this.optionalUserId(req),
+    });
+    if (!session) {
+      // A signed-in customer: they already hold a session; issue nothing.
+      return { order, session: null };
+    }
     // F-01 fix: strip refreshToken from the JSON body and set it as an
     // httpOnly cookie — identical to the /auth/login and /auth/register
     // contract — so the refresh token is never accessible to page scripts.
-    const { refreshToken, ...sessionWithoutToken } = session as {
-      refreshToken: string;
-      [key: string]: unknown;
-    };
+    const { refreshToken, ...sessionWithoutToken } = session;
     res.cookie(REFRESH_COOKIE, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -75,6 +95,28 @@ export class OrdersController {
       maxAge: REFRESH_MAX_AGE,
     });
     return { order, session: sessionWithoutToken };
+  }
+
+  /**
+   * This route is @Public, so the global guard never decodes a token on it.
+   * A valid, active bearer token still identifies the caller (a stale tab
+   * showing the guest form); anything else is treated as an anonymous guest.
+   */
+  private async optionalUserId(req: ExpressRequest): Promise<string | undefined> {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return undefined;
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(
+        header.slice('Bearer '.length),
+      );
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { isActive: true },
+      });
+      return user?.isActive ? payload.sub : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   @UseGuards(JwtAuthGuard)

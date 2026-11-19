@@ -7,6 +7,7 @@ import {
 import { OrderStatus, Prisma, ReviewStatus } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReportReviewDto } from './dto/report-review.dto';
 import { ReviewQueryDto } from './dto/review-query.dto';
@@ -24,7 +25,10 @@ const REVIEW_USER_SELECT = {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uploads: UploadsService,
+  ) {}
 
   // ─── Eligibility (drives the frontend CTA) ──────────────
 
@@ -108,8 +112,15 @@ export class ReviewsService {
       );
     }
 
+    // QA P2-15: only the reviewer's own uploads, stored on the shop's origin.
+    const images = await this.uploads.resolveReviewImages(
+      userId,
+      dto.images ?? [],
+    );
+
+    let review: Awaited<ReturnType<typeof this.prisma.review.create>>;
     try {
-      return await this.prisma.review.create({
+      review = await this.prisma.review.create({
         data: {
           productId: dto.productId,
           orderId: dto.orderId,
@@ -122,8 +133,8 @@ export class ReviewsService {
           comfortRating: dto.comfortRating,
           sizeFeedback: dto.sizeFeedback,
           wouldRecommend: dto.wouldRecommend,
-          images: dto.images ?? [],
-          hasImages: (dto.images?.length ?? 0) > 0,
+          images: images.urls,
+          hasImages: images.urls.length > 0,
           isVerifiedPurchase: true,
         },
       });
@@ -138,6 +149,8 @@ export class ReviewsService {
       }
       throw e;
     }
+    await this.uploads.markAttached(images.filenames);
+    return review;
   }
 
   async update(reviewId: string, userId: string, dto: UpdateReviewDto) {
@@ -151,15 +164,30 @@ export class ReviewsService {
       throw new ForbiddenException('You can only edit your own review');
     }
 
-    return this.prisma.review.update({
+    // QA P2-15: new photos must be the reviewer's own uploads; photos already
+    // on this review stay as they are.
+    const images =
+      dto.images !== undefined
+        ? await this.uploads.resolveReviewImages(
+            userId,
+            dto.images,
+            Array.isArray(review.images)
+              ? review.images.filter((u): u is string => typeof u === 'string')
+              : [],
+          )
+        : null;
+
+    const updated = await this.prisma.review.update({
       where: { id: reviewId },
       data: {
         ...dto,
-        ...(dto.images !== undefined
-          ? { hasImages: dto.images.length > 0 }
+        ...(images
+          ? { images: images.urls, hasImages: images.urls.length > 0 }
           : {}),
       },
     });
+    if (images) await this.uploads.markAttached(images.filenames);
+    return updated;
   }
 
   // ─── Public listing + aggregate stats ───────────────────

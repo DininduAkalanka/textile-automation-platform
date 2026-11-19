@@ -4,10 +4,8 @@ import { useEffect, Suspense } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import AppPreloader from '@/components/layout/AppPreloader';
 import TopProgressBar from '@/components/layout/TopProgressBar';
 import QuickViewModal from '@/components/products/QuickViewModal';
-import VisualSearchModal from '@/components/products/VisualSearchModal';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 
@@ -24,7 +22,6 @@ export default function ShopLayout({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppPreloader />
       <Suspense fallback={null}>
         <TopProgressBar />
       </Suspense>
@@ -32,7 +29,6 @@ export default function ShopLayout({
       <main style={{ flex: 1 }}>{children}</main>
       <Footer />
       <QuickViewModal />
-      <VisualSearchModal />
       {/* The shopping assistant, on every shop page (doc 10 §5.5). */}
       <ChatWidget />
       {/* Production WhatsApp customer engagement widget (+94 71 708 8445) */}

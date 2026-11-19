@@ -35,25 +35,8 @@ import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { MeasurementDialog } from '@/components/cart/measurement-dialog';
 import { MeasurementSet, fieldsFor } from '@/lib/measurements';
-
-// ── Comprehensive Sri Lankan Sizing Tables ──────────────────────
-const SIZE_CHART_INCHES = [
-  { size: 'XS', chest: '34"', waist: '28"', length: '25"', shoulders: '15.5"' },
-  { size: 'S',  chest: '36"', waist: '30"', length: '26"', shoulders: '16.5"' },
-  { size: 'M',  chest: '38"', waist: '32"', length: '27"', shoulders: '17.5"' },
-  { size: 'L',  chest: '40"', waist: '34"', length: '28"', shoulders: '18.5"' },
-  { size: 'XL', chest: '42"', waist: '36"', length: '29"', shoulders: '19.5"' },
-  { size: 'XXL', chest: '44"', waist: '38"', length: '30"', shoulders: '20.5"' },
-];
-
-const SIZE_CHART_CM = [
-  { size: 'XS', chest: '86 cm', waist: '71 cm', length: '63 cm', shoulders: '39 cm' },
-  { size: 'S',  chest: '91 cm', waist: '76 cm', length: '66 cm', shoulders: '42 cm' },
-  { size: 'M',  chest: '96 cm', waist: '81 cm', length: '68 cm', shoulders: '44 cm' },
-  { size: 'L',  chest: '101 cm', waist: '86 cm', length: '71 cm', shoulders: '47 cm' },
-  { size: 'XL', chest: '107 cm', waist: '91 cm', length: '74 cm', shoulders: '49 cm' },
-  { size: 'XXL', chest: '112 cm', waist: '96 cm', length: '76 cm', shoulders: '52 cm' },
-];
+import { SIZE_CHART_CM, SIZE_CHART_INCHES } from '@/lib/size-chart';
+import { SHOWROOM } from '@/lib/site-config';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -129,9 +112,11 @@ export default function ProductDetailPage() {
     if (slug) {
       setLoading(true);
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      // A slug is never an id: retrying a missing slug as an id only produced a
+      // guaranteed 400 ("uuid is expected") before the not-found page.
       const fetcher = isUuid
         ? api.getProductById(slug).catch(() => api.getProductBySlug(slug))
-        : api.getProductBySlug(slug).catch(() => api.getProductById(slug));
+        : api.getProductBySlug(slug);
 
       fetcher
         .then((prod) => {
@@ -203,23 +188,14 @@ export default function ProductDetailPage() {
   const comparePriceNum = product.compareAtPrice ? Number(product.compareAtPrice) : null;
   const discount = comparePriceNum ? Math.round((1 - priceNum / comparePriceNum) * 100) : 0;
 
-  // Sri Lankan BNPL installment calculations
-  const kokoInstallment = (priceNum / 3).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const mintpayInstallment = (priceNum / 3).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const payzyInstallment = (priceNum / 4).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // The checkout's installment plan splits the total into 3 monthly payments.
+  const installmentAmount = (priceNum / 3).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // Vendor extraction inspired by Thilakawardhana metadata
-  const vendorName = 
-    product.attributes?.vendor ||
-    product.attributes?.brand ||
-    (product.name.toLowerCase().includes('engage') ? 'Engage' :
-     product.name.toLowerCase().includes('tendenza') ? 'Tendenza' :
-     product.name.toLowerCase().includes('trafford') ? 'Trafford' :
-     product.name.toLowerCase().includes('vantage') ? 'Vantage' :
-     product.name.toLowerCase().includes('rainco') ? 'Rainco' :
-     product.name.toLowerCase().includes('moose') ? 'Moose' :
-     product.name.toLowerCase().includes('bella') ? 'Bella' :
-     product.name.toLowerCase().includes('akasi') ? 'Akasi' : 'Nandana Signature');
+  // The brand shown under the title: whatever the product record says, else the shop's own label.
+  const vendorName =
+    (product.attributes?.vendor as string | undefined) ||
+    (product.attributes?.brand as string | undefined) ||
+    'Nandana Textile';
 
   // Multi-angle gallery images construction
   const rawImages = (product.images && product.images.length > 0) ? product.images : [];
@@ -410,7 +386,7 @@ export default function ProductDetailPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-[var(--clr-brand)] font-bold">✓</span>
-            <span><strong>Free Delivery:</strong> Applied automatically on all orders above Rs. 5,000.</span>
+            <span><strong>Free Delivery:</strong> On every order, anywhere in Sri Lanka.</span>
           </li>
         </ul>
       </div>
@@ -558,7 +534,7 @@ export default function ProductDetailPage() {
         {/* ── Right Column: Buy Box & Product Metadata (5 cols on desktop, sticky) ──── */}
         <div className="lg:col-span-5 xl:col-span-5 2xl:col-span-5 lg:sticky lg:top-28 flex flex-col gap-2.5 sm:gap-3 self-start" ref={buyBoxRef}>
           
-          {/* 1. Title & Header Meta (Thilakawardhana Reference Structure) */}
+          {/* 1. Title & Header Meta */}
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight leading-tight">
               {product.name}
@@ -634,33 +610,22 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* 3. Sri Lankan BNPL Split-Payment Breakdown (Koko, Mintpay, Payzy) */}
-          <div className="bg-neutral-50 border border-neutral-200/90 rounded-lg p-3 text-xs space-y-1.5">
-            <div className="flex items-center justify-between text-neutral-700">
+          {/* 3. Installment plan (the shop's own: 3 monthly payments via PayHere).
+              This used to advertise third-party pay-later services that the
+              checkout does not support. */}
+          <div className="bg-neutral-50 border border-neutral-200/90 rounded-lg p-3 text-xs">
+            <div className="flex items-center justify-between gap-2 text-neutral-700">
               <span>
-                or pay in 3 x <strong className="text-neutral-900">Rs. {kokoInstallment}</strong> with{' '}
-                <span className="font-bold text-neutral-900 uppercase tracking-tight">koko</span>
+                or 3 monthly installments of <strong className="text-neutral-900">Rs. {installmentAmount}</strong>, no extra charge
               </span>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowBnplInfo(true)}
                 className="text-neutral-400 hover:text-neutral-700 transition-colors"
-                aria-label="BNPL info"
+                aria-label="How installment payments work"
               >
                 <Info size={14} />
               </button>
-            </div>
-            <div className="flex items-center justify-between text-neutral-700">
-              <span>
-                3 x <strong className="text-neutral-900">Rs. {mintpayInstallment}</strong> or 3% Cashback with{' '}
-                <span className="font-bold text-neutral-900 uppercase tracking-tight">mintpay</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-neutral-700">
-              <span>
-                or up to 4 x <strong className="text-neutral-900">Rs. {payzyInstallment}</strong> with{' '}
-                <span className="font-bold text-neutral-900 uppercase tracking-tight">payzy</span>
-              </span>
             </div>
           </div>
 
@@ -968,7 +933,7 @@ export default function ProductDetailPage() {
             </a>
           </div>
 
-          {/* 9. Gift Packaging Upsell Box (Thilakawardhana Reference with Photography) */}
+          {/* 9. Gift Packaging Upsell Box */}
           <div className="mt-1 border border-neutral-200 rounded-lg p-3 bg-white shadow-xs">
             <label className="flex items-start gap-3 cursor-pointer">
               <input 
@@ -1003,7 +968,7 @@ export default function ProductDetailPage() {
                 <p className="font-bold text-neutral-900 uppercase tracking-wide">
                   Pickup Available at Nandana Textile Showroom
                 </p>
-                <p className="text-neutral-500">Usually ready in 4 hours</p>
+                <p className="text-neutral-500">Arrange collection on WhatsApp</p>
                 <button
                   type="button"
                   onClick={() => setShowStoreInfo(true)}
@@ -1260,7 +1225,7 @@ export default function ProductDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
-              <h3 className="text-base font-bold text-neutral-900">Buy Now, Pay Later in Sri Lanka</h3>
+              <h3 className="text-base font-bold text-neutral-900">Pay in 3 Monthly Installments</h3>
               <button
                 type="button"
                 onClick={() => setShowBnplInfo(false)}
@@ -1271,15 +1236,15 @@ export default function ProductDetailPage() {
             </div>
             <div className="mt-4 space-y-3 text-xs text-neutral-700">
               <p>
-                Split your total order into 3 or 4 interest-free debit or credit card installments with zero extra charges:
+                Choose <strong>Monthly Installments</strong> at checkout and your order total is split into 3 equal payments, with no interest or extra charges:
               </p>
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-2">
-                <p><strong>1st Payment:</strong> Paid today at checkout (33%)</p>
-                <p><strong>2nd Payment:</strong> Deducted in 30 days (33%)</p>
-                <p><strong>3rd Payment:</strong> Deducted in 60 days (34%)</p>
+                <p><strong>1st payment:</strong> paid at checkout by card through PayHere. Your order is confirmed once it is paid.</p>
+                <p><strong>2nd payment:</strong> due one month later.</p>
+                <p><strong>3rd payment:</strong> due two months later.</p>
               </div>
               <p className="text-neutral-500">
-                Supported via Koko, Mintpay, and Payzy at checkout. Valid with Commercial Bank, Sampath, HNB, Seylan, and all major Sri Lankan debit/credit cards.
+                Pay each remaining installment online from <strong>My Orders</strong> when it is due. Nothing is deducted automatically. A sign-in account is needed to use installments.
               </p>
             </div>
             <div className="mt-5 flex justify-end">
@@ -1330,26 +1295,26 @@ export default function ProductDetailPage() {
             <div className="mt-4 p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-800">
               <div className="flex items-center gap-2 font-bold text-neutral-900 mb-1">
                 <Check size={16} strokeWidth={2.5} className="text-emerald-700" />
-                <span>Ready for In-Store Pickup in 2–4 Hours</span>
+                <span>Collect Your Order from Our Showroom</span>
               </div>
               <p className="text-neutral-600 leading-relaxed text-[11.5px]">
-                Orders placed before 2:00 PM are prepared the same day. You will receive an SMS and email notification with your pickup code once ready. Zero delivery or handling fees.
+                Place your order, then message us on WhatsApp with your order number to collect it from our Veyangoda showroom. We will confirm when it is ready. There is no charge.
               </p>
             </div>
 
-            {/* Showrooms */}
+            {/* Showroom */}
             <div className="mt-4 space-y-3">
-              <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider font-mono text-[11px]">Showroom Locations</p>
+              <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider font-mono text-[11px]">Our Showroom</p>
               
-              {/* Veyangoda Flagship */}
+              {/* Veyangoda showroom (the only one) */}
               <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-neutral-900 text-white rounded-sm mb-1">
-                      FLAGSHIP SHOWROOM
+                      VEYANGODA
                     </span>
                     <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Veyangoda</h4>
-                    <p className="text-xs text-neutral-600 mt-0.5">50 Main Street, Veyangoda, Sri Lanka</p>
+                    <p className="text-xs text-neutral-600 mt-0.5">{SHOWROOM.listingName}, {SHOWROOM.address}, Sri Lanka</p>
                   </div>
                 </div>
                 
@@ -1368,7 +1333,7 @@ export default function ProductDetailPage() {
 
                 <div className="mt-3 flex items-center gap-2">
                   <a
-                    href="https://maps.google.com/?q=Nandana+Textile+Veyangoda"
+                    href={SHOWROOM.mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium transition-colors"
@@ -1387,27 +1352,13 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* Kurunegala Branch */}
-              <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
-                <div>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider border border-neutral-300 text-neutral-800 bg-neutral-100 rounded-sm mb-1">
-                    KURUNEGALA BRANCH
-                  </span>
-                  <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Kurunegala</h4>
-                  <p className="text-xs text-neutral-600 mt-0.5">No. 145, Main Street, Kurunegala, Sri Lanka</p>
-                </div>
-                <div className="mt-2.5 pt-2.5 border-t border-neutral-200/80 text-[11.5px] text-neutral-600">
-                  <span className="font-semibold text-neutral-800">Hours: </span>
-                  <span>Mon – Sat: 8:30 AM – 6:00 PM | Sun: 9:00 AM – 2:00 PM</span>
-                </div>
-              </div>
             </div>
 
             {/* Pickup Instructions */}
             <div className="mt-4 p-3 bg-neutral-100 rounded-xl text-xs text-neutral-700 space-y-1">
               <p className="font-bold text-neutral-900">What to know for pickup:</p>
               <ul className="list-disc pl-4 space-y-0.5 text-[11.5px] text-neutral-600">
-                <li>Bring your Order ID (e.g. #ORD-XXXX) or SMS confirmation.</li>
+                <li>Bring your order number (it starts with TXL-).</li>
                 <li>Fitting rooms available if you wish to try garments before taking them.</li>
                 <li>Free on-the-spot size exchange if stock is available.</li>
               </ul>

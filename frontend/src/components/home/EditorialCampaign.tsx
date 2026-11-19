@@ -58,7 +58,7 @@ export function EditorialCampaign() {
             </Link>
 
             <Link
-              href="/products?category=fabrics"
+              href="/products?search=fabric"
               className="btn btn-ghost-white btn-md sm:btn-lg"
             >
               Discover Fabric Cuts

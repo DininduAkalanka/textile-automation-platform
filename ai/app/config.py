@@ -21,6 +21,18 @@ class Settings(BaseSettings):
     environment: str = "development"
     ai_enforce_prod_secrets: bool = False
 
+    # QA P2-11: "production" used to mean ENVIRONMENT=production ONLY — a value
+    # neither docker-compose nor the Render service sets, so the secret guard
+    # never ran where it mattered. NODE_ENV (the rest of the stack's switch) and
+    # RENDER (set automatically on every Render service) now count too.
+    node_env: str = ""
+    render: str = ""
+
+    # Interactive API docs (/docs, /redoc, /openapi.json). Off in production
+    # unless explicitly enabled — this service is internal and its schema is a
+    # map for anyone probing it.
+    ai_docs_enabled: bool | None = None
+
     # Read-only DB. If someone pastes the admin URL in here by mistake, the
     # service still cannot write, because it never issues a write statement --
     # but the role is the real guarantee.
@@ -33,23 +45,45 @@ class Settings(BaseSettings):
     # internet; the API is its only client.
     internal_api_key: str = "local-dev-internal-key"
 
+    @property
+    def is_production(self) -> bool:
+        return (
+            self.environment.lower() in ("production", "prod")
+            or self.node_env.lower() == "production"
+            or bool(self.render.strip())
+            or self.ai_enforce_prod_secrets
+        )
+
+    @property
+    def docs_enabled(self) -> bool:
+        if self.ai_docs_enabled is not None:
+            return self.ai_docs_enabled
+        return not self.is_production
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         """
-        Boot-time guard (QA-006): Disallows weak development defaults
-        when running in production or when AI_ENFORCE_PROD_SECRETS is enabled.
+        Boot-time guard (QA-006, QA P2-11): refuse to start in production with a
+        secret that is published in this repository.
+
+        Both defaults are public: the internal key is in docker-compose.yml and
+        the read-only role's password is in the ai_readonly_role migration. A
+        production service running on either can be called (internal key) or its
+        database read (role password) by anyone who has read the source.
         """
-        is_prod = (
-            self.environment.lower() in ("production", "prod")
-            or self.ai_enforce_prod_secrets
-        )
-        if is_prod:
+        if self.is_production:
             if (
                 not self.internal_api_key
                 or self.internal_api_key == "local-dev-internal-key"
             ):
                 raise ValueError(
                     "Default development internal_api_key is prohibited in production"
+                )
+            if "ai_readonly_local_dev_password" in self.database_url_readonly:
+                raise ValueError(
+                    "The development password for textile_ai_readonly is prohibited "
+                    "in production. Rotate it (see docs/RUNBOOK.md) and update "
+                    "DATABASE_URL_READONLY."
                 )
         return self
 

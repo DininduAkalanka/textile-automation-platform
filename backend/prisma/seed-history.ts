@@ -20,6 +20,7 @@ import {
   ReviewSizeFeedback,
   ReviewStatus,
 } from '@prisma/client';
+import { assertSafeSeedTarget } from './seed-guard';
 
 const prisma = new PrismaClient();
 
@@ -52,6 +53,7 @@ const SHIPPING = {
 };
 
 export async function seedHistory() {
+  assertSafeSeedTarget('seed-history');
   console.log('📈 Seeding demo sales history and production floor tasks…');
 
   // 1. Clear any prior HIST- and DEMO-ACT- batches (children first, then orders).

@@ -69,8 +69,6 @@ export const CATEGORIES_DATA: CategoryItem[] = [
         links: [
           { label: 'Executive Formal Shirts', href: '/products?category=men&sub=shirts' },
           { label: 'Casual Linen Shirts', href: '/products?category=men&sub=casual' },
-          { label: 'Trendy Street Style', href: '/products?category=teenagers&sub=street' },
-          { label: 'Activewear & Sportswear', href: '/products?category=teenagers&sub=sports' },
         ],
       },
       {
@@ -116,12 +114,14 @@ export const CATEGORIES_DATA: CategoryItem[] = [
         ],
       },
       {
+        // Each label opens what it names (these used to open sarees, tops
+        // and trousers). Fabric search also finds the client's real fabrics.
         title: 'FABRIC MATERIALS',
-        viewAllHref: '/products?category=women',
+        viewAllHref: '/products?search=fabric',
         links: [
-          { label: 'Handloom Cotton Fabrics', href: '/products?category=women&sub=sarees' },
-          { label: 'Cotton-Rich Cuts', href: '/products?category=women&sub=tops' },
-          { label: 'Stretch Poly-Crepe', href: '/products?category=women&sub=bottoms' },
+          { label: 'Cotton Fabrics', href: '/products?search=cotton' },
+          { label: 'Silk Fabrics', href: '/products?search=silk' },
+          { label: 'All Fabrics', href: '/products?search=fabric' },
         ],
       },
     ],
@@ -270,11 +270,27 @@ export function useNavCategories(): CategoryItem[] {
 
     if (effectiveCategories && effectiveCategories.length > 0) {
       // Find top-level categories (parentId is null or empty), filtering out legacy test generated IDs
+      // A category with no visible products (counting its sub-categories)
+      // would open an empty page, so it stays out of the menu until products
+      // are added. Archived products don't count. When the API gives no
+      // counts at all, the category is shown as before.
+      const visibleCount = (cat: Category): number | undefined =>
+        cat.activeProductCount ?? cat._count?.products;
+      const hasProducts = (cat: Category): boolean => {
+        const own = visibleCount(cat);
+        if (own === undefined) return true;
+        if (own > 0) return true;
+        return effectiveCategories.some(
+          (child) => child.parentId === cat.id && (visibleCount(child) ?? 0) > 0,
+        );
+      };
+
       const topLevel = effectiveCategories.filter(
         (c) =>
           !c.parentId &&
           !/^DEPT_/i.test(c.name) &&
-          !/^DEPT_/i.test(c.slug || ''),
+          !/^DEPT_/i.test(c.slug || '') &&
+          hasProducts(c),
       );
 
       topLevel.forEach((cat) => {
@@ -364,6 +380,7 @@ export function CategoryMegaNav() {
               >
                 <Link
                   href={cat.href}
+                  onClick={() => setActiveId(null)}
                   className={`relative inline-flex items-center gap-1.5 px-3.5 py-3 text-xs lg:text-[0.8125rem] font-bold uppercase tracking-wider transition-all duration-150 ${
                     isActive
                       ? 'text-white bg-black/15'

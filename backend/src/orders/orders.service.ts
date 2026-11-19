@@ -2,17 +2,27 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Logger,
   Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductionService } from '../production/production.service';
 import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
-import { AuthService } from '../auth/auth.service';
-import { VerificationService } from '../verification/verification.service';
+import { AuthService, loginRequired } from '../auth/auth.service';
+import { ContactVerificationService } from '../verification/contact-verification.service';
+import { normalizeLkPhone } from '../common/phone.util';
+import {
+  maxOpenGuestOrdersPerIp,
+  maxOpenPendingPerUser,
+  reservationTtlMinutes,
+} from '../common/config/limits';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { GuestCheckoutDto } from './dto/guest-checkout.dto';
+import { GuestCheckoutDto, GuestSendCodeDto } from './dto/guest-checkout.dto';
 import { validateMeasurements } from './measurements.config';
 import {
   OrderStatus,
@@ -31,15 +41,34 @@ import {
   orderStatusNotification,
 } from './order.machine';
 
+type Tx = Prisma.TransactionClient;
+
+/** Who/what is placing a guest order — resolved by the controller. */
+export interface GuestCheckoutContext {
+  userAgent?: string;
+  ip?: string;
+  /** Set when the request carried a valid access token (a stale-tab "guest"). */
+  authenticatedUserId?: string;
+}
+
+/** The order a key in selectedAttributes may describe. Anything else is refused (QA P2-3). */
+const ALLOWED_ATTRIBUTE_KEYS = new Set(['size']);
+const MAX_SIZE_LABEL_LENGTH = 50;
+
+/** A tailored ("Custom") line is cut to measurements, never taken from per-size stock. */
+const CUSTOM_SIZE = 'Custom';
+
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private prisma: PrismaService,
     private inventory: InventoryService,
     private production: ProductionService,
     private dispatch: NotificationDispatchService,
     @Optional() private authService?: AuthService,
-    @Optional() private verificationService?: VerificationService,
+    @Optional() private contactVerification?: ContactVerificationService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -48,66 +77,197 @@ export class OrdersService {
     return `TXL-${timestamp}-${random}`;
   }
 
-  async guestCheckout(dto: GuestCheckoutDto, userAgent?: string) {
+  // ─── Guest checkout (QA P0-1, P0-2, P1-8) ─────────────────────────────────
+
+  /**
+   * Send a one-time code to a guest's email or phone so they can pay Cash on
+   * Delivery. Public and rate-limited (controller throttle + per-contact
+   * cooldown/hourly cap). A contact that already has an account is told to
+   * sign in instead — checkout would refuse it anyway.
+   */
+  async sendGuestCode(dto: GuestSendCodeDto) {
+    if (!this.contactVerification) {
+      throw new BadRequestException('Verification is unavailable');
+    }
+    const email = dto.email.trim().toLowerCase();
+    const phone = normalizeLkPhone(dto.phone)!; // DTO @IsLkPhone validated it
+    await this.assertContactIsNew(email, phone);
+
+    const channel = dto.channel ?? VerificationChannel.EMAIL;
+    return this.contactVerification.sendCode(
+      channel === VerificationChannel.EMAIL ? email : phone,
+      channel,
+    );
+  }
+
+  /**
+   * QA P0-1: this endpoint used to FIND any existing account by email/phone and
+   * hand back a logged-in session for it — no password, no code. A guest order
+   * with admin@textileshop.com returned a working ADMIN token.
+   *
+   * The rules now:
+   *  - a request carrying a valid access token orders as THAT user (stale tab);
+   *    no new session is issued;
+   *  - a contact that belongs to an account is refused with LOGIN_REQUIRED;
+   *  - Cash on Delivery needs a code sent to the contact (sendGuestCode), and the
+   *    account is created only after that code checks out (QA P1-8);
+   *  - only a brand-new account ever receives a session.
+   */
+  async guestCheckout(dto: GuestCheckoutDto, ctx: GuestCheckoutContext = {}) {
     if (!this.authService) {
       throw new BadRequestException('Auth service unavailable for guest checkout');
     }
-
-    const { user, session } = await this.authService.provisionOrFindGuestUser(
-      dto.email,
-      dto.phone,
-      dto.fullName,
-      dto.password,
-      userAgent,
-    );
-
-    // If verification code is provided, verify on the fly
-    if (dto.verificationCode && this.verificationService) {
-      try {
-        await this.verificationService.verifyCode(
-          user.id,
-          VerificationChannel.EMAIL,
-          dto.verificationCode,
-        );
-        user.emailVerified = true;
-      } catch {
-        try {
-          await this.verificationService.verifyCode(
-            user.id,
-            VerificationChannel.SMS,
-            dto.verificationCode,
-          );
-          user.phoneVerified = true;
-        } catch {
-          throw new BadRequestException({
-            code: 'OTP_INVALID',
-            message: 'Invalid or expired verification code.',
-          });
-        }
-      }
-    }
-
-    // COD gate: prevent fake courier dispatches by requiring verified contact
-    if (dto.paymentMethod === PaymentMethod.COD) {
-      if (!user.emailVerified && !user.phoneVerified) {
-        throw new BadRequestException({
-          code: 'VERIFICATION_REQUIRED',
-          message: 'Cash on Delivery requires a verified email or phone number OTP.',
-        });
-      }
-    }
-
-    const order = await this.createOrderInternal(user.id, {
+    const orderInput: CreateOrderDto = {
       items: dto.items,
       shippingAddress: dto.shippingAddress,
       billingAddress: dto.billingAddress,
       notes: dto.notes,
+    };
+
+    // A signed-in customer whose tab still showed the guest form. The order is
+    // theirs; the email/phone typed into the form grant nothing.
+    if (ctx.authenticatedUserId) {
+      const order = await this.create(ctx.authenticatedUserId, orderInput);
+      if (dto.paymentMethod === PaymentMethod.COD) {
+        await this.placeCodPayment(order.id);
+      }
+      return { order: await this.reloadOrder(order.id), session: null };
+    }
+
+    const email = dto.email.trim().toLowerCase();
+    const phone = normalizeLkPhone(dto.phone)!; // DTO @IsLkPhone validated it
+    await this.assertContactIsNew(email, phone);
+
+    let emailVerified = false;
+    let phoneVerified = false;
+    if (dto.paymentMethod === PaymentMethod.COD) {
+      // COD dispatches a courier on trust, so the contact must be proven first.
+      if (!dto.verificationCode) {
+        throw new BadRequestException({
+          code: 'VERIFICATION_REQUIRED',
+          message:
+            'Cash on Delivery needs a one-time code. Request one, then enter it to place the order.',
+        });
+      }
+      if (!this.contactVerification) {
+        throw new BadRequestException('Verification is unavailable');
+      }
+      const channel = dto.verificationChannel ?? VerificationChannel.EMAIL;
+      await this.contactVerification.verifyCode(
+        channel === VerificationChannel.EMAIL ? email : phone,
+        channel,
+        dto.verificationCode,
+      );
+      emailVerified = channel === VerificationChannel.EMAIL;
+      phoneVerified = channel === VerificationChannel.SMS;
+    }
+
+    // QA P0-2: one address may hold only a few unpaid guest reservations.
+    await this.assertGuestIpCapacity(ctx.ip);
+
+    const user = await this.authService.createGuestUser({
+      email,
+      phone,
+      fullName: dto.fullName,
+      password: dto.password,
+      emailVerified,
+      phoneVerified,
     });
 
-    return {
-      order,
-      session,
-    };
+    let order: Awaited<ReturnType<OrdersService['createOrderInternal']>>;
+    try {
+      order = await this.createOrderInternal(user.id, orderInput, {
+        clientIp: ctx.ip,
+      });
+    } catch (err) {
+      // No order means no reason for the account to exist: leave nothing
+      // behind that would squat on this email/phone.
+      await this.prisma.user
+        .delete({ where: { id: user.id } })
+        .catch((e) =>
+          this.logger.warn(`Could not remove guest account ${user.id}: ${String(e)}`),
+        );
+      throw err;
+    }
+
+    if (dto.paymentMethod === PaymentMethod.COD) {
+      // QA P1-8: the guest COD branch never created a payment or confirmed the
+      // order, so it sat PENDING forever. Do it here, server-side.
+      await this.placeCodPayment(order.id);
+    }
+
+    const session = await this.authService.issueGuestSession(user, ctx.userAgent);
+    return { order: await this.reloadOrder(order.id), session };
+  }
+
+  /** LOGIN_REQUIRED when the email or phone already belongs to an account. */
+  private async assertContactIsNew(email: string, phone: string) {
+    const existing = await this.prisma.user.findFirst({
+      where: { OR: [{ email }, { phone }] },
+      select: { id: true },
+    });
+    if (existing) throw loginRequired();
+  }
+
+  private async assertGuestIpCapacity(ip?: string) {
+    if (!ip) return;
+    const open = await this.prisma.order.count({
+      where: {
+        clientIp: ip,
+        status: OrderStatus.PENDING,
+        createdAt: { gt: this.reservationCutoff() },
+      },
+    });
+    if (open >= maxOpenGuestOrdersPerIp()) {
+      throw new HttpException(
+        {
+          code: 'TOO_MANY_PENDING_ORDERS',
+          message:
+            'There are already several unpaid orders from your connection. Complete or cancel one, or wait a few minutes.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  /** Orders created before this instant have outlived their reservation. */
+  private reservationCutoff(now = Date.now()): Date {
+    return new Date(now - reservationTtlMinutes() * 60_000);
+  }
+
+  private reloadOrder(orderId: string) {
+    return this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { items: { include: { product: true } }, payment: true },
+    });
+  }
+
+  /**
+   * Record a Cash-on-Delivery payment and confirm the order (SALE). Used by the
+   * guest COD path; the signed-in path goes through PaymentsService.createCodPayment.
+   */
+  private async placeCodPayment(orderId: string) {
+    const order = await this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      select: { total: true },
+    });
+    await this.prisma.payment.upsert({
+      where: { orderId },
+      create: {
+        orderId,
+        amount: order.total,
+        currency: 'LKR',
+        status: PaymentStatus.PENDING, // collected by the courier
+        method: PaymentMethod.COD,
+        paymentPlan: PaymentPlan.FULL,
+      },
+      update: {
+        status: PaymentStatus.PENDING,
+        method: PaymentMethod.COD,
+        currency: 'LKR',
+      },
+    });
+    await this.confirmOrder(orderId);
   }
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -125,10 +285,53 @@ export class OrdersService {
     return this.createOrderInternal(userId, dto);
   }
 
-  private async createOrderInternal(userId: string, dto: CreateOrderDto) {
+  private async createOrderInternal(
+    userId: string,
+    dto: CreateOrderDto,
+    opts: { clientIp?: string } = {},
+  ) {
+    // QA P0-2: one account may hold only a few unpaid reservations at a time.
+    const openForUser = await this.prisma.order.count({
+      where: {
+        userId,
+        status: OrderStatus.PENDING,
+        createdAt: { gt: this.reservationCutoff() },
+      },
+    });
+    if (openForUser >= maxOpenPendingPerUser()) {
+      throw new HttpException(
+        {
+          code: 'TOO_MANY_PENDING_ORDERS',
+          message:
+            'You already have several unpaid orders. Pay for or cancel one before placing another.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
 
-    // Validate all products exist and have sufficient stock
-    const productIds = dto.items.map((item) => item.productId);
+    // QA P2-3: selectedAttributes is snapshotted onto the order line and shown
+    // to staff, so accept only the keys the shop understands, as short strings.
+    for (const item of dto.items) {
+      const attrs = item.selectedAttributes;
+      if (!attrs) continue;
+      for (const [key, value] of Object.entries(attrs)) {
+        if (!ALLOWED_ATTRIBUTE_KEYS.has(key)) {
+          throw new BadRequestException(`Unknown order attribute "${key}"`);
+        }
+        if (
+          typeof value !== 'string' ||
+          !value.trim() ||
+          value.length > MAX_SIZE_LABEL_LENGTH
+        ) {
+          throw new BadRequestException(`Invalid value for "${key}"`);
+        }
+      }
+    }
+
+    // Validate all products exist and have sufficient stock. QA P2-2: compare
+    // against the UNIQUE ids — the same product twice (sizes S and M) is two
+    // lines but one row, and used to fail as "not found or inactive".
+    const productIds = [...new Set(dto.items.map((item) => item.productId))];
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds }, isActive: true },
     });
@@ -139,32 +342,45 @@ export class OrdersService {
       );
     }
 
-    // Check stock availability
+    // Check stock availability (a fast, friendly pre-check — the guarded
+    // UPDATEs inside the transaction are what actually prevent overselling).
+    const requestedPerProduct = new Map<string, number>();
+    for (const item of dto.items) {
+      requestedPerProduct.set(
+        item.productId,
+        (requestedPerProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
     for (const item of dto.items) {
       const product = products.find((p) => p.id === item.productId);
       if (!product) {
         throw new BadRequestException(`Product ${item.productId} not found`);
       }
-      if (product.stockQuantity < item.quantity) {
+      const requested = requestedPerProduct.get(product.id) ?? item.quantity;
+      if (product.stockQuantity < requested) {
         throw new BadRequestException(
           `Insufficient stock for "${product.name}". Available: ${product.stockQuantity}`,
         );
       }
 
-      // Check size stock if item has size specified and product has sizeStock
-      const selectedSize = item.selectedAttributes?.size
-        ? String(item.selectedAttributes.size).trim()
-        : null;
-      if (selectedSize && product.attributes) {
-        const sizeStock = (product.attributes as Record<string, any>)?.sizeStock as
-          | Record<string, number>
-          | undefined;
-        if (sizeStock && typeof sizeStock[selectedSize] === 'number') {
-          if (sizeStock[selectedSize] < item.quantity) {
-            throw new BadRequestException(
-              `Insufficient stock for size "${selectedSize}" of "${product.name}". Available: ${sizeStock[selectedSize]}`,
-            );
-          }
+      // QA P1-6: a product that tracks per-size stock must be ordered in one
+      // of ITS sizes (or tailored to measurements). An unknown size used to
+      // slip past the size check entirely.
+      const sizeStock = this.sizeStockOf(product.attributes);
+      const selectedSize = this.selectedSizeOf(item);
+      if (sizeStock && selectedSize !== CUSTOM_SIZE) {
+        if (!selectedSize) {
+          throw new BadRequestException(`Choose a size for "${product.name}"`);
+        }
+        if (typeof sizeStock[selectedSize] !== 'number') {
+          throw new BadRequestException(
+            `Size "${selectedSize}" is not available for "${product.name}"`,
+          );
+        }
+        if (sizeStock[selectedSize] < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for size "${selectedSize}" of "${product.name}". Available: ${sizeStock[selectedSize]}`,
+          );
         }
       }
     }
@@ -235,6 +451,7 @@ export class OrdersService {
           shippingAddress: dto.shippingAddress as any,
           billingAddress: (dto.billingAddress || dto.shippingAddress) as any,
           notes: dto.notes,
+          clientIp: opts.clientIp ?? null,
           items: {
             create: orderItems,
           },
@@ -260,25 +477,23 @@ export class OrdersService {
           product?.name,
         );
 
-        // Decrement sizeStock in product.attributes if size is specified
-        const selectedSize = item.selectedAttributes?.size
-          ? String(item.selectedAttributes.size).trim()
-          : null;
-        if (selectedSize && product?.attributes) {
-          const currentAttrs = (product.attributes as Record<string, any>) || {};
-          const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
-          if (typeof sizeStock[selectedSize] === 'number') {
-            sizeStock[selectedSize] = Math.max(0, sizeStock[selectedSize] - item.quantity);
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                attributes: {
-                  ...currentAttrs,
-                  sizeStock,
-                },
-              },
-            });
-          }
+        // QA P1-6: per-size stock is taken by ONE guarded UPDATE inside this
+        // transaction. It used to be a read (outside the transaction) followed
+        // by a full write-back, so parallel orders all saw the same count and
+        // ten orders went through for two size-M shirts.
+        const selectedSize = this.selectedSizeOf(item);
+        if (
+          selectedSize &&
+          selectedSize !== CUSTOM_SIZE &&
+          this.sizeStockOf(product?.attributes)
+        ) {
+          await this.inventory.reserveSize(
+            tx,
+            item.productId,
+            selectedSize,
+            item.quantity,
+            product?.name,
+          );
         }
       }
 
@@ -472,121 +687,230 @@ export class OrdersService {
       ? 'A refund will be processed manually.'
       : undefined;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const items = await tx.orderItem.findMany({ where: { orderId } });
-      for (const item of items) {
-        if (order.status === OrderStatus.PENDING) {
-          // Not yet sold — free the reservation.
-          await this.inventory.release(
-            tx,
-            item.productId,
-            item.quantity,
-            orderId,
-          );
-        } else {
-          // Already sold (CONFIRMED) — return units to available.
-          await this.inventory.restock(
-            tx,
-            item.productId,
-            item.quantity,
-            orderId,
-          );
-        }
-
-        // Return size stock if size was specified
-        const selectedAttrs = item.selectedAttributes as Record<string, any> | null;
-        const size = selectedAttrs?.size ? String(selectedAttrs.size).trim() : null;
-        if (size) {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId },
-            select: { attributes: true },
-          });
-          const currentAttrs = (product?.attributes as Record<string, any>) || {};
-          const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
-          if (typeof sizeStock[size] === 'number') {
-            sizeStock[size] += item.quantity;
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                attributes: {
-                  ...currentAttrs,
-                  sizeStock,
-                },
-              },
-            });
-          }
-        }
+    return this.prisma.$transaction(async (tx) => {
+      // QA P1-9 / P1-2: lock the order row and re-check it. The checks above
+      // read it without a lock, so a worker starting a task (which moves the
+      // order to IN_PRODUCTION) or a payment confirming it could slip in
+      // between. production.act() and confirmOrder() take the same lock, so
+      // these now run one after another instead of interleaving.
+      const current = await this.lockOrderStatus(tx, orderId);
+      if (current !== order.status) {
+        throw new ConflictException(
+          `This order changed to ${current.toLowerCase().replace('_', ' ')} while you were cancelling it. Reload and try again.`,
+        );
       }
 
-      const result = await tx.order.update({
-        where: { id: orderId },
-        data: { status: OrderStatus.CANCELLED },
-      });
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId,
-          fromStatus: order.status,
-          toStatus: OrderStatus.CANCELLED,
-          changedBy: actor.id,
-          note: options.note,
-        },
-      });
-
-      if (order.payment) {
-        if (order.payment.paymentPlan === PaymentPlan.INSTALLMENT) {
-          // Void any uncollected installments so no phantom debts remain on cancelled order
-          await tx.installment.updateMany({
-            where: {
-              paymentId: order.payment.id,
-              status: PaymentStatus.PENDING,
-            },
-            data: { status: PaymentStatus.FAILED },
-          });
-
-          await tx.payment.update({
-            where: { orderId },
-            data: {
-              status: hasPaidInstallments
-                ? PaymentStatus.REFUNDED
-                : PaymentStatus.FAILED,
-            },
-          });
-        } else if (order.payment.status === PaymentStatus.COMPLETED) {
-          await tx.payment.update({
-            where: { orderId },
-            data: { status: PaymentStatus.REFUNDED },
-          });
-        } else if (order.payment.status === PaymentStatus.PENDING) {
-          // Nothing was ever collected — there is nothing to refund, only a
-          // promise that will now never be honoured.
-          await tx.payment.update({
-            where: { orderId },
-            data: { status: PaymentStatus.FAILED },
-          });
-        }
-      }
-
-      const copy = orderStatusNotification(
-        OrderStatus.CANCELLED,
-        order.orderNumber,
+      return this.applyCancellation(tx, {
+        order,
+        changedBy: actor.id,
+        note: options.note,
         refundDetail,
-      );
-      if (copy) {
-        await tx.notification.create({
-          data: {
-            userId: order.userId,
-            type: 'order.status_changed',
-            targetId: orderId,
-            title: copy.title,
-            body: copy.body,
+        hasPaidInstallments,
+      });
+    });
+  }
+
+  /**
+   * QA P0-2: release the stock held by an unpaid order once its reservation
+   * has expired. Nothing used to do this — every abandoned PayHere/installment
+   * checkout (and every abusive one) held its stock forever.
+   *
+   * Runs one order per transaction behind the same row lock as cancel() and
+   * confirmOrder(), and re-checks under that lock, so a payment confirming the
+   * order at the same moment wins cleanly or loses cleanly, never half-and-half.
+   * Returns false when the order no longer qualifies (paid, COD, not PENDING).
+   */
+  async expireUnpaidOrder(orderId: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const status = await this.lockOrderStatus(tx, orderId).catch(() => null);
+      if (status !== OrderStatus.PENDING) return false;
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: orderId },
+        include: { payment: { include: { installments: true } } },
+      });
+      if (order.createdAt > this.reservationCutoff()) return false;
+      // COD is confirmed at placement; a completed payment means the money is
+      // in and confirmation is on its way. Neither is an abandoned checkout.
+      if (order.payment?.method === PaymentMethod.COD) return false;
+      if (order.payment?.status === PaymentStatus.COMPLETED) return false;
+      const hasPaidInstallments =
+        order.payment?.installments.some(
+          (i) => i.status === PaymentStatus.COMPLETED,
+        ) ?? false;
+      if (hasPaidInstallments) return false;
+
+      await this.applyCancellation(tx, {
+        order,
+        changedBy: null,
+        note: `Automatically cancelled — payment was not received within ${reservationTtlMinutes()} minutes.`,
+        hasPaidInstallments: false,
+      });
+      return true;
+    });
+  }
+
+  /** Unpaid PENDING orders whose reservation window has passed (oldest first). */
+  async findExpiredUnpaidOrderIds(limit = 100): Promise<string[]> {
+    const rows = await this.prisma.order.findMany({
+      where: {
+        status: OrderStatus.PENDING,
+        createdAt: { lt: this.reservationCutoff() },
+        OR: [
+          { payment: null },
+          {
+            payment: {
+              method: { not: PaymentMethod.COD },
+              status: { not: PaymentStatus.COMPLETED },
+            },
           },
-        });
+        ],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+    return rows.map((r) => r.id);
+  }
+
+  /** SELECT … FOR UPDATE on the order row; the one lock every status writer shares. */
+  private async lockOrderStatus(tx: Tx, orderId: string): Promise<OrderStatus> {
+    const rows = await tx.$queryRaw<Array<{ status: OrderStatus }>>`
+      SELECT status FROM orders WHERE id = ${orderId}::uuid FOR UPDATE`;
+    if (rows.length === 0) throw new NotFoundException('Order not found');
+    return rows[0].status;
+  }
+
+  /**
+   * The body of a cancellation, shared by the customer/admin cancel and the
+   * reservation-expiry sweep. Caller must hold the order row lock.
+   */
+  private async applyCancellation(
+    tx: Tx,
+    input: {
+      order: {
+        id: string;
+        status: OrderStatus;
+        orderNumber: string;
+        userId: string;
+        payment: {
+          id: string;
+          status: PaymentStatus;
+          paymentPlan: PaymentPlan;
+        } | null;
+      };
+      changedBy: string | null;
+      note?: string;
+      refundDetail?: string;
+      hasPaidInstallments: boolean;
+    },
+  ) {
+    const { order } = input;
+    const orderId = order.id;
+
+    const items = await tx.orderItem.findMany({ where: { orderId } });
+    for (const item of items) {
+      if (order.status === OrderStatus.PENDING) {
+        // Not yet sold — free the reservation.
+        await this.inventory.release(tx, item.productId, item.quantity, orderId);
+      } else {
+        // Already sold (CONFIRMED) — return units to available.
+        await this.inventory.restock(tx, item.productId, item.quantity, orderId);
       }
 
-      return result;
+      // Return per-size stock with one guarded UPDATE (QA P1-6) — the old
+      // read-modify-write here lost updates to concurrent checkouts.
+      const size = this.selectedSizeOf(item);
+      if (size && size !== CUSTOM_SIZE) {
+        await this.inventory.restoreSize(tx, item.productId, size, item.quantity);
+      }
+    }
+
+    const result = await tx.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.CANCELLED },
+    });
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        fromStatus: order.status,
+        toStatus: OrderStatus.CANCELLED,
+        changedBy: input.changedBy,
+        note: input.note,
+      },
     });
 
-    return updated;
+    if (order.payment) {
+      if (order.payment.paymentPlan === PaymentPlan.INSTALLMENT) {
+        // Void any uncollected installments so no phantom debts remain on cancelled order
+        await tx.installment.updateMany({
+          where: {
+            paymentId: order.payment.id,
+            status: PaymentStatus.PENDING,
+          },
+          data: { status: PaymentStatus.FAILED },
+        });
+
+        await tx.payment.update({
+          where: { orderId },
+          data: {
+            status: input.hasPaidInstallments
+              ? PaymentStatus.REFUNDED
+              : PaymentStatus.FAILED,
+          },
+        });
+      } else if (order.payment.status === PaymentStatus.COMPLETED) {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+      } else if (order.payment.status === PaymentStatus.PENDING) {
+        // Nothing was ever collected — there is nothing to refund, only a
+        // promise that will now never be honoured.
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+    }
+
+    // QA P1-9: a cancelled order's production tasks are dead work. The order
+    // can only be cancelled before any task has started (IN_PRODUCTION is not
+    // cancellable), so the tasks are unstarted; they stay as history, but the
+    // board, the worker queue and production.act() all exclude cancelled
+    // orders, so nobody cuts cloth for an order that no longer exists.
+
+    const copy = orderStatusNotification(
+      OrderStatus.CANCELLED,
+      order.orderNumber,
+      input.refundDetail,
+    );
+    if (copy) {
+      await tx.notification.create({
+        data: {
+          userId: order.userId,
+          type: 'order.status_changed',
+          targetId: orderId,
+          title: copy.title,
+          body: copy.body,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /** products.attributes.sizeStock, when the product tracks stock per size. */
+  private sizeStockOf(attributes: unknown): Record<string, number> | null {
+    const sizeStock = (attributes as Record<string, unknown> | null)?.sizeStock;
+    return sizeStock && typeof sizeStock === 'object' && !Array.isArray(sizeStock)
+      ? (sizeStock as Record<string, number>)
+      : null;
+  }
+
+  private selectedSizeOf(item: { selectedAttributes?: unknown }): string | null {
+    const size = (item.selectedAttributes as Record<string, unknown> | null)?.size;
+    return typeof size === 'string' && size.trim() ? size.trim() : null;
   }
 
   /**
@@ -888,7 +1212,11 @@ export class OrdersService {
   private computeAdminActions(order: {
     status: OrderStatus;
     hasProductionTasks: boolean;
-    payment: { method: PaymentMethod; status: PaymentStatus } | null;
+    payment: {
+      method: PaymentMethod;
+      status: PaymentStatus;
+      paymentPlan: PaymentPlan;
+    } | null;
   }) {
     const allowed = new Set(
       allowedOrderActions({
@@ -897,7 +1225,14 @@ export class OrdersService {
       }),
     );
 
-    const confirmAllowed = order.status === OrderStatus.PENDING;
+    // QA P1-7: "Confirm" marks the WHOLE payment received. On an installment
+    // plan that used to flip the payment to COMPLETED while every installment
+    // stayed unpaid — and reported the full amount as revenue on day one. An
+    // installment order is confirmed by recording its first installment.
+    const isInstallmentPlan =
+      order.payment?.paymentPlan === PaymentPlan.INSTALLMENT;
+    const confirmAllowed =
+      order.status === OrderStatus.PENDING && !isInstallmentPlan;
     const markCollectedAllowed =
       order.payment?.method === PaymentMethod.COD &&
       order.payment?.status !== PaymentStatus.COMPLETED;
@@ -915,7 +1250,11 @@ export class OrdersService {
         action: 'confirm' as const,
         label: 'Confirm order',
         allowed: confirmAllowed,
-        reason: confirmAllowed ? null : 'Only a pending order can be confirmed',
+        reason: confirmAllowed
+          ? null
+          : isInstallmentPlan && order.status === OrderStatus.PENDING
+            ? 'Installment order: record the first installment to confirm it'
+            : 'Only a pending order can be confirmed',
       },
       {
         action: 'cancel' as const,

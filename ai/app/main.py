@@ -62,7 +62,20 @@ async def lifespan(app: FastAPI):
     await _state["pool"].close()
 
 
-app = FastAPI(title="Textile AI Service", version="1.0.0", lifespan=lifespan)
+# QA P2-11: the interactive docs were public in production. They are now off
+# there unless AI_DOCS_ENABLED=true. Settings are read at import, so a production
+# deploy that still uses a published default secret fails to start (by design).
+_boot_settings = get_settings()
+_docs = _boot_settings.docs_enabled
+
+app = FastAPI(
+    title="Textile AI Service",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
+)
 
 
 def require_internal_key(
@@ -94,7 +107,7 @@ async def root() -> dict:
         "version": "1.0.0",
         "llm_enabled": settings.llm_enabled,
         "llm_provider": settings.llm_provider,
-        "docs": "/docs",
+        **({"docs": "/docs"} if settings.docs_enabled else {}),
         "health": "/health",
     }
 

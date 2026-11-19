@@ -1,12 +1,10 @@
 import { MetadataRoute } from 'next';
+import { getResolvedApiUrl } from '@/lib/api-url';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nandanatextile.lk';
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.VERCEL || process.env.NODE_ENV === 'production'
-      ? 'https://textile-automation-platform.onrender.com/api/v1'
-      : 'http://localhost:3001/api/v1');
+  // Shared rule (QA P1-10): only a production deployment reads the live API.
+  const apiUrl = getResolvedApiUrl();
 
   // Base static routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -22,12 +20,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
-    {
-      url: `${baseUrl}/returns-exchange`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
+    // Customer-information pages.
+    ...['/contact', '/returns-exchange', '/shipping', '/size-guide', '/privacy', '/terms'].map(
+      (path): MetadataRoute.Sitemap[number] => ({
+        url: `${baseUrl}${path}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      }),
+    ),
   ];
 
   // Dynamic product routes

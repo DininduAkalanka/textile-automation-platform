@@ -47,7 +47,7 @@ export function WomensWearSection() {
       className="w-full py-12 sm:py-16 bg-neutral-50/50 border-t border-b border-neutral-100"
     >
       <div className="container-wide">
-        {/* Thilakawardhana-style Editorial Header */}
+        {/* Editorial Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between gap-4">
             <div>

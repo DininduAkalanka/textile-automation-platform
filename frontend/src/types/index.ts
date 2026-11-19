@@ -22,6 +22,8 @@ export interface Category {
   imageUrl?: string;
   /** Depth capped at 2 (plan doc 06 §5.2) — null means top-level. */
   parentId?: string | null;
+  /** Products a shopper can see (archived excluded); drives the store menu. */
+  activeProductCount?: number;
   _count?: {
     products: number;
     children?: number;
@@ -191,11 +193,27 @@ export interface InstallmentSchedule {
   paymentId: string;
   orderId: string;
   orderNumber: string;
+  /** Order status — a cancelled order's installments can no longer be paid. */
+  orderStatus?: string;
   totalAmount: number;
+  currency?: string;
   paymentPlan: 'FULL' | 'INSTALLMENT';
   installmentCount: number;
   overallStatus: string;
   installments: Installment[];
+}
+
+/** POST /payments/installments/create — the schedule that was just created. */
+export interface InstallmentPlanResponse {
+  paymentId: string;
+  orderId: string;
+  amount: number | string;
+  currency: string;
+  status: string;
+  paymentPlan: 'INSTALLMENT';
+  installmentCount: number;
+  firstInstallmentAmount: number | string;
+  installments: Array<Pick<Installment, 'id' | 'installmentNo' | 'amount' | 'dueDate' | 'status'>>;
 }
 
 export interface PaymentIntentResponse {

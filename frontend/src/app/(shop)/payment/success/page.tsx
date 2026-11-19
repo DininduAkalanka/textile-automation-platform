@@ -108,7 +108,7 @@ function PaymentSuccessContent() {
               Thank You For Your Order!
             </h1>
             <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
-              Your order has been confirmed and routed directly to our production floor. A confirmation SMS and email have been dispatched.
+              Your payment is confirmed and we are now preparing your order. You can follow its progress any time in My Orders.
             </p>
 
             {orderId && (

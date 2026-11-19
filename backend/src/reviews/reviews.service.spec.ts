@@ -8,6 +8,11 @@ import { OrderStatus, Prisma, ReviewStatus } from '@prisma/client';
 
 import { ReviewsService } from './reviews.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
+
+// A filename the upload endpoint would issue, and the API origin under test.
+const PHOTO = '0f8fad5b-d9cb-469f-a165-70867728950e.jpg';
+const API = 'https://api.shop.test';
 
 /**
  * Reviews are gated on delivery and re-verified server-side on every write —
@@ -35,8 +40,15 @@ describe('ReviewsService', () => {
       delete: jest.Mock;
     };
     reviewReport: { create: jest.Mock };
+    uploadedImage: { findMany: jest.Mock; updateMany: jest.Mock };
     $transaction: jest.Mock;
   };
+  const savedApiUrl = process.env.PUBLIC_API_URL;
+
+  afterEach(() => {
+    if (savedApiUrl === undefined) delete process.env.PUBLIC_API_URL;
+    else process.env.PUBLIC_API_URL = savedApiUrl;
+  });
 
   beforeEach(async () => {
     prisma = {
@@ -57,11 +69,23 @@ describe('ReviewsService', () => {
         delete: jest.fn(),
       },
       reviewReport: { create: jest.fn() },
+      // The reviewer owns PHOTO unless a test says otherwise.
+      uploadedImage: {
+        findMany: jest.fn().mockResolvedValue([{ filename: PHOTO }]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       $transaction: jest.fn((ops) => Promise.all(ops)),
     };
+    process.env.PUBLIC_API_URL = API;
 
+    // The REAL UploadsService over the same Prisma mock, so the photo
+    // ownership rules are exercised, not stubbed.
     const moduleRef = await Test.createTestingModule({
-      providers: [ReviewsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ReviewsService,
+        UploadsService,
+        { provide: PrismaService, useValue: prisma },
+      ],
     }).compile();
 
     service = moduleRef.get(ReviewsService);
@@ -136,7 +160,8 @@ describe('ReviewsService', () => {
       comfortRating: 5,
       sizeFeedback: 'TRUE_TO_SIZE' as const,
       wouldRecommend: true,
-      images: ['https://cdn/img1.jpg'],
+      // Sent with a foreign origin on purpose: it must be stored on the API's.
+      images: [`https://evil.example/uploads/${PHOTO}`],
     };
 
     it('rejects when the order does not belong to the user / is not delivered / lacks the product', async () => {
@@ -168,10 +193,39 @@ describe('ReviewsService', () => {
           data: expect.objectContaining({
             isVerifiedPurchase: true,
             hasImages: true,
+            images: [`${API}/uploads/${PHOTO}`],
           }),
         }),
       );
+      expect(prisma.uploadedImage.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            filename: { in: [PHOTO] },
+            uploadedById: 'u1',
+          }),
+        }),
+      );
+      expect(prisma.uploadedImage.updateMany).toHaveBeenCalled();
       expect(result).toEqual(expect.objectContaining({ id: 'rev1' }));
+    });
+
+    it('QA P2-15: refuses a photo hosted anywhere but the shop', async () => {
+      prisma.order.findFirst.mockResolvedValue({ id: 'o1' });
+
+      await expect(
+        service.create('u1', { ...dto, images: ['https://cdn.example/x.jpg'] }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.review.create).not.toHaveBeenCalled();
+    });
+
+    it("QA P2-15: refuses another customer's uploaded photo", async () => {
+      prisma.order.findFirst.mockResolvedValue({ id: 'o1' });
+      prisma.uploadedImage.findMany.mockResolvedValue([]); // not this user's
+
+      await expect(service.create('u1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.review.create).not.toHaveBeenCalled();
     });
 
     it('turns a duplicate-submit race (unique constraint) into a friendly 400, not a 500', async () => {
@@ -208,6 +262,44 @@ describe('ReviewsService', () => {
       await expect(service.update('missing', 'u1', {})).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it('QA P2-15: keeps photos already on the review and verifies new ones', async () => {
+      const legacy = 'https://cdn.example/written-before-the-check.jpg';
+      prisma.review.findUnique.mockResolvedValue({
+        id: 'rev1',
+        userId: 'u1',
+        images: [legacy],
+      });
+      prisma.review.update.mockResolvedValue({ id: 'rev1' });
+
+      await service.update('rev1', 'u1', {
+        images: [legacy, `/uploads/${PHOTO}`],
+      });
+
+      expect(prisma.review.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            images: [legacy, `${API}/uploads/${PHOTO}`],
+            hasImages: true,
+          }),
+        }),
+      );
+    });
+
+    it('QA P2-15: an edit cannot add a photo from an outside site', async () => {
+      prisma.review.findUnique.mockResolvedValue({
+        id: 'rev1',
+        userId: 'u1',
+        images: [],
+      });
+
+      await expect(
+        service.update('rev1', 'u1', {
+          images: ['https://evil.example/a.jpg'],
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.review.update).not.toHaveBeenCalled();
     });
   });
 

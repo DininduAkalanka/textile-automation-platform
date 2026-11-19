@@ -24,6 +24,22 @@ function clearRoleCookie() {
   document.cookie = `${ROLE_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
+/**
+ * Whether this browser was signed in before (a stored user or the role
+ * cookie). Only then can a refresh cookie exist worth trying: an anonymous
+ * visitor used to send a doomed POST /auth/refresh — a 401 in the console —
+ * on every single page load.
+ */
+function hadSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.localStorage.getItem('user')) return true;
+  } catch {
+    // Storage blocked: fall through to the cookie check.
+  }
+  return document.cookie.split('; ').some((c) => c.startsWith(`${ROLE_COOKIE}=`) && c.length > ROLE_COOKIE.length + 1);
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -136,6 +152,10 @@ export const useAuthStore = create<AuthState>((set) => {
 
     loadUser: async () => {
       const existingToken = getToken();
+      if (!existingToken && !hadSession()) {
+        set({ isAuthenticated: false, isLoading: false });
+        return;
+      }
       if (!existingToken) {
         try {
           const refreshed = await api.refresh();

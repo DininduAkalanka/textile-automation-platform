@@ -127,6 +127,13 @@ model User {
   passwordHash  String   @map("password_hash")
   resetTokenHash String? @unique @map("reset_token_hash")
   resetExpiresAt DateTime? @map("reset_expires_at")
+  /// Which contact the outstanding reset link was delivered to. Completing the
+  /// reset marks that contact verified — receiving the link proves ownership,
+  /// which is how the owner of a guest-squatted email claims it (QA P1-8).
+  resetChannel   VerificationChannel? @map("reset_channel")
+  /// Per-account brute-force lockout (QA P1-4).
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
   firstName     String   @map("first_name")
   lastName      String   @map("last_name")
   phone         String?  @unique // canonical +947XXXXXXXX (see phone.util.ts)
@@ -147,6 +154,7 @@ model User {
   reviews            Review[]
   reviewHelpfulVotes ReviewHelpfulVote[]
   reviewReports      ReviewReport[]
+  uploadedImages     UploadedImage[]
 
   @@index([email])
   @@index([phone])
@@ -188,6 +196,49 @@ model VerificationCode {
 
   @@index([userId, channel, createdAt])
   @@map("verification_codes")
+}
+
+/// One-time codes for a guest checkout (QA P1-8). Keyed to the CONTACT itself
+/// (canonical email or +947 phone), not to a user — a guest proves they own an
+/// email/phone BEFORE any account is created for it, so no account is ever
+/// created for a contact nobody has verified. Same limits as VerificationCode.
+model ContactVerificationCode {
+  id         String              @id @default(uuid()) @db.Uuid
+  contact    String
+  channel    VerificationChannel
+  codeHash   String              @map("code_hash")
+  expiresAt  DateTime            @map("expires_at")
+  attempts   Int                 @default(0)
+  consumedAt DateTime?           @map("consumed_at")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  @@index([contact, channel, createdAt])
+  @@map("contact_verification_codes")
+}
+
+enum UploadPurpose {
+  CATALOGUE
+  REVIEW
+}
+
+/// Every image the upload endpoints wrote to disk (QA P2-15). It is how a
+/// review proves a photo is the reviewer's own upload, how the per-customer
+/// daily quota is counted, and how review photos that were never attached to
+/// a review are found and removed.
+model UploadedImage {
+  id           String        @id @default(uuid()) @db.Uuid
+  filename     String        @unique
+  uploadedById String?       @map("uploaded_by_id") @db.Uuid
+  purpose      UploadPurpose
+  sizeBytes    Int           @map("size_bytes")
+  attachedAt   DateTime?     @map("attached_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([uploadedById, purpose, createdAt])
+  @@index([purpose, attachedAt, createdAt])
+  @@map("uploaded_images")
 }
 
 model Category {
@@ -276,6 +327,9 @@ model Order {
   shippingAddress Json?       @map("shipping_address")
   billingAddress  Json?       @map("billing_address")
   notes           String?     @db.Text
+  /// Set only for guest checkouts: caps how many unpaid reservations one
+  /// address may hold at once (QA P0-2).
+  clientIp        String?     @map("client_ip")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
@@ -291,6 +345,7 @@ model Order {
   @@index([status])
   @@index([orderNumber])
   @@index([createdAt])
+  @@index([clientIp, status, createdAt])
   @@map("orders")
 }
 
@@ -322,7 +377,7 @@ model Payment {
   orderId          String        @unique @map("order_id") @db.Uuid
   transactionId    String?       @unique @map("transaction_id")
   amount           Decimal       @db.Decimal(10, 2)
-  currency         String        @default("USD")
+  currency         String        @default("LKR")
   status           PaymentStatus @default(PENDING)
   method           PaymentMethod @default(STRIPE)
   paymentPlan      PaymentPlan   @default(FULL) @map("payment_plan")
@@ -347,6 +402,8 @@ model Installment {
   dueDate         DateTime      @map("due_date")
   status          PaymentStatus @default(PENDING)
   stripePaymentId String?       @map("stripe_payment_id")
+  /// The gateway's id for the payment that settled THIS installment (QA P1-7).
+  transactionId   String?       @map("transaction_id")
   paidAt          DateTime?     @map("paid_at")
   createdAt       DateTime      @default(now()) @map("created_at")
 
@@ -355,6 +412,7 @@ model Installment {
   @@index([paymentId])
   @@index([status])
   @@index([dueDate])
+  @@index([transactionId])
   @@map("installments")
 }
 
@@ -443,7 +501,12 @@ model PaymentWebhookEvent {
   processingError String?  @map("processing_error")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  @@unique([gateway, transactionId, eventStatus]) // D5: idempotent — replays no-op
+  // D5 idempotency, QA P1-1: replays are deduplicated by a PARTIAL unique index
+  // on these columns WHERE signature_valid (see migration
+  // 20261119000000_qa_p0_p1_remediation). Only a verified event can claim the
+  // key, so a forged notify can never make the genuine one look like a replay.
+  // Prisma cannot express a partial index, so the schema keeps a plain one.
+  @@index([gateway, transactionId, eventStatus])
   @@map("payment_webhook_events")
 }
 

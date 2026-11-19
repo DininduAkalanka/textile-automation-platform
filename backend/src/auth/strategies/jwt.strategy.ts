@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -11,7 +13,10 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     const secret = configService.get<string>('JWT_SECRET');
     if (!secret) {
       // Fail fast: never validate tokens against a predictable fallback secret.
@@ -26,11 +31,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload) {
+  /**
+   * QA P1-5: a signature check alone trusted a token for its whole lifetime —
+   * a deactivated worker or admin kept working until it expired, and a demoted
+   * admin kept the ADMIN claim. Every request now confirms the account still
+   * exists and is active, and takes the role from the database, not the token.
+   * (One primary-key lookup per authenticated request.)
+   */
+  async validate(payload: JwtPayload) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { isActive: true, role: true, email: true },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
     return {
       sub: payload.sub,
-      email: payload.email,
-      role: payload.role,
+      email: user.email,
+      role: user.role,
     };
   }
 }

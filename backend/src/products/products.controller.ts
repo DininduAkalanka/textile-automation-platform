@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  ParseFloatPipe,
   ParseUUIDPipe,
   Query,
   UseGuards,
@@ -22,6 +23,19 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 
+/**
+ * A recommendation-list size from the query string, clamped to 1–24. A
+ * negative value used to reach a raw SQL LIMIT (a 500) and a huge one asked
+ * the database for everything.
+ */
+function recommendationLimit(raw: unknown): number {
+  const n = Math.trunc(Number(raw));
+  if (raw === undefined || raw === null || raw === '' || !Number.isFinite(n)) {
+    return 8;
+  }
+  return Math.min(24, Math.max(1, n));
+}
+
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
@@ -34,7 +48,10 @@ export class ProductsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
-    @Query('categoryId') categoryId?: string,
+    // QA P2-4: a malformed id or price used to reach Prisma and come back as a
+    // 500; it is a client mistake, so it is now a 400 at the door.
+    @Query('categoryId', new ParseUUIDPipe({ optional: true }))
+    categoryId?: string,
     @Query('categorySlug') categorySlug?: string,
     @Query('category') category?: string,
     @Query('subCategory') subCategory?: string,
@@ -42,8 +59,10 @@ export class ProductsController {
     @Query('offers') offers?: string,
     @Query('tier') tier?: string,
     @Query('period') period?: string,
-    @Query('minPrice') minPrice?: number,
-    @Query('maxPrice') maxPrice?: number,
+    @Query('minPrice', new ParseFloatPipe({ optional: true }))
+    minPrice?: number,
+    @Query('maxPrice', new ParseFloatPipe({ optional: true }))
+    maxPrice?: number,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
@@ -87,7 +106,7 @@ export class ProductsController {
   ) {
     return this.productsService.frequentlyBoughtTogether(
       id,
-      limit ? Number(limit) : 8,
+      recommendationLimit(limit),
     );
   }
 
@@ -99,7 +118,7 @@ export class ProductsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('limit') limit?: number,
   ) {
-    return this.productsService.relatedProducts(id, limit ? Number(limit) : 8);
+    return this.productsService.relatedProducts(id, recommendationLimit(limit));
   }
 
   // ─── Admin Endpoints ───────────────────────────────────

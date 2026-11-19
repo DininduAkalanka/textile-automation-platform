@@ -33,20 +33,35 @@ const makeUser = (over: Record<string, unknown> = {}) => ({
 describe('AuthService (dual identity + OTP)', () => {
   let service: AuthService;
   let prisma: {
-    user: { findFirst: jest.Mock; findUnique: jest.Mock; create: jest.Mock };
-    refreshToken: { create: jest.Mock };
+    user: {
+      findFirst: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
+    refreshToken: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      updateMany: jest.Mock;
+    };
   };
   let jwt: { sign: jest.Mock };
   let verification: { sendCode: jest.Mock };
 
   beforeEach(async () => {
+    (bcrypt.compare as jest.Mock).mockReset();
     prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue(null),
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn().mockResolvedValue({ failedLoginAttempts: 1 }),
       },
-      refreshToken: { create: jest.fn().mockResolvedValue({}) },
+      refreshToken: {
+        create: jest.fn().mockResolvedValue({}),
+        findUnique: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
     jwt = { sign: jest.fn().mockReturnValue('access-token') };
     verification = { sendCode: jest.fn().mockResolvedValue({}) };
@@ -183,6 +198,142 @@ describe('AuthService (dual identity + OTP)', () => {
         password: 'Password1',
       });
       expect(res.accessToken).toBe('access-token');
+    });
+
+    // ─── QA P1-4 ────────────────────────────────────────────────────────
+    it('spends bcrypt time on an UNKNOWN identifier too (no timing oracle)', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.login({ identifier: 'nobody@x.com', password: 'whatever1' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      // The same expensive comparison a real account would cost.
+      expect(bcrypt.compare).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts a wrong password against the account', async () => {
+      prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 0 }));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.login({ identifier: 'a@b.com', password: 'nope' } as any),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { failedLoginAttempts: { increment: 1 } },
+        }),
+      );
+    });
+
+    it('locks the account on the 5th failure in a row', async () => {
+      prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 4 }));
+      prisma.user.update.mockResolvedValueOnce({ failedLoginAttempts: 5 });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.login({ identifier: 'a@b.com', password: 'nope' } as any),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.user.update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            failedLoginAttempts: 0,
+            lockedUntil: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    it('refuses a locked account WITHOUT checking the password', async () => {
+      prisma.user.findUnique.mockResolvedValue(
+        makeUser({ lockedUntil: new Date(Date.now() + 10 * 60_000) }),
+      );
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const err = await service
+        .login({ identifier: 'a@b.com', password: 'Password1' })
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.getResponse()).toMatchObject({ code: 'ACCOUNT_LOCKED' });
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+
+    it('a correct password clears earlier failures', async () => {
+      prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 3 }));
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await service.login({ identifier: 'a@b.com', password: 'Password1' });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { failedLoginAttempts: 0, lockedUntil: null },
+        }),
+      );
+    });
+  });
+
+  // ─── QA P1-5 ──────────────────────────────────────────────────────────
+  describe('refresh', () => {
+    it('refuses a deactivated account and revokes all of its refresh tokens', async () => {
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 't1',
+        userId: 'u1',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        user: makeUser({ isActive: false }),
+      });
+
+      await expect(service.refresh('raw-token')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'u1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── QA P0-1 ──────────────────────────────────────────────────────────
+  describe('createGuestUser', () => {
+    it('never looks up existing accounts; a duplicate contact is LOGIN_REQUIRED', async () => {
+      const { Prisma } = jest.requireActual('@prisma/client');
+      prisma.user.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+
+      const err = await service
+        .createGuestUser({
+          email: 'admin@textileshop.com',
+          phone: '+94770000000',
+          fullName: 'Attacker',
+          emailVerified: false,
+          phoneVerified: false,
+        })
+        .catch((e) => e);
+
+      expect(err).toBeInstanceOf(ConflictException);
+      expect(err.getResponse()).toMatchObject({ code: 'LOGIN_REQUIRED' });
+      expect(prisma.user.findFirst).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+    });
+
+    it('creates only CUSTOMER accounts', async () => {
+      prisma.user.create.mockResolvedValue(makeUser());
+      await service.createGuestUser({
+        email: 'new@x.com',
+        phone: '+94771111111',
+        fullName: 'New Guest',
+        emailVerified: false,
+        phoneVerified: false,
+      });
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ role: 'CUSTOMER' }),
+        }),
+      );
     });
   });
 });

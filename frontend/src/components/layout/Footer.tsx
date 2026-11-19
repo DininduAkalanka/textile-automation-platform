@@ -1,183 +1,104 @@
 import Link from 'next/link';
 
 import { BrandMark } from '@/components/brand/brand-mark';
+import { SocialIcon } from '@/components/brand/social-icon';
+import {
+  CONTACT_EMAIL,
+  PHONE_LANDLINE,
+  PHONE_MOBILE,
+  SHOWROOM,
+  SITE_NAME,
+  activeSocialLinks,
+  whatsappUrl,
+} from '@/lib/site-config';
 
-/* ── Social icon paths ──────────────────────────────────────── */
-const SOCIAL = [
-  {
-    id: 'facebook',
-    label: 'Facebook',
-    href: '#',
-    path: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z',
-    fill: true,
-  },
-  {
-    id: 'instagram',
-    label: 'Instagram',
-    href: '#',
-    path: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01',
-    fill: false,
-    extra: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>',
-  },
-  {
-    id: 'whatsapp',
-    label: 'WhatsApp',
-    href: 'https://wa.me/94717088445',
-    path: 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z',
-    fill: true,
-  },
-];
-
-/* ── Link columns ───────────────────────────────────────────── */
+/* ── Link columns ───────────────────────────────────────────
+ * Every link here must open a real page with real content. The footer used to
+ * carry seven "#" links (socials, shipping, size guide, FAQ, privacy, terms). */
 const COLS = [
   {
     heading: 'Shop',
     links: [
-      { label: 'New Arrivals',          href: '/#latest-arrivals' },
-      { label: 'Women',                 href: '/products?category=women' },
-      { label: 'Men',                   href: '/products?category=men' },
-      { label: 'Teenagers',             href: '/products?category=teenagers' },
-      { label: 'All Products',          href: '/products' },
+      { label: 'New Arrivals', href: '/products?category=new-arrivals' },
+      { label: 'Women', href: '/products?category=women' },
+      { label: 'Men', href: '/products?category=men' },
+      { label: 'Teenagers', href: '/products?category=teenagers' },
+      { label: 'All Products', href: '/products' },
     ],
   },
   {
     heading: 'Uniforms',
     links: [
-      { label: 'Government & School Uniforms', href: '/products?category=school-uniforms' },
-      { label: 'Private School Uniforms',    href: '/products?category=school-uniforms' },
-      { label: 'Corporate Office Wear',      href: '/products?category=corporate-uniforms' },
-      { label: 'Workwear & Industrial',      href: '/products?category=industrial-uniforms' },
-      { label: 'Healthcare & Hospitality',   href: '/products?category=healthcare-uniforms' },
+      { label: 'Government School Uniforms', href: '/products?category=uniforms&sub=government-school' },
+      { label: 'Private School Uniforms', href: '/products?category=uniforms&sub=private-school' },
+      { label: 'Corporate Office Wear', href: '/products?category=corporate-uniforms' },
+      { label: 'Workwear & Industrial', href: '/products?category=industrial-uniforms' },
+      { label: 'Healthcare & Hospitality', href: '/products?category=healthcare-uniforms' },
     ],
   },
   {
     heading: 'Customer Care',
     links: [
-      { label: 'Track My Order',       href: '/account/orders' },
-      { label: 'Contact & Showrooms',  href: '/contact' },
-      { label: 'Returns & Exchange',   href: '/returns-exchange' },
-      { label: 'Shipping Information', href: '#' },
-      { label: 'Size & Fit Guide',     href: '#' },
-      { label: 'Frequently Asked',     href: '#' },
+      { label: 'Track My Order', href: '/account/orders' },
+      { label: 'Contact & Showroom', href: '/contact' },
+      { label: 'Shipping & Delivery', href: '/shipping' },
+      { label: 'Returns & Exchange', href: '/returns-exchange' },
+      { label: 'Size & Fit Guide', href: '/size-guide' },
+      { label: 'FAQs', href: '/contact#faq' },
     ],
   },
 ];
 
-/* ── Helper ─────────────────────────────────────────────────── */
+const LEGAL = [
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Service', href: '/terms' },
+];
+
+const linkClass =
+  'group inline-flex items-center gap-2 text-[0.8125rem] leading-normal text-white/55 no-underline transition-all duration-150 hover:gap-3 hover:text-white/90 focus-visible:text-white focus-visible:outline-none';
+
 function ColLink({ href, label }: { href: string; label: string }) {
   return (
     <li>
-      <Link
-        href={href}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontSize: '0.8125rem',
-          color: 'rgba(255,255,255,0.45)',
-          textDecoration: 'none',
-          lineHeight: 1.5,
-          transition: 'color 150ms ease, gap 150ms ease',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; (e.currentTarget as HTMLElement).style.gap = '0.75rem'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)'; (e.currentTarget as HTMLElement).style.gap = '0.5rem'; }}
-      >
-        <span style={{ display: 'block', width: '14px', height: '1px', background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+      <Link href={href} className={linkClass}>
+        <span aria-hidden className="block h-px w-3.5 shrink-0 bg-white/20 transition-colors group-hover:bg-[var(--clr-brand)]" />
         {label}
       </Link>
     </li>
   );
 }
 
-/* ── Footer ─────────────────────────────────────────────────── */
+const headingStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.6rem',
+  fontWeight: 500,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase' as const,
+  color: 'rgba(255,255,255,0.7)',
+  marginBottom: '1.25rem',
+  paddingBottom: '0.75rem',
+  borderBottom: '1px solid rgba(255,255,255,0.07)',
+};
+
+/* ── Footer ─────────────────────────────────────────────── */
 export default function Footer() {
+  const socials = activeSocialLinks();
+  const contacts = [
+    { icon: 'phone' as const, label: `${PHONE_MOBILE.display} (Mobile & WhatsApp)`, href: `tel:${PHONE_MOBILE.tel}` },
+    { icon: 'phone' as const, label: `${PHONE_LANDLINE.display} (Veyangoda)`, href: `tel:${PHONE_LANDLINE.tel}` },
+    { icon: 'mail' as const, label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
+  ];
+
   return (
     <footer style={{ background: 'var(--obsidian-950)', color: 'rgba(255,255,255,0.45)' }}>
-
-      {/* ── Newsletter ────────────────────────────────────── */}
-      <div
-        style={{
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          padding: '3rem 0',
-        }}
-      >
-        <div
-          className="container flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10"
-        >
-          <div className="max-w-md">
-            <p
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.625rem',
-                fontWeight: 500,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: 'var(--clr-brand)',
-                marginBottom: '0.5rem',
-              }}
-            >
-              Newsletter
-            </p>
-            <h3
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
-                fontWeight: 600,
-                color: '#fff',
-                lineHeight: 1.25,
-              }}
-            >
-              Stay Updated with Nandana Textile
-            </h3>
-            <p style={{ fontSize: '0.8125rem', marginTop: '0.375rem', lineHeight: 1.65, color: 'rgba(255,255,255,0.65)' }}>
-              New arrivals, school season alerts, and exclusive offers delivered to your inbox.
-            </p>
-          </div>
-          <form
-            onSubmit={e => e.preventDefault()}
-            className="w-full lg:w-auto"
-            style={{ display: 'flex', gap: '0' }}
-          >
-            <input
-              type="email"
-              id="newsletter-email"
-              placeholder="Your email address"
-              className="min-w-0 flex-1 lg:w-70 lg:flex-none"
-              style={{
-                padding: '0.75rem 1.125rem',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRight: 'none',
-                color: '#fff',
-                fontSize: '0.875rem',
-                fontFamily: 'var(--font-sans)',
-                outline: 'none',
-                borderRadius: 'var(--r-xs) 0 0 var(--r-xs)',
-              }}
-            />
-            <button
-              type="submit"
-              className="btn btn-brand"
-              style={{ borderRadius: '0 var(--r-xs) var(--r-xs) 0' }}
-            >
-              Subscribe
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* ── Main links ────────────────────────────────────── */}
-      <div style={{ padding: '4rem 0 3rem' }}>
+      <div style={{ padding: '4rem 0 0' }}>
         <div className="container">
-          <div
-            className="footer-grid"
-            style={{ marginBottom: '3.5rem' }}
-          >
+          <div className="footer-grid" style={{ marginBottom: '3.5rem' }}>
             {/* Brand column */}
             <div>
-              {/* Logo */}
               <Link
                 href="/"
+                aria-label={`${SITE_NAME} home`}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', textDecoration: 'none' }}
               >
                 <BrandMark size={38} variant="onDark" style={{ flexShrink: 0 }} />
@@ -191,107 +112,79 @@ export default function Footer() {
                 </div>
               </Link>
 
-              <p
-                style={{
-                  fontSize: '0.8125rem',
-                  lineHeight: 1.85,
-                  color: 'rgba(255,255,255,0.4)',
-                  maxWidth: '270px',
-                  marginBottom: '1.75rem',
-                }}
-              >
-                Sri Lanka's trusted textile and uniform specialist. Quality fabrics for school, office, and everyday life — since 2009.
+              <p style={{ fontSize: '0.8125rem', lineHeight: 1.85, color: 'rgba(255,255,255,0.5)', maxWidth: '290px', marginBottom: '1.5rem' }}>
+                Sri Lanka&apos;s trusted textile and uniform specialist. Quality fabrics for school, office, and everyday life.
               </p>
 
-              {/* Social */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {SOCIAL.map(s => (
-                  <a
-                    key={s.id}
-                    href={s.href}
-                    aria-label={s.label}
-                    style={{
-                      width: '34px',
-                      height: '34px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 'var(--r-xs)',
-                      color: 'rgba(255,255,255,0.45)',
-                      transition: 'all 200ms ease',
-                    }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.borderColor = 'var(--clr-brand)';
-                      (e.currentTarget as HTMLElement).style.color       = '#fff';
-                      (e.currentTarget as HTMLElement).style.background  = 'var(--clr-brand)';
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
-                      (e.currentTarget as HTMLElement).style.color       = 'rgba(255,255,255,0.45)';
-                      (e.currentTarget as HTMLElement).style.background  = 'transparent';
-                    }}
-                  >
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill={s.fill ? 'currentColor' : 'none'}
-                      stroke={s.fill ? 'none' : 'currentColor'}
-                      strokeWidth="1.75"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d={s.path} />
-                    </svg>
-                  </a>
-                ))}
-              </div>
+              {/* Social profiles — only those with a real URL are shown. */}
+              {socials.length > 0 && (
+                <ul aria-label="Follow us" className="mb-6 flex list-none gap-2 p-0">
+                  {socials.map((s) => (
+                    <li key={s.id}>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${SITE_NAME} on ${s.label} (opens in a new tab)`}
+                        title={s.label}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--r-xs)] border border-white/15 text-white/60 transition-colors duration-200 hover:border-[var(--clr-brand)] hover:bg-[var(--clr-brand)] hover:text-white focus-visible:border-white focus-visible:text-white focus-visible:outline-none"
+                      >
+                        <SocialIcon name={s.id} size={16} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-              {/* Contact */}
-              <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  { label: '+94 71 708 8445' },
-                  { label: 'info@nandanatextile.lk' },
-                  { label: 'Colombo, Sri Lanka' },
-                ].map(c => (
-                  <p key={c.label} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-                    {c.label}
-                  </p>
+              {/* Contact — every line is tappable. */}
+              <ul className="flex list-none flex-col gap-2.5 p-0" aria-label="Contact">
+                {contacts.map((c) => (
+                  <li key={c.href}>
+                    <a href={c.href} className="inline-flex items-center gap-2.5 text-[0.78rem] text-white/55 no-underline transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}>
+                      <SocialIcon name={c.icon} size={14} className="shrink-0 text-[var(--clr-brand)]" />
+                      {c.label}
+                    </a>
+                  </li>
                 ))}
-              </div>
+                <li>
+                  <a
+                    href={SHOWROOM.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${SHOWROOM.listingName}, ${SHOWROOM.address} — open in Google Maps`}
+                    className="inline-flex items-start gap-2.5 text-[0.78rem] text-white/55 no-underline transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}
+                  >
+                    <SocialIcon name="map-pin" size={14} className="mt-0.5 shrink-0 text-[var(--clr-brand)]" />
+                    {SHOWROOM.address}
+                  </a>
+                </li>
+                <li>
+                  <a href={whatsappUrl('Hello Nandana Textile, I have a question.')} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-[var(--r-xs)] bg-[#25D366] px-3 py-2 text-[0.72rem] font-semibold uppercase tracking-wider text-white no-underline transition-opacity hover:opacity-90">
+                    <SocialIcon name="whatsapp" size={14} />
+                    Chat on WhatsApp
+                  </a>
+                </li>
+              </ul>
             </div>
 
             {/* Link columns */}
-            {COLS.map(col => (
-              <div key={col.heading}>
-                <h4
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.6rem',
-                    fontWeight: 500,
-                    letterSpacing: '0.16em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.7)',
-                    marginBottom: '1.25rem',
-                    paddingBottom: '0.75rem',
-                    borderBottom: '1px solid rgba(255,255,255,0.07)',
-                  }}
-                >
-                  {col.heading}
-                </h4>
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {col.links.map(link => (
+            {COLS.map((col) => (
+              <nav key={col.heading} aria-label={col.heading}>
+                <h4 style={headingStyle}>{col.heading}</h4>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
+                  {col.links.map((link) => (
                     <ColLink key={link.label} href={link.href} label={link.label} />
                   ))}
                 </ul>
-              </div>
+              </nav>
             ))}
           </div>
 
-          {/* Bottom bar with mobile clearance for floating action buttons */}
+          {/* Bottom bar. The bottom padding keeps the © line and legal links
+              clear of the floating WhatsApp and chat buttons on every screen. */}
           <div
-            className="pb-16 sm:pb-0"
+            className="pb-40 sm:pb-24"
             style={{
               paddingTop: '2rem',
               borderTop: '1px solid rgba(255,255,255,0.07)',
@@ -302,29 +195,21 @@ export default function Footer() {
               gap: '1rem',
             }}
           >
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.28)' }}>
-              &copy; {new Date().getFullYear()} Nandana Textile. All rights reserved.
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)' }}>
+              &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
             </p>
-            <div style={{ display: 'flex', gap: '1.75rem' }}>
-              {['Privacy Policy', 'Terms of Service'].map(l => (
+            <nav aria-label="Legal" className="flex gap-7">
+              {LEGAL.map((l) => (
                 <Link
-                  key={l}
-                  href="#"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.6rem',
-                    letterSpacing: '0.08em',
-                    color: 'rgba(255,255,255,0.25)',
-                    textDecoration: 'none',
-                    transition: 'color 150ms ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.65)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
+                  key={l.href}
+                  href={l.href}
+                  className="text-[0.65rem] tracking-[0.08em] text-white/45 no-underline transition-colors hover:text-white/85 focus-visible:text-white focus-visible:outline-none"
+                  style={{ fontFamily: 'var(--font-mono)' }}
                 >
-                  {l}
+                  {l.label}
                 </Link>
               ))}
-            </div>
+            </nav>
           </div>
         </div>
       </div>

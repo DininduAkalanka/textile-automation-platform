@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Product, Category } from '@/types';
 import ProductCard from '@/components/products/ProductCard';
 import ViewAsToolbar, { ViewMode } from '@/components/products/ViewAsToolbar';
+import { SITE_NAME, whatsappUrl } from '@/lib/site-config';
 
 function ProductsContent() {
   const router = useRouter();
@@ -13,7 +14,9 @@ function ProductsContent() {
   const searchParams = useSearchParams();
 
   // Read URL search parameters directly (source of truth)
-  const search = searchParams.get('search') || '';
+  // `material` (e.g. the home page's "Cotton" / "Linen" fabric links) is a
+  // word to look for in the product text, so it searches.
+  const search = searchParams.get('search') || searchParams.get('material') || '';
   const categoryId = searchParams.get('categoryId') || '';
   const categorySlug = searchParams.get('category') || '';
   const subCategory = searchParams.get('sub') || '';
@@ -22,7 +25,7 @@ function ProductsContent() {
   const tier = searchParams.get('tier') || '';
   const period = searchParams.get('period') || '';
   const sortParam = searchParams.get('sort') || '';
-  const sortBy = searchParams.get('sortBy') || (sortParam === 'newest' ? 'createdAt' : sortParam === 'trending' ? 'trending' : 'createdAt');
+  const sortBy = searchParams.get('sortBy') || (sortParam === 'trending' || sortParam === 'popular' ? 'trending' : 'createdAt');
   const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
   const minPrice = searchParams.get('minPrice') || '';
   const maxPrice = searchParams.get('maxPrice') || '';
@@ -31,7 +34,19 @@ function ProductsContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  // Filter list: only categories a shopper can find products in (archived
+  // products don't count). Empty ones like the test "shorts" category used to
+  // be listed and opened an empty page. With no counts from the API, all show.
+  const filterCategories = categories.filter((cat) => {
+    const count = (c: Category) => c.activeProductCount ?? c._count?.products;
+    const own = count(cat);
+    if (own === undefined || own > 0) return true;
+    return categories.some((child) => child.parentId === cat.id && (count(child) ?? 0) > 0);
+  });
   const [loading, setLoading] = useState(true);
+  // A failed load is shown as an error with Retry, never as "No products".
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
   // View mode state with local storage persistence
@@ -92,6 +107,7 @@ function ProductsContent() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoadError(false);
 
     api.getProducts({
       page,
@@ -116,13 +132,16 @@ function ProductsContent() {
       }
     }).catch((err) => {
       console.error('Failed to load products:', err);
-      if (active) setLoading(false);
+      if (active) {
+        setLoadError(true);
+        setLoading(false);
+      }
     });
 
     return () => {
       active = false;
     };
-  }, [page, search, categoryId, categorySlug, subCategory, collection, offers, tier, period, sortParam, minPrice, maxPrice, sortBy, sortOrder]);
+  }, [page, search, categoryId, categorySlug, subCategory, collection, offers, tier, period, sortParam, minPrice, maxPrice, sortBy, sortOrder, reloadKey]);
 
   // Push new parameters to URL
   const updateFilters = (newParams: Record<string, string | number | null | undefined>) => {
@@ -156,12 +175,15 @@ function ProductsContent() {
         <div style={{ marginBottom: '1.5rem' }}>
           <h1 className="font-display flex items-baseline gap-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '-0.01em', color: '#111827' }}>
             <span>{getPageHeading()}</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 sm:hidden">
-              {pagination.total}
-            </span>
+            {/* Counts are only shown once loaded: a "0" while loading read as "no products". */}
+            {!loading && (
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 sm:hidden">
+                {pagination.total}
+              </span>
+            )}
           </h1>
           <p className="hidden sm:block" style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-            {pagination.total} articles available
+            {loading ? 'Loading products…' : `${pagination.total} articles available`}
           </p>
         </div>
 
@@ -324,7 +346,7 @@ function ProductsContent() {
                       New Arrivals
                     </button>
 
-                    {categories.map((cat) => {
+                    {filterCategories.map((cat) => {
                       const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
                       return (
                         <button
@@ -403,7 +425,7 @@ function ProductsContent() {
                   className="btn btn-brand"
                   style={{ flex: 2, justifyContent: 'center', fontSize: '0.8125rem', background: '#CC0000' }}
                 >
-                  View ({pagination.total}) Products
+                  {loading ? 'View Products' : `View (${pagination.total}) Products`}
                 </button>
               </div>
             </div>
@@ -482,7 +504,7 @@ function ProductsContent() {
                   New Arrivals
                 </button>
 
-                {categories.map((cat) => {
+                {filterCategories.map((cat) => {
                   const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
                   return (
                     <button
@@ -591,7 +613,7 @@ function ProductsContent() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <p style={{ fontSize: '0.875rem', color: 'var(--clr-text-2)', fontFamily: 'var(--font-mono)', margin: 0 }}>
-                  {pagination.total} products found
+                  {loading ? 'Loading products…' : `${pagination.total} products found`}
                 </p>
                 <ViewAsToolbar currentMode={viewMode} onModeChange={handleViewModeChange} />
               </div>
@@ -626,11 +648,35 @@ function ProductsContent() {
                   </div>
                 ))}
               </div>
+            ) : loadError ? (
+              <div role="alert" style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--clr-surface-2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--clr-border)' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.375rem', color: 'var(--clr-text)' }}>We couldn&apos;t load the products</h3>
+                <p style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>Please check your connection and try again.</p>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setReloadKey((k) => k + 1)}>
+                  Try again
+                </button>
+              </div>
             ) : products.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '5rem 2rem', background: 'var(--clr-surface-2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--clr-border)' }}>
-                <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔍</p>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--clr-text)' }}>No products found</h3>
-                <p style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem' }}>Try adjusting your filters or search terms</p>
+              <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--clr-surface-2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--clr-border)' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.375rem', color: 'var(--clr-text)' }}>
+                  {search ? `Nothing matches "${search}" yet` : 'No products here yet'}
+                </h3>
+                <p style={{ color: 'var(--clr-text-3)', fontSize: '0.85rem', maxWidth: '28rem', margin: '0 auto 1.25rem' }}>
+                  Our showroom stock changes often and not everything is online. Browse the full collection, or ask us on WhatsApp: we may have it in store.
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => router.push('/products')}>
+                    Browse all products
+                  </button>
+                  <a
+                    className="btn btn-outline btn-sm"
+                    href={whatsappUrl(`Hello ${SITE_NAME}, I'm looking for ${search || getPageHeading()}. Do you have it?`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ask on WhatsApp
+                  </a>
+                </div>
               </div>
             ) : (
               <>

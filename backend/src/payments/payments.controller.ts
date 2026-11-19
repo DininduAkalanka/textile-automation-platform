@@ -10,8 +10,13 @@ import {
   Request,
   Headers,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
-import { CreateFullPaymentDto, CreateInstallmentPaymentDto } from './dto/create-payment.dto';
+import {
+  CreateFullPaymentDto,
+  CreateInstallmentPaymentDto,
+  PayInstallmentDto,
+} from './dto/create-payment.dto';
 import { MarkPaidDto } from './dto/mark-paid.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -55,7 +60,21 @@ export class PaymentsController {
     return this.paymentsService.createInstallmentPayment(
       dto.orderId,
       req.user.sub,
-      dto.installmentCount || 3,
+      // `??`, not `||`: an explicit 0 must be REJECTED, not become 3.
+      dto.installmentCount ?? 3,
+    );
+  }
+
+  /** QA P1-7: pay one installment online — returns a PayHere checkout. */
+  @Post('installments/payhere')
+  @UseGuards(JwtAuthGuard)
+  payInstallmentWithPayhere(
+    @Request() req: RequestWithUser,
+    @Body() dto: PayInstallmentDto,
+  ) {
+    return this.paymentsService.createInstallmentPayherePayment(
+      dto.installmentId,
+      req.user.sub,
     );
   }
 
@@ -106,6 +125,22 @@ export class PaymentsController {
     return this.paymentsService.rejectPayment(orderId);
   }
 
+  /** QA P1-7: record ONE installment received (cash / bank transfer). */
+  @Post('admin/installments/:installmentId/mark-paid')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  markInstallmentPaid(
+    @Request() req: RequestWithUser,
+    @Param('installmentId', ParseUUIDPipe) installmentId: string,
+    @Body() dto: MarkPaidDto,
+  ) {
+    return this.paymentsService.adminMarkInstallmentPaid(
+      installmentId,
+      req.user.sub,
+      dto.note,
+    );
+  }
+
   // ─── Get Payment by Order ──────────────────────────────
 
   @Get(':orderId')
@@ -152,9 +187,13 @@ export class PaymentsController {
 
   // ─── PayHere Notify (server-to-server, public) ──────────
 
+  // QA P1-1 / P2-10: public and unauthenticated by design (PayHere calls it),
+  // so it gets its own per-IP limit. Genuine traffic is a handful of calls
+  // per order; a flood of forged notifies stops here.
   @Public()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Post('payhere/notify')
-  handlePayhereNotify(@Body() body: any) {
+  handlePayhereNotify(@Body() body: Record<string, unknown>) {
     return this.paymentsService.handlePayhereNotify(body);
   }
 

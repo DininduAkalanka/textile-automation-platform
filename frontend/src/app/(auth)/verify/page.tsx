@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/brand/brand-mark';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useSendCode, useVerifyCode } from '@/hooks/use-auth';
+import { safeReturnTo, useSendCode, useVerifyCode } from '@/hooks/use-auth';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -30,7 +30,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function VerifyContent() {
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get('returnTo') || '/';
+  // QA P2-7: only ever a same-origin path.
+  const returnTo = safeReturnTo(searchParams.get('returnTo')) || '/';
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);

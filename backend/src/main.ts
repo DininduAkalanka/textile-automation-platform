@@ -9,15 +9,20 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { trustProxyHops } from './common/config/limits';
+import { swaggerEnabled } from './common/config/exposure';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
 
-  // Trust proxy for reverse proxies (Render / ALB / Vercel)
-  // Ensures req.ip correctly resolves the client IP for rate limiting and audit logging.
-  app.set('trust proxy', 1);
+  // QA P1-4: trust X-Forwarded-For only from the real number of proxy hops.
+  // A hard-coded 1 let any client on a direct deployment (docker-compose / VPS)
+  // pick its own IP with a spoofed header and walk straight past every
+  // per-IP rate limit. 0 = trust none (req.ip is the socket address); Render
+  // (RENDER=true) gets its single proxy hop; TRUST_PROXY_HOPS overrides both.
+  app.set('trust proxy', trustProxyHops());
 
   // Security headers: HSTS, X-Content-Type-Options, frame-deny, etc.
   // (doc 09 §13, doc 05 §10). CSP is left off because this API serves JSON
@@ -106,14 +111,14 @@ async function bootstrap() {
       message: 'Welcome to the Smart Textile E-Commerce API',
       status: 'online',
       version: '1.0.0',
-      docs: '/api/v1/docs',
+      ...(swaggerEnabled() ? { docs: '/api/v1/docs' } : {}),
       health: '/api/v1/health',
     });
   });
 
-  // Swagger OpenAPI Documentation
-  // Enabled by default; can be disabled with SWAGGER_ENABLED=false
-  if (process.env.SWAGGER_ENABLED !== 'false') {
+  // Swagger OpenAPI Documentation (QA P2-11): off in production unless
+  // SWAGGER_ENABLED=true; on in development and CI unless SWAGGER_ENABLED=false.
+  if (swaggerEnabled()) {
     const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
     const config = new DocumentBuilder()
       .setTitle('Nandana Textile Platform API')
@@ -133,7 +138,10 @@ async function bootstrap() {
   await app.listen(port);
 
   Logger.log(
-    `Backend listening on http://localhost:${String(port)}/api/v1 | Docs: http://localhost:${String(port)}/api/v1/docs`,
+    `Backend listening on http://localhost:${String(port)}/api/v1` +
+      (swaggerEnabled()
+        ? ` | Docs: http://localhost:${String(port)}/api/v1/docs`
+        : ' | API docs disabled (SWAGGER_ENABLED)'),
     'Bootstrap',
   );
 }

@@ -6,7 +6,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
-import { useModalStore } from '@/store/useModalStore';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { BrandMark } from '@/components/brand/brand-mark';
 import { Product } from '@/types';
@@ -97,9 +96,7 @@ const NAV = [
     dropdown: [
       { label: 'Formal Shirts',    href: '/products?category=men&sub=shirts' },
       { label: 'Trousers',         href: '/products?category=men&sub=trousers' },
-      { label: 'Sarongs',          href: '/products?category=men&sub=sarongs' },
       { label: 'Casual Wear',      href: '/products?category=men&sub=casual' },
-      { label: 'Sports & Active',  href: '/products?category=men&sub=sports' },
     ],
   },
   {
@@ -107,9 +104,8 @@ const NAV = [
     href: '/products?category=teenagers',
     dropdown: [
       { label: 'Casual & Trendy',  href: '/products?category=teenagers&sub=casual' },
-      { label: 'Street Style',     href: '/products?category=teenagers&sub=street' },
-      { label: 'Sportswear',       href: '/products?category=teenagers&sub=sports' },
-      { label: 'School Ready',     href: '/products?category=teenagers&sub=school-ready' },
+      { label: 'Tops & T-Shirts',  href: '/products?category=teenagers&sub=tops' },
+      { label: 'Dresses & Skirts', href: '/products?category=teenagers&sub=dresses' },
     ],
   },
   {
@@ -275,7 +271,6 @@ export default function Header() {
   const items           = useCartStore(s => s.items) || [];
   const cartCount       = items.length;
   const wishlistCount   = useWishlistStore(s => s.items.length);
-  const openVisualSearch = useModalStore(s => s.openVisualSearch);
 
   const [scrolled,        setScrolled]        = useState(false);
   const [mobileOpen,      setMobileOpen]      = useState(false);
@@ -384,12 +379,14 @@ export default function Header() {
           lineHeight: 1.4,
         }}
       >
-        <span>Free island-wide delivery on orders above&nbsp;</span>
-        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Rs. 5,000</span>
-        <span style={{ margin: '0 1rem', opacity: 0.3 }}>|</span>
-        <span>Use code&nbsp;</span>
-        <span style={{ color: 'var(--gold-400)', fontWeight: 500 }}>NANDANA20</span>
-        <span>&nbsp;for 20% off your first order</span>
+        {/* Only offers the shop really honours. This used to advertise a
+            NANDANA20 discount code that no checkout accepts and a Rs. 5,000
+            free-delivery threshold, while delivery is free on every order. */}
+        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Free island-wide delivery</span>
+        <span className="hidden sm:inline" style={{ margin: '0 1rem', opacity: 0.3 }}>|</span>
+        <span className="hidden sm:inline">Cash on Delivery available</span>
+        <span className="hidden md:inline" style={{ margin: '0 1rem', opacity: 0.3 }}>|</span>
+        <span className="hidden md:inline">Exchanges within 7 working days</span>
       </div>
 
       {/* ── Main Header ──────────────────────────────────── */}
@@ -503,38 +500,6 @@ export default function Header() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               />
-              {/* Visual Search (AI Lens) shortcut inside primary search bar */}
-              <button
-                type="button"
-                onClick={openVisualSearch}
-                aria-label="Search by image with AI"
-                title="Search by image (AI Lens)"
-                style={{
-                  position: 'absolute',
-                  right: '36px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '26px',
-                  height: '26px',
-                  background: 'transparent',
-                  color: 'var(--clr-text-3)',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  borderRadius: '50%',
-                  transition: 'color 150ms ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#CC0000')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--clr-text-3)')}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                  <circle cx="12" cy="13" r="3" />
-                </svg>
-              </button>
-
               <button
                 type="submit"
                 aria-label="Submit search"
@@ -870,6 +835,7 @@ export default function Header() {
 
                         {[
                           { label: 'My Orders', href: '/account/orders' },
+                          { label: 'Change Password', href: '/account/security' },
                           ...(user?.role === 'ADMIN' ? [{ label: 'Admin Dashboard', href: '/admin' }] : []),
                         ].map(link => (
                           <Link
@@ -986,39 +952,6 @@ export default function Header() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
-
-            {/* Mobile Visual Search (AI Lens) Camera Button */}
-            <button
-              type="button"
-              onClick={openVisualSearch}
-              aria-label="Search by image with AI"
-              title="Search by image (AI Lens)"
-              id="mobile-visual-search-btn"
-              style={{
-                position: 'absolute',
-                right: '36px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '26px',
-                height: '26px',
-                background: 'transparent',
-                color: 'var(--clr-text-3)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                borderRadius: '50%',
-                transition: 'color 150ms ease',
-              }}
-              onTouchStart={(e) => ((e.currentTarget as HTMLElement).style.color = '#CC0000')}
-              onTouchEnd={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--clr-text-3)')}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                <circle cx="12" cy="13" r="3" />
-              </svg>
-            </button>
 
             <button
               type="submit"
@@ -1238,13 +1171,19 @@ export default function Header() {
 
           {/* Quick Account / Sign In */}
           {mounted && isAuthenticated ? (
-            <button
-              onClick={() => { logout(); closeMobile(); }}
-              className="btn btn-outline-brand"
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
-              Sign Out
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', gap: '0.625rem' }}>
+                <Link href="/account/orders" onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>My Orders</Link>
+                <Link href="/account/security" onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Change Password</Link>
+              </div>
+              <button
+                onClick={() => { logout(); closeMobile(); }}
+                className="btn btn-outline-brand"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                Sign Out
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', gap: '0.625rem' }}>
               <Link href="/login"    onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Sign In</Link>

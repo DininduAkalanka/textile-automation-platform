@@ -9,6 +9,19 @@ import { LoginInput, RegisterInput } from '@/lib/schemas';
 import { useAuthStore } from '@/store/useAuthStore';
 import { AuthResponse } from '@/types';
 
+/**
+ * QA P2-7: `returnTo` comes from the URL, so it is attacker-controlled. Only a
+ * same-origin path is followed — "/checkout" yes; "//evil.example",
+ * "/\\evil.example" or "https://evil.example" no (those would send a freshly
+ * signed-in user to another site).
+ */
+export function safeReturnTo(value: string | null | undefined): string | undefined {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) {
+    return undefined;
+  }
+  return value;
+}
+
 /** Where each role lands after authenticating (plan Session 1.2). */
 function landingFor(role: string | undefined): string {
   switch (role) {
@@ -30,7 +43,7 @@ export function useLogin(returnTo?: string) {
     onSuccess: (response: AuthResponse) => {
       setAuth(response.user, response.accessToken);
       toast.success(`Welcome back, ${response.user.firstName}`);
-      router.push(returnTo || landingFor(response.user.role));
+      router.push(safeReturnTo(returnTo) || landingFor(response.user.role));
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Could not sign in');
