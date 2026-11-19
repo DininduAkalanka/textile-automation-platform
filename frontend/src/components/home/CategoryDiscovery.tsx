@@ -49,7 +49,7 @@ const CATEGORIES: CategoryTile[] = [
     id: 'fabrics',
     name: 'Fabrics',
     subTitle: 'Handloom, Cottons & Linens',
-    href: '/products?category=fabrics',
+    href: '/products?search=fabric',
     image: '/images/categories/fabrics.jpg',
     accent: '#928E82',
   },

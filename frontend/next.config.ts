@@ -35,10 +35,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "thilakawardhana.com",
-      },
-      {
-        protocol: "https",
         hostname: "**.onrender.com",
       },
       {

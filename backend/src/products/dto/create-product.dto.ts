@@ -11,7 +11,14 @@ import {
   Min,
   MinLength,
   MaxLength,
+  ArrayMaxSize,
+  Matches,
 } from 'class-validator';
+
+import {
+  IMAGE_URL_MESSAGE,
+  IMAGE_URL_PATTERN,
+} from '../../common/validation/image-url';
 
 export class CreateProductDto {
   @IsString()
@@ -42,6 +49,12 @@ export class CreateProductDto {
 
   @IsArray()
   @IsOptional()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @Matches(IMAGE_URL_PATTERN, {
+    each: true,
+    message: `each image ${IMAGE_URL_MESSAGE}`,
+  })
   images?: string[];
 
   @IsObject()

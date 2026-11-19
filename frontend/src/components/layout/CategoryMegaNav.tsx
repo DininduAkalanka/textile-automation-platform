@@ -270,11 +270,27 @@ export function useNavCategories(): CategoryItem[] {
 
     if (effectiveCategories && effectiveCategories.length > 0) {
       // Find top-level categories (parentId is null or empty), filtering out legacy test generated IDs
+      // A category with no visible products (counting its sub-categories)
+      // would open an empty page, so it stays out of the menu until products
+      // are added. Archived products don't count. When the API gives no
+      // counts at all, the category is shown as before.
+      const visibleCount = (cat: Category): number | undefined =>
+        cat.activeProductCount ?? cat._count?.products;
+      const hasProducts = (cat: Category): boolean => {
+        const own = visibleCount(cat);
+        if (own === undefined) return true;
+        if (own > 0) return true;
+        return effectiveCategories.some(
+          (child) => child.parentId === cat.id && (visibleCount(child) ?? 0) > 0,
+        );
+      };
+
       const topLevel = effectiveCategories.filter(
         (c) =>
           !c.parentId &&
           !/^DEPT_/i.test(c.name) &&
-          !/^DEPT_/i.test(c.slug || ''),
+          !/^DEPT_/i.test(c.slug || '') &&
+          hasProducts(c),
       );
 
       topLevel.forEach((cat) => {

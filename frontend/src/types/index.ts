@@ -22,6 +22,8 @@ export interface Category {
   imageUrl?: string;
   /** Depth capped at 2 (plan doc 06 §5.2) — null means top-level. */
   parentId?: string | null;
+  /** Products a shopper can see (archived excluded); drives the store menu. */
+  activeProductCount?: number;
   _count?: {
     products: number;
     children?: number;

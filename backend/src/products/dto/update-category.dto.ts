@@ -4,8 +4,14 @@ import {
   IsUUID,
   MinLength,
   MaxLength,
+  Matches,
   ValidateIf,
 } from 'class-validator';
+
+import {
+  IMAGE_URL_MESSAGE,
+  IMAGE_URL_PATTERN,
+} from '../../common/validation/image-url';
 
 export class UpdateCategoryDto {
   @IsString()
@@ -21,6 +27,8 @@ export class UpdateCategoryDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(2048)
+  @Matches(IMAGE_URL_PATTERN, { message: `imageUrl ${IMAGE_URL_MESSAGE}` })
   imageUrl?: string;
 
   /**

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { SOCIAL_LINKS } from "@/lib/site-config";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nandanatextile.lk";
 
@@ -94,10 +95,8 @@ const jsonLd = {
           "closes": "19:30"
         }
       ],
-      "sameAs": [
-        "https://www.facebook.com/nandanatextile",
-        "https://www.instagram.com/nandanatextile"
-      ]
+      // Real profiles only (the Instagram handle here used to be wrong).
+      "sameAs": SOCIAL_LINKS.filter((s) => s.url && s.id !== 'whatsapp').map((s) => s.url)
     },
     {
       "@type": "WebSite",

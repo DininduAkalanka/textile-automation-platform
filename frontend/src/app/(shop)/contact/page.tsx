@@ -3,6 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+import { SITE_NAME, whatsappUrl } from '@/lib/site-config';
+
+const INQUIRY_TOPICS = [
+  { value: 'general', label: 'General Customer Service' },
+  { value: 'pickup', label: 'Showroom Order Pickup & Status' },
+  { value: 'uniforms', label: 'School & Corporate Uniform Procurement' },
+  { value: 'tailoring', label: 'Custom Measurement & Tailoring' },
+  { value: 'exchange', label: 'Return or Exchange Request' },
+];
+
 export default function ContactPage() {
   const [formState, setFormState] = useState({
     name: '',
@@ -13,16 +23,34 @@ export default function ContactPage() {
     message: '',
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  // The link the form built, so the customer can reopen WhatsApp if their
+  // browser blocked the new tab.
+  const [whatsappLink, setWhatsappLink] = useState<string | null>(null);
 
+  /**
+   * The form used to show "Message Received" after a fake 0.7 s delay while
+   * sending nothing, so every enquiry was silently lost. It now writes the
+   * enquiry into a WhatsApp message to the shop and opens WhatsApp; the
+   * customer presses Send there, and the shop actually receives it.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-    }, 700);
+    const topic = INQUIRY_TOPICS.find((t) => t.value === formState.inquiryType)?.label ?? 'General';
+    const lines = [
+      `Hello ${SITE_NAME},`,
+      '',
+      `Topic: ${topic}`,
+      `Subject: ${formState.subject.trim()}`,
+      '',
+      formState.message.trim(),
+      '',
+      `Name: ${formState.name.trim()}`,
+    ];
+    if (formState.email.trim()) lines.push(`Email: ${formState.email.trim()}`);
+    if (formState.phone.trim()) lines.push(`Phone: ${formState.phone.trim()}`);
+    const url = whatsappUrl(lines.join('\n'));
+    setWhatsappLink(url);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -309,24 +337,32 @@ export default function ContactPage() {
                 We're Here to Help
               </h2>
               <p className="text-xs sm:text-sm text-neutral-600 mb-6">
-                Fill out the form below and our team will get back to you promptly within business hours.
+                Fill in the form and press the button: WhatsApp opens with your message ready to send to our team.
               </p>
 
-              {submitted ? (
-                <div className="p-7 bg-neutral-50 rounded-xl border border-neutral-200 text-center animate-fade-in">
-                  <div className="w-12 h-12 rounded-full bg-neutral-900 text-white flex items-center justify-center mx-auto mb-3">
+              {whatsappLink ? (
+                <div className="p-7 bg-neutral-50 rounded-xl border border-neutral-200 text-center animate-fade-in" role="status">
+                  <div className="w-12 h-12 rounded-full bg-[#25D366] text-white flex items-center justify-center mx-auto mb-3">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </div>
-                  <h3 className="font-serif text-lg font-bold text-neutral-900">Message Received</h3>
+                  <h3 className="font-serif text-lg font-bold text-neutral-900">Your message is ready in WhatsApp</h3>
                   <p className="text-xs text-neutral-600 mt-1 max-w-md mx-auto">
-                    Thank you for reaching out to Nandana Textile. Our customer support team will contact you via phone or email shortly.
+                    Press <strong>Send</strong> in WhatsApp to deliver it to our team. If WhatsApp did not open, use the button below.
                   </p>
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Open WhatsApp
+                  </a>
                   <button
                     type="button"
                     onClick={() => {
-                      setSubmitted(false);
+                      setWhatsappLink(null);
                       setFormState({
                         name: '',
                         email: '',
@@ -336,9 +372,9 @@ export default function ContactPage() {
                         message: '',
                       });
                     }}
-                    className="mt-4 font-mono text-xs font-bold text-[#CC0000] hover:underline uppercase tracking-wider"
+                    className="mt-4 block mx-auto font-mono text-xs font-bold text-[#CC0000] hover:underline uppercase tracking-wider"
                   >
-                    Send another message
+                    Write another message
                   </button>
                 </div>
               ) : (
@@ -359,11 +395,10 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-neutral-800 mb-1">
-                        Email Address <span className="text-red-500">*</span>
+                        Email Address
                       </label>
                       <input
                         type="email"
-                        required
                         value={formState.email}
                         onChange={(e) => setFormState({ ...formState, email: e.target.value })}
                         placeholder="kasun@example.com"
@@ -394,11 +429,9 @@ export default function ContactPage() {
                         onChange={(e) => setFormState({ ...formState, inquiryType: e.target.value })}
                         className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-[#CC0000] focus:border-[#CC0000] bg-white transition-colors"
                       >
-                        <option value="general">General Customer Service</option>
-                        <option value="pickup">Showroom Order Pickup & Status</option>
-                        <option value="uniforms">School & Corporate Uniform Procurement</option>
-                        <option value="tailoring">Custom Measurement & Tailoring</option>
-                        <option value="exchange">Return or Exchange Request</option>
+                        {INQUIRY_TOPICS.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -433,20 +466,12 @@ export default function ContactPage() {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto px-8 py-3 rounded-lg bg-[#CC0000] hover:bg-[#b30000] text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-70 cursor-pointer"
+                    className="w-full sm:w-auto px-8 py-3 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <span>Sending...</span>
-                      </>
-                    ) : (
-                      <span>Submit Message</span>
-                    )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
+                    </svg>
+                    <span>Continue on WhatsApp</span>
                   </button>
                 </form>
               )}
@@ -467,9 +492,9 @@ export default function ContactPage() {
                     01
                   </div>
                   <div>
-                    <p className="font-bold text-neutral-900">Select Store Pickup at Checkout</p>
+                    <p className="font-bold text-neutral-900">Place Your Order</p>
                     <p className="text-neutral-600 mt-0.5 text-[11.5px] leading-relaxed">
-                      Choose either Veyangoda or Kurunegala showroom during online checkout. There are zero shipping or handling fees.
+                      Order online as usual, then message us on WhatsApp with your order number (TXL-…) and the showroom you prefer: Veyangoda or Kurunegala.
                     </p>
                   </div>
                 </div>
@@ -479,9 +504,9 @@ export default function ContactPage() {
                     02
                   </div>
                   <div>
-                    <p className="font-bold text-neutral-900">Receive Ready Notification</p>
+                    <p className="font-bold text-neutral-900">We Confirm When It&apos;s Ready</p>
                     <p className="text-neutral-600 mt-0.5 text-[11.5px] leading-relaxed">
-                      Orders placed before 2:00 PM are prepared the same day within 2 to 4 hours. You will receive an SMS and email with your pickup confirmation code.
+                      Our showroom team replies on WhatsApp to confirm when your order is packed and ready to collect.
                     </p>
                   </div>
                 </div>
@@ -528,8 +553,8 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ── FAQ Section ────────────────────────────────────────── */}
-      <section className="py-12 sm:py-16">
+      {/* ── FAQ Section (the footer's "FAQs" link lands here) ───── */}
+      <section id="faq" className="py-12 sm:py-16 scroll-mt-24">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-8">
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#CC0000] font-semibold block mb-1">
@@ -543,16 +568,24 @@ export default function ContactPage() {
           <div className="space-y-3">
             {[
               {
-                q: 'How long are in-store pickup orders held?',
-                a: 'Orders are held at your selected showroom for up to 7 calendar days from the date of the "Ready for Pickup" notification. If you require extended holding, simply notify our team via WhatsApp or phone.',
+                q: 'How long does delivery take, and what does it cost?',
+                a: 'Delivery is free island-wide and usually takes 2–3 business days after your order is confirmed. Custom-tailored items take longer because they are made to your measurements. See the Shipping & Delivery page for details.',
               },
               {
-                q: 'Can an authorized representative collect the order?',
-                a: 'Yes. Please have them present the order confirmation SMS or email containing your Order ID (#ORD-XXXX).',
+                q: 'Which payment methods can I use online?',
+                a: 'Cash on Delivery, card payment through PayHere (Visa, Mastercard and more), or an installment plan where each installment is paid online through PayHere.',
               },
               {
-                q: 'What payment options are available at pickup?',
-                a: 'You may choose Pay at Store / Cash on Delivery during checkout, or settle via Visa, Mastercard, or Koko BNPL at the showroom terminal.',
+                q: 'How do I track my order?',
+                a: 'Sign in and open My Orders to see the live status of every order. Your order number starts with TXL-.',
+              },
+              {
+                q: 'How long are pickup orders held at the showroom?',
+                a: 'Once we confirm on WhatsApp that your order is ready, we hold it for 7 days. If you need longer, just let us know.',
+              },
+              {
+                q: 'Can someone else collect my order?',
+                a: 'Yes. They only need your order number (TXL-…), which is shown in your order confirmation and under My Orders.',
               },
               {
                 q: 'Do you offer tailoring and alteration services on-site?',

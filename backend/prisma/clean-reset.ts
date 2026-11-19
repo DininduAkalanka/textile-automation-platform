@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { seedCatalog } from './seed';
 import { seedHistory } from './seed-history';
+import { assertSafeSeedTarget } from './seed-guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // Deletes every order and product before re-seeding: never on a live shop.
+  assertSafeSeedTarget('clean-reset');
   console.log('🚀 Starting Clean Database Reset for Nandana Textile...\n');
 
   console.log('1️⃣  Cleaning obsolete transactional & product records in safe FK order...');

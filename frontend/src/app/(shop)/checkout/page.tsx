@@ -982,7 +982,7 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>PayHere Verified</span>
               <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Islandwide COD</span>
-              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>14-Day Exchange</span>
+              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', background: 'white', border: '1px solid var(--clr-border-2)', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>7-Day Exchange</span>
             </div>
           </div>
         </div>

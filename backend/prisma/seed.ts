@@ -7,6 +7,8 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+import { assertSafeSeedTarget, seedPassword } from './seed-guard';
+
 const prisma = new PrismaClient();
 
 /**
@@ -35,10 +37,11 @@ type ProductSeed = {
 };
 
 export async function seedCatalog() {
+  assertSafeSeedTarget('seed');
   console.log('🌱 Seeding database...');
 
   // ─── Create Admin User ──────────────────────────────────
-  const adminPassword = await bcrypt.hash('Admin@123456', 12);
+  const adminPassword = await bcrypt.hash(seedPassword('SEED_ADMIN_PASSWORD', 'Admin@123456'), 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@textileshop.com' },
     // In `update` too, not just `create`: the verified-flag columns default to
@@ -59,7 +62,7 @@ export async function seedCatalog() {
   console.log(`✅ Admin user created: ${admin.email}`);
 
   // ─── Create Test Customer ───────────────────────────────
-  const customerPassword = await bcrypt.hash('Customer@123456', 12);
+  const customerPassword = await bcrypt.hash(seedPassword('SEED_CUSTOMER_PASSWORD', 'Customer@123456'), 12);
   const customer = await prisma.user.upsert({
     where: { email: 'customer@example.com' },
     update: { emailVerified: true, phoneVerified: true },
@@ -79,7 +82,7 @@ export async function seedCatalog() {
   // ─── Create Workers (BR5: tasks are assigned to workers) ─
   // Workers authenticate as users with role=WORKER; the `workers` row carries
   // only production-specific attributes.
-  const workerPassword = await bcrypt.hash('Worker@123456', 12);
+  const workerPassword = await bcrypt.hash(seedPassword('SEED_WORKER_PASSWORD', 'Worker@123456'), 12);
   const workerSeeds = [
     {
       email: 'worker.cutting@textileshop.com',

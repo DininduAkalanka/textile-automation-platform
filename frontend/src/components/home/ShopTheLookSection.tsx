@@ -1,80 +1,58 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useCartStore } from '@/store/useCartStore';
-import { useState } from 'react';
 
-interface LookItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  slug: string;
-  category: string;
-}
+import { api } from '@/lib/api';
+import { normalizeImageUrl } from '@/lib/image-url';
+import type { Product } from '@/types';
 
-const LOOK_ITEMS: LookItem[] = [
-  {
-    id: 'look-1',
-    name: 'Executive Oxford Formal Shirt',
-    price: 3450,
-    image: '/images/products/men-shirt.png',
-    slug: 'executive-oxford-formal-shirt',
-    category: 'Men',
-  },
-  {
-    id: 'look-2',
-    name: 'Tailored Slim Fit Trousers',
-    price: 4900,
-    image: '/images/products/men-formal-trouser.jpg',
-    slug: 'tailored-slim-fit-trousers',
-    category: 'Men',
-  },
-  {
-    id: 'look-3',
-    name: 'Single-Breasted Suiting Blazer',
-    price: 14500,
-    image: '/images/products/uniform-blazer.png',
-    slug: 'single-breasted-suiting-blazer',
-    category: 'Uniforms',
-  },
-];
+/** The collection this curated look is drawn from. */
+const LOOK_CATEGORY = 'corporate-uniforms';
+const LOOK_SIZE = 3;
 
+const rupees = (value: number) =>
+  `Rs. ${value.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * "Shop the Look" — a curated outfit built from REAL catalogue products.
+ *
+ * It used to hard-code three products that did not exist ("look-1"…"look-3",
+ * made-up prices and slugs): their links opened "Product Not Found", and
+ * "Add Entire Look" put fake items in the cart that checkout then rejected.
+ * It now shows in-stock products from the corporate collection, each linking to
+ * its real page (where the customer picks a size or enters measurements for a
+ * made-to-measure item), and hides itself entirely
+ * when the collection has too few products to make a look.
+ */
 export function ShopTheLookSection() {
-  const addItem = useCartStore((s) => s.addItem);
-  const [addedAll, setAddedAll] = useState(false);
+  const [items, setItems] = useState<Product[] | null>(null);
 
-  const totalPrice = LOOK_ITEMS.reduce((sum, item) => sum + item.price, 0);
+  useEffect(() => {
+    let active = true;
+    api
+      .getProducts({ categorySlug: LOOK_CATEGORY, limit: 12 })
+      .then((res) => {
+        if (!active) return;
+        const usable = (res.products ?? []).filter((p) => p.stockQuantity > 0);
+        setItems(usable.slice(0, LOOK_SIZE));
+      })
+      .catch(() => active && setItems([]));
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handleAddAll = () => {
-    LOOK_ITEMS.forEach((item) => {
-      // Mock minimal Product to pass to cart store
-      addItem(
-        {
-          id: item.id,
-          name: item.name,
-          slug: item.slug,
-          price: item.price,
-          stockQuantity: 10,
-          sku: `LOOK-${item.id}`,
-          images: [item.image],
-          attributes: { size: 'M', color: 'Classic' },
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        } as any,
-        1,
-      );
-    });
-    setAddedAll(true);
-    setTimeout(() => setAddedAll(false), 2500);
-  };
+  // Nothing to show while loading, and nothing at all without a real look.
+  if (!items || items.length < 2) return null;
+
+  const totalPrice = items.reduce((sum, item) => sum + Number(item.price), 0);
 
   return (
     <section
       id="shop-the-look"
-      aria-label="Shop the Look Fashion Merchandising"
+      aria-label="Shop the look"
       className="w-full py-14 sm:py-20 bg-white border-b border-neutral-200/70"
     >
       <div className="container-wide">
@@ -86,82 +64,53 @@ export function ShopTheLookSection() {
               CURATED OUTFIT
             </div>
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-neutral-900">
-              Shop the Look: The Executive Ensemble
+              Shop the Look: Corporate Wear
             </h2>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1 max-w-lg">
-              Coordinated tailoring engineered for boardrooms, official convocations, and executive events.
+              Coordinated pieces for the office and formal occasions — {items.length} pieces from{' '}
+              {rupees(totalPrice)} in total.
             </p>
           </div>
 
           <div className="self-start sm:self-end">
-            <button
-              onClick={handleAddAll}
-              disabled={addedAll}
-              className={`btn ${addedAll ? 'btn-brand bg-black' : 'btn-brand'} btn-md shadow-md`}
-            >
-              {addedAll ? (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  <span>Added Complete Outfit!</span>
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                    <line x1="3" y1="6" x2="21" y2="6" />
-                    <path d="M16 10a4 4 0 0 1-8 0" />
-                  </svg>
-                  <span>Add Entire Look — Rs. {totalPrice.toLocaleString('en-LK')}.00</span>
-                </>
-              )}
-            </button>
+            <Link href={`/products?category=${LOOK_CATEGORY}`} className="btn btn-brand btn-md shadow-md">
+              Shop the Collection
+            </Link>
           </div>
         </div>
 
-        {/* Editorial Layout: Hero Visual on Left + 3 Items on Right */}
+        {/* Editorial Layout: Hero Visual on Left + Items on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Main Editorial Visual */}
           <div className="lg:col-span-5 relative rounded-2xl overflow-hidden min-h-[380px] lg:min-h-full bg-neutral-900 shadow-md">
             <Image
               src="/images/hero/hero-banner-suits.png"
-              alt="Executive Suiting Outfit by Nandana Textile"
+              alt="Corporate wear by Nandana Textile"
               fill
               sizes="(max-width: 1024px) 100vw, 40vw"
               className="object-cover object-center filter saturate-105"
             />
             <div
               className="absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)',
-              }}
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }}
             />
             <div className="absolute inset-x-0 bottom-0 p-6 text-white">
               <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--gold-400)] block mb-1">
-                3-PIECE ENSEMBLE
+                {items.length}-PIECE LOOK
               </span>
-              <h3 className="font-serif text-2xl font-bold text-white">
-                Corporate Authority &amp; Classic Fit
-              </h3>
-              <p className="text-xs text-neutral-300 mt-1 max-w-sm">
-                Fine wool-blend suiting paired with breathable pinpoint cotton oxford shirting.
-              </p>
+              <h3 className="font-serif text-2xl font-bold text-white">Corporate Authority &amp; Classic Fit</h3>
             </div>
           </div>
 
-          {/* Individual Look Items Grid */}
           <div className="lg:col-span-7 flex flex-col justify-between gap-4">
-            {LOOK_ITEMS.map((item, idx) => (
-              <div
+            {items.map((item, idx) => (
+              <Link
                 key={item.id}
-                className="flex items-center gap-4 sm:gap-6 p-4 sm:p-5 rounded-xl border border-neutral-200/80 bg-[var(--warm-50)] hover:border-neutral-300 transition-all duration-200"
+                href={`/products/${item.slug || item.id}`}
+                className="group flex items-center gap-4 sm:gap-6 p-4 sm:p-5 rounded-xl border border-neutral-200/80 bg-[var(--warm-50)] hover:border-neutral-400 transition-all duration-200 no-underline"
               >
-                {/* Thumbnail */}
                 <div className="relative w-20 h-24 sm:w-24 sm:h-28 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-200/70">
                   <Image
-                    src={item.image}
+                    src={normalizeImageUrl(item.images?.[0])}
                     alt={item.name}
                     fill
                     sizes="100px"
@@ -169,30 +118,22 @@ export function ShopTheLookSection() {
                   />
                 </div>
 
-                {/* Info */}
                 <div className="min-w-0 flex-1">
                   <span className="font-mono text-[0.625rem] font-bold uppercase tracking-wider text-[var(--clr-brand)] block mb-0.5">
-                    PIECE {idx + 1} &bull; {item.category}
+                    PIECE {idx + 1}
+                    {item.category?.name ? ` • ${item.category.name}` : ''}
                   </span>
-                  <h4 className="font-sans text-sm sm:text-base font-bold text-neutral-900 leading-snug">
-                    {item.name}
-                  </h4>
-                  <div className="text-sm sm:text-[0.9375rem] font-bold text-neutral-900 mt-1">
-                    Rs. {item.price.toLocaleString('en-LK')}.00
-                  </div>
+                  <h4 className="font-sans text-sm sm:text-base font-bold text-neutral-900 leading-snug">{item.name}</h4>
+                  <div className="text-sm sm:text-[0.9375rem] font-bold text-neutral-900 mt-1">{rupees(Number(item.price))}</div>
                   <div className="font-mono text-[0.65rem] text-neutral-500 mt-0.5">
-                    In Stock &bull; Standard Sizing
+                    {item.requiresMeasurement ? 'Made to your measurements' : 'In stock'}
                   </div>
                 </div>
 
-                {/* Quick Link */}
-                <Link
-                  href={`/products/${item.slug}`}
-                  className="shrink-0 btn btn-outline btn-sm hidden sm:inline-flex"
-                >
+                <span className="shrink-0 btn btn-outline btn-sm hidden sm:inline-flex group-hover:border-neutral-900">
                   View Details
-                </Link>
-              </div>
+                </span>
+              </Link>
             ))}
           </div>
         </div>

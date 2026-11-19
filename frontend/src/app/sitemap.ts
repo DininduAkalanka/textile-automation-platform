@@ -20,12 +20,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
-    {
-      url: `${baseUrl}/returns-exchange`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
+    // Customer-information pages.
+    ...['/contact', '/returns-exchange', '/shipping', '/size-guide', '/privacy', '/terms'].map(
+      (path): MetadataRoute.Sitemap[number] => ({
+        url: `${baseUrl}${path}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      }),
+    ),
   ];
 
   // Dynamic product routes

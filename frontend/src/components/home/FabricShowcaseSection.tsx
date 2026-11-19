@@ -20,7 +20,7 @@ const FABRICS: FabricPillar[] = [
     gsm: '160–180 GSM',
     properties: ['Breathable', 'Ultra-Soft', 'Eco-Dyed', 'Cooling'],
     description: 'Heritage handwoven cotton sourced directly from Sri Lankan artisanal loom societies. Ideal for sarees, casual shirting, and warm tropical weather.',
-    href: '/products?category=fabrics&material=cotton',
+    href: '/products?search=cotton',
   },
   {
     name: 'Natural Washed Linen',
@@ -29,7 +29,7 @@ const FABRICS: FabricPillar[] = [
     gsm: '175–210 GSM',
     properties: ['Temperature Regulating', 'High Wicking', 'Crisp Drape'],
     description: 'Lightweight and effortlessly textured. Crafted to soften naturally with each wash, offering relaxed luxury for executive casuals.',
-    href: '/products?category=fabrics&material=linen',
+    href: '/products?search=linen',
   },
   {
     name: 'Institutional Uniform Drill',
@@ -75,7 +75,7 @@ export function FabricShowcaseSection() {
           </div>
 
           <Link
-            href="/products?category=fabrics"
+            href="/products?search=fabric"
             className="inline-flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[var(--clr-brand)] hover:text-[var(--crimson-700)] transition-colors group self-start sm:self-end"
           >
             <span>Explore All Textiles</span>

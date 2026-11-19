@@ -799,13 +799,35 @@ export class ProductsService {
     return { success: true };
   }
 
+  /**
+   * Every category with two product counts:
+   *  - `_count.products`: ALL its products, archived included (the admin
+   *    screens and the delete guard need the full number);
+   *  - `activeProductCount`: only products a shopper can see. The storefront
+   *    menu hides a category whose count is 0, so a link never opens an empty
+   *    page (pre-handover audit: an empty test category was in the live menu).
+   */
   async findAllCategories() {
-    return this.prisma.category.findMany({
-      include: {
-        _count: {
-          select: { products: true, children: true },
+    const [categories, active] = await Promise.all([
+      this.prisma.category.findMany({
+        include: {
+          _count: {
+            select: { products: true, children: true },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.product.groupBy({
+        by: ['categoryId'],
+        where: { isActive: true, categoryId: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+    const activeByCategory = new Map(
+      active.map((row) => [row.categoryId, row._count._all]),
+    );
+    return categories.map((category) => ({
+      ...category,
+      activeProductCount: activeByCategory.get(category.id) ?? 0,
+    }));
   }
 }

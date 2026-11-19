@@ -43,7 +43,7 @@ const SPOTLIGHT_DEPARTMENTS = [
 export function TrustMetricsBar() {
   return (
     <section id="department-spotlight" aria-label="Featured Departments & Service Guarantees" className="w-full bg-white">
-      {/* ── 1. Minimalist Editorial Service Ribbon (Thilakawardhana Style) ── */}
+      {/* ── 1. Minimalist Editorial Service Ribbon ── */}
       <div className="border-b border-neutral-200/80 bg-neutral-50/70">
         <div className="container-wide py-3.5 sm:py-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200/70">
@@ -66,7 +66,7 @@ export function TrustMetricsBar() {
         </div>
       </div>
 
-      {/* ── 2. Thilakawardhana-Style Curated Department Spotlight ── */}
+      {/* ── 2. Curated Department Spotlight ── */}
       <div className="container-wide py-8 sm:py-12 border-b border-neutral-200/80">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {SPOTLIGHT_DEPARTMENTS.map((dept) => (
