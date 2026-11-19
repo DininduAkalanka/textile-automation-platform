@@ -1,4 +1,4 @@
-import { Order } from '@/types';
+import type { Payment } from '@/types';
 
 import { http, unwrap } from './http';
 
@@ -14,5 +14,5 @@ import { http, unwrap } from './http';
  */
 export const paymentsService = {
   markPaid: (orderId: string, note?: string) =>
-    unwrap<Order>(http.post(`/payments/admin/${orderId}/mark-paid`, { note })),
+    unwrap<Payment>(http.post(`/payments/admin/${orderId}/mark-paid`, { note })),
 };

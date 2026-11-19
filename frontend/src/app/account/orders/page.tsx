@@ -16,7 +16,7 @@ const STATUS_BADGE: Record<OrderStatus, string> = {
   CONFIRMED: 'badge-info',
   IN_PRODUCTION: 'badge-info',
   QUALITY_CHECK: 'badge-info',
-  COMPLETED: 'badge-success',
+  COMPLETED: 'badge-info',
   DELIVERED: 'badge-success',
   CANCELLED: 'badge-danger',
 };
@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CONFIRMED: 'Confirmed',
   IN_PRODUCTION: 'In production',
   QUALITY_CHECK: 'Quality check',
-  COMPLETED: 'Completed',
+  COMPLETED: 'Ready for delivery',
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
 };

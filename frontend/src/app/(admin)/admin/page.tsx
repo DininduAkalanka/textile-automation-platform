@@ -105,8 +105,10 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      {/* grid-cols-1 + min-w-0: without them the phone layout was sized by the
+          chart's content and scrolled sideways. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2">
           {isLoading ? (
             <div className="h-[300px] animate-pulse rounded-2xl bg-white" />
           ) : (
@@ -114,7 +116,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div>
+        <div className="min-w-0">
           {isLoading ? (
             <div className="h-[300px] animate-pulse rounded-2xl bg-white" />
           ) : (

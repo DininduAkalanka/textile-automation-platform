@@ -161,13 +161,13 @@ function InventoryTable({ productId, lowStockOnly, initialSearch }: {
       ) : (
         <>
           {/* 📱 MOBILE VIEW: High-Density Inventory Cards (< md) */}
-          <div className="grid gap-3 md:hidden">
+          <div className="grid grid-cols-1 gap-3 md:hidden">
             {data?.items.map((item) => {
               const open = expanded === item.productId;
               return (
                 <article
                   key={item.productId}
-                  className="rounded-xl border border-[#EAE8E1] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md"
+                  className="min-w-0 rounded-xl border border-[#EAE8E1] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-2 border-b border-[#F4F3EF] pb-3">
                     <div className="min-w-0 flex-1">
@@ -236,7 +236,7 @@ function InventoryTable({ productId, lowStockOnly, initialSearch }: {
                   </div>
 
                   {/* Min reorder info & Actions */}
-                  <div className="flex items-center justify-between border-t border-[#F4F3EF] pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#F4F3EF] pt-3">
                     <div className="text-xs text-[#6E6A5E]">
                       Reorder at: <span className="font-semibold text-[#0F0F0F]">{item.minimum}</span>
                     </div>

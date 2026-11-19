@@ -137,7 +137,7 @@ describe('Customer Journey E2E Flow', () => {
           cy.contains('h3', 'Tracking').should('be.visible');
           cy.contains('Order placed').should('be.visible');
           cy.contains('Confirmed').should('be.visible');
-          cy.contains('Completed').should('be.visible');
+          cy.contains('Ready for delivery').should('be.visible');
           cy.contains('Delivered').should('be.visible');
 
           // ── Step F: Order History & Re-Tracking ─────────────────────────────

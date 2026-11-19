@@ -47,19 +47,19 @@ export class AdminProductsQueryDto {
    * GET /products: that one hardcodes `isActive: true` so a shopper never sees
    * an archived product, which is correct for a storefront and wrong for an
    * admin table that needs to find, filter, and restore exactly those rows.
-   * Omitted entirely = both. Same `enableImplicitConversion` boolean trap as
+   * Omitted = active products only. Same `enableImplicitConversion` boolean trap as
    * inventory's lowStockOnly (the STRING "false" is truthy under `!!value`),
-   * so it is parsed explicitly rather than trusted.
+   * so the RAW query string (obj[key]) is read — `value` has already been coerced.
    */
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ obj, key }) => obj[key] === true || obj[key] === 'true')
   @IsBoolean()
   archivedOnly?: boolean;
 
   /** available (available - reserved) at or below the product's own reorder
    *  minimum — the same definition inventory.service.ts's list() uses. */
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ obj, key }) => obj[key] === true || obj[key] === 'true')
   @IsBoolean()
   lowStockOnly?: boolean;
 

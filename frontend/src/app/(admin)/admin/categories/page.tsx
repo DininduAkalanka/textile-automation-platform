@@ -120,8 +120,8 @@ export default function AdminCategoriesPage() {
           button — this gets an explicit confirm step. */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-[15px] font-semibold text-[#0F0F0F]">
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-category-title" className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 id="delete-category-title" className="text-[15px] font-semibold text-[#0F0F0F]">
               Delete &ldquo;{deleteTarget.name}&rdquo;?
             </h2>
             <p className="mt-1 text-[13px] text-[#928E82]">

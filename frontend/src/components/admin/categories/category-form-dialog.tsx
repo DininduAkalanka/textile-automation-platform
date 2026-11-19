@@ -100,7 +100,9 @@ function CategoryFormInner({
           data: {
             name: name.trim(),
             description: description.trim() || undefined,
-            imageUrl: imageUrl.trim() || undefined,
+            // Clearing a field that had an image removes it (null); leaving an
+            // empty field empty changes nothing.
+            imageUrl: imageUrl.trim() || (category?.imageUrl ? null : undefined),
             parentId: hasChildren ? undefined : parentId || null,
           },
         },
