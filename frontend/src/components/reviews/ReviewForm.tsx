@@ -127,7 +127,12 @@ export function ReviewForm(props: ReviewFormProps) {
       try {
         const uploaded = await uploadImage.mutateAsync(file);
         setState((s) => ({ ...s, images: [...s.images, uploaded.url] }));
-      } catch {
+      } catch (error) {
+        // The daily photo limit has its own message; say it, and stop trying.
+        if ((error as { code?: string }).code === 'UPLOAD_QUOTA_EXCEEDED') {
+          setUploadError((error as Error).message);
+          break;
+        }
         setUploadError('Failed to upload one of the photos. Please try again.');
       }
     }

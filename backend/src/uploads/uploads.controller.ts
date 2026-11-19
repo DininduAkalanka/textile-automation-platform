@@ -1,10 +1,22 @@
-import { closeSync, existsSync, mkdirSync, openSync, readSync, unlinkSync } from 'fs';
-import { extname, join } from 'path';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  unlinkSync,
+} from 'fs';
+import { extname } from 'path';
 import { randomUUID } from 'crypto';
 
 import {
   BadRequestException,
+  CanActivate,
   Controller,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Injectable,
   Post,
   Req,
   UploadedFile,
@@ -12,13 +24,20 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
+import { UploadPurpose, UserRole } from '@prisma/client';
 import type { Request } from 'express';
 import { diskStorage } from 'multer';
 
+import { publicUploadUrl } from '../common/config/exposure';
+import {
+  REVIEW_UPLOAD_THROTTLE_AT_LOAD,
+  reviewUploadsPerDay,
+} from '../common/config/limits';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { UPLOAD_DIR, UploadsService } from './uploads.service';
 
 /**
  * Image uploads for the admin catalogue and, separately, customer review
@@ -35,9 +54,34 @@ import { RolesGuard } from '../common/guards/roles.guard';
  * only the returned `url` has to come from somewhere else.
  */
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads');
 if (!existsSync(UPLOAD_DIR)) {
   mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+/**
+ * QA P2-15: refuses a review-photo upload once the customer has used their
+ * daily quota. A guard (not a check in the handler) so it runs before multer
+ * has written anything to disk.
+ */
+@Injectable()
+export class ReviewUploadQuotaGuard implements CanActivate {
+  constructor(private readonly uploads: UploadsService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { sub?: string } }>();
+    const userId = req.user?.sub;
+    if (!userId) return true; // the JWT guard has already decided this
+    if ((await this.uploads.reviewUploadsRemaining(userId)) > 0) return true;
+    throw new HttpException(
+      {
+        message: `You can upload up to ${reviewUploadsPerDay()} review photos a day. Please try again tomorrow.`,
+        code: 'UPLOAD_QUOTA_EXCEEDED',
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
 }
 
 // Magic-number-free but mimetype + extension checked; doc 09 §10 caps at 2 MB.
@@ -108,7 +152,23 @@ function validateImageMagicBytes(filePath: string): boolean {
   }
 }
 
-function toUploadResponse(file: Express.Multer.File, req: Request) {
+type AuthedRequest = Request & { user?: { sub?: string } };
+
+/** Deletes a rejected upload; a file that is already gone is not an error. */
+function removeQuietly(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch {
+    // Nothing to clean up.
+  }
+}
+
+async function toUploadResponse(
+  file: Express.Multer.File,
+  req: AuthedRequest,
+  uploads: UploadsService,
+  purpose: UploadPurpose,
+) {
   if (!file) {
     throw new BadRequestException('No image was received.');
   }
@@ -116,20 +176,26 @@ function toUploadResponse(file: Express.Multer.File, req: Request) {
   // Magic bytes signature validation (QA-010)
   // Rejects spoofed non-image payloads (e.g. bash scripts with image/jpeg header)
   if (!validateImageMagicBytes(file.path)) {
-    try {
-      unlinkSync(file.path);
-    } catch {}
+    removeQuietly(file.path);
     throw new BadRequestException(
       'Invalid image file signature. Only valid JPG, PNG, or WebP files are allowed.',
     );
   }
 
+  // QA P2-15: every upload is recorded with its uploader — the basis of the
+  // quota, of the "your own photos only" check on reviews, and of the cleanup.
+  try {
+    await uploads.record(file, req.user?.sub ?? null, purpose);
+  } catch (err) {
+    removeQuietly(file.path);
+    throw err;
+  }
+
   // Absolute URL so it works in <img>, in captions, and (later) for the
-  // Instagram Graph API, which will only accept a public URL.
-  const base =
-    process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`;
+  // Instagram Graph API, which will only accept a public URL. QA P2-15: the
+  // origin comes from configuration, never from the client's Host header.
   return {
-    url: `${base}/uploads/${file.filename}`,
+    url: publicUploadUrl(file.filename, req),
     filename: file.filename,
     size: file.size,
   };
@@ -139,16 +205,21 @@ function toUploadResponse(file: Express.Multer.File, req: Request) {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class UploadsController {
+  constructor(private readonly uploads: UploadsService) {}
+
   @Post('image')
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
-  uploadImage(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-    return toUploadResponse(file, req);
+  uploadImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: AuthedRequest,
+  ) {
+    return toUploadResponse(file, req, this.uploads, UploadPurpose.CATALOGUE);
   }
 
   @Post()
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
-  upload(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-    return toUploadResponse(file, req);
+  upload(@UploadedFile() file: Express.Multer.File, @Req() req: AuthedRequest) {
+    return toUploadResponse(file, req, this.uploads, UploadPurpose.CATALOGUE);
   }
 }
 
@@ -157,25 +228,31 @@ export class UploadsController {
  * UploadsController above) purely so it can sit outside the class-level
  * @Roles(ADMIN) guard: any authenticated customer may attach photos to their
  * own review, not just admins. Same disk/validation pipeline otherwise.
+ *
+ * QA P2-15: open to every signed-in customer, so it is rate limited per
+ * minute and capped per day. The quota guard runs BEFORE multer, so a refused
+ * upload never touches the disk.
  */
 @Controller('uploads')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ReviewUploadQuotaGuard)
+@Throttle({
+  default: { limit: REVIEW_UPLOAD_THROTTLE_AT_LOAD, ttl: 60_000 },
+})
 export class ReviewUploadsController {
+  constructor(private readonly uploads: UploadsService) {}
+
   @Post('review-image')
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
   uploadReviewImage(
     @UploadedFile() file: Express.Multer.File,
-    @Req() req: Request,
+    @Req() req: AuthedRequest,
   ) {
-    return toUploadResponse(file, req);
+    return toUploadResponse(file, req, this.uploads, UploadPurpose.REVIEW);
   }
 
   @Post()
   @UseInterceptors(FileInterceptor('file', imageStorageOptions))
-  upload(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: Request,
-  ) {
-    return toUploadResponse(file, req);
+  upload(@UploadedFile() file: Express.Multer.File, @Req() req: AuthedRequest) {
+    return toUploadResponse(file, req, this.uploads, UploadPurpose.REVIEW);
   }
 }

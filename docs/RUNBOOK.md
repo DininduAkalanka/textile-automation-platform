@@ -77,13 +77,48 @@ This runbook documents the deployment, operational lifecycle, secret rotation, b
 
 ### A. Managed Database Provisioning (Neon / Supabase)
 1. Create a project in [Neon](https://neon.tech) or [Supabase](https://supabase.com).
-2. Create the AI read-only user and assign permissions:
+2. **The AI read-only user is created by the migrations — do not create it by hand.**
+   `prisma migrate deploy` (run automatically when the backend container starts)
+   creates `textile_ai_readonly` and grants it `SELECT` on an explicit allow-list
+   only: the `products`, `categories` and `inventory` tables and the
+   `ai_sales_facts` / `ai_inventory_facts` views. It can never read `users`
+   (password hashes, emails, phones), `orders`, `payments` or anything else.
+
+   > **Never** run `GRANT SELECT ON ALL TABLES IN SCHEMA public` or
+   > `ALTER DEFAULT PRIVILEGES … GRANT SELECT ON TABLES` for this role. Either
+   > one hands the AI service every customer's personal data and password hash,
+   > and the default-privileges form keeps doing so for every future table.
+
+3. **Rotate the role's password before the first AI deploy.** The migration
+   creates it with the published development password
+   `ai_readonly_local_dev_password`; the AI service refuses to start in
+   production while `DATABASE_URL_READONLY` still uses it. As the database
+   owner (Neon SQL editor or `psql`):
    ```sql
-   CREATE ROLE textile_ai_readonly WITH LOGIN PASSWORD 'your_secure_password';
-   GRANT CONNECT ON DATABASE textile_prod TO textile_ai_readonly;
-   GRANT USAGE ON SCHEMA public TO textile_ai_readonly;
-   GRANT SELECT ON ALL TABLES IN SCHEMA public TO textile_ai_readonly;
-   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO textile_ai_readonly;
+   -- Use a long random value, e.g. from: openssl rand -hex 24
+   ALTER ROLE textile_ai_readonly WITH PASSWORD '<new-random-password>';
+   ```
+   Then set the AI service's `DATABASE_URL_READONLY` to
+   `postgresql://textile_ai_readonly:<new-random-password>@<host>/<db>?sslmode=require`.
+
+4. Verify the grants (expect exactly these five rows, all `SELECT`):
+   ```sql
+   SELECT table_name, string_agg(privilege_type, ',') AS privileges
+   FROM information_schema.role_table_grants
+   WHERE grantee = 'textile_ai_readonly'
+   GROUP BY table_name ORDER BY 1;
+   -- ai_inventory_facts | SELECT
+   -- ai_sales_facts     | SELECT
+   -- categories         | SELECT
+   -- inventory          | SELECT
+   -- products           | SELECT
+   ```
+   If anything else is listed (left over from the old instructions), remove it:
+   ```sql
+   REVOKE ALL ON ALL TABLES IN SCHEMA public FROM textile_ai_readonly;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM textile_ai_readonly;
+   GRANT SELECT ON products, categories, inventory, ai_sales_facts, ai_inventory_facts
+     TO textile_ai_readonly;
    ```
 
 ### B. Deploy Backend & AI to Railway / Render
@@ -99,6 +134,19 @@ This runbook documents the deployment, operational lifecycle, secret rotation, b
 2. Root directory: `frontend`.
 3. Set Environment Variable: `NEXT_PUBLIC_API_URL`.
 4. Deploy!
+
+### D. Pre-deploy checklist (security hardening from the QA remediation)
+Check these before every production deploy that includes the QA fixes:
+
+| # | Check | Why |
+| :--- | :--- | :--- |
+| 1 | AI service `INTERNAL_API_KEY` is a long random value (not `local-dev-internal-key`) and the backend uses the **same** value | The AI service refuses to start in production with the default key. |
+| 2 | `textile_ai_readonly` password rotated (Section A, step 3) | The AI service refuses to start in production with the published password. |
+| 3 | `SWAGGER_ENABLED` is unset or `false` on the backend; `AI_DOCS_ENABLED` unset on the AI service | API docs are off in production by default; only turn them on deliberately. |
+| 4 | `ALLOW_DEV_OTP_BYPASS` is **not** set on the backend | Development-only; ignored when `NODE_ENV=production`, but keep it out of production config. |
+| 5 | `PUBLIC_API_URL` is the backend's public `https://` origin, or unset on Render | Uploaded-image links are built from it (Render's `RENDER_EXTERNAL_URL` is used when unset), never from the request. |
+| 6 | Image uploads are on persistent storage | Uploads are written to the container's `uploads/` folder. On Render's free tier that disk is wiped on every deploy/restart, so product and review photos disappear; attach a persistent disk or move uploads to object storage (e.g. Cloudinary). |
+| 7 | `EMAIL_FROM` uses a domain verified in Resend | OTP and password-reset emails are rejected otherwise. |
 
 ---
 

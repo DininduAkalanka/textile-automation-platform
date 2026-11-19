@@ -61,6 +61,33 @@ export const GUEST_CHECKOUT_THROTTLE_AT_LOAD = intFromEnv(
   10,
 );
 
+// ─── P2-15: customer review photos ──────────────────────────────────────────
+
+/** Review photos one customer may upload in any rolling 24 hours. */
+export const reviewUploadsPerDay = () =>
+  intFromEnv('REVIEW_UPLOADS_PER_DAY', 20);
+
+/** Review-photo upload requests per user/IP per minute. */
+export const REVIEW_UPLOAD_THROTTLE_AT_LOAD = intFromEnv(
+  'REVIEW_UPLOAD_THROTTLE_LIMIT',
+  10,
+);
+
+/** A review photo never attached to a review is deleted after this long. */
+export const orphanUploadTtlHours = () =>
+  intFromEnv('ORPHAN_UPLOAD_TTL_HOURS', 24);
+
+/** How often the orphan-photo cleanup runs. */
+export const uploadCleanupIntervalMs = () =>
+  intFromEnv('UPLOAD_CLEANUP_INTERVAL_MS', 60 * 60 * 1000);
+
+/** The cleanup is on everywhere except the Jest suites (same rule as the expiry sweep). */
+export const uploadCleanupEnabled = () => {
+  const raw = process.env.UPLOAD_CLEANUP_ENABLED;
+  if (raw !== undefined && raw.trim() !== '') return raw === 'true';
+  return !isTest();
+};
+
 // ─── P1-4: credential stuffing ──────────────────────────────────────────────
 
 /** Wrong passwords in a row before an account is temporarily locked. */

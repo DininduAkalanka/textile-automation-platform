@@ -7,6 +7,65 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
+
+/**
+ * Errors that are the caller's fault but are not HttpExceptions. Only fixed,
+ * developer-written messages are returned — never the library's own text,
+ * which can name tables, constraints or internals.
+ */
+export function classifyKnownError(
+  exception: unknown,
+): { status: number; code: string; message: string } | null {
+  // body-parser (express.json / urlencoded) errors carry `type` and a 4xx
+  // `status` (http-errors).
+  const e = exception as { type?: unknown; status?: unknown; expose?: unknown };
+  if (exception instanceof Error && typeof e.type === 'string') {
+    if (e.type === 'entity.too.large') {
+      return {
+        status: HttpStatus.PAYLOAD_TOO_LARGE,
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'The request body is too large.',
+      };
+    }
+    if (
+      e.expose === true &&
+      typeof e.status === 'number' &&
+      e.status >= 400 &&
+      e.status < 500
+    ) {
+      return {
+        status: e.status,
+        code: 'MALFORMED_REQUEST',
+        message: 'The request body could not be read. Send valid JSON.',
+      };
+    }
+  }
+
+  if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    if (exception.code === 'P2002') {
+      const target = exception.meta?.target;
+      const fields = Array.isArray(target)
+        ? target.join(', ')
+        : typeof target === 'string'
+          ? target
+          : 'value';
+      return {
+        status: HttpStatus.CONFLICT,
+        code: 'DUPLICATE',
+        message: `Another record already uses this ${fields}.`,
+      };
+    }
+    if (exception.code === 'P2025') {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        code: 'NOT_FOUND',
+        message: 'The record was not found.',
+      };
+    }
+  }
+  return null;
+}
 
 /**
  * Global error envelope (CODING_STANDARDS §5.4, doc 07 §13).
@@ -36,7 +95,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message: string | string[] = 'Internal server error';
     let code = 'INTERNAL_ERROR';
 
-    if (exception instanceof HttpException) {
+    const known = classifyKnownError(exception);
+    if (known) {
+      // QA P2-4: client mistakes that are not HttpExceptions — an oversized or
+      // malformed body (body-parser), a duplicate unique value or a missing
+      // record (Prisma) — used to fall through to the 500 branch below. They
+      // are the CALLER's error, so they get a 4xx with a safe, fixed message.
+      status = known.status;
+      code = known.code;
+      message = known.message;
+    } else if (exception instanceof HttpException) {
       // Deliberate, developer-authored errors are safe to surface.
       status = exception.getStatus();
       const body = exception.getResponse();

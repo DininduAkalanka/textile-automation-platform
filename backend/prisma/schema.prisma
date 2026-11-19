@@ -154,6 +154,7 @@ model User {
   reviews            Review[]
   reviewHelpfulVotes ReviewHelpfulVote[]
   reviewReports      ReviewReport[]
+  uploadedImages     UploadedImage[]
 
   @@index([email])
   @@index([phone])
@@ -213,6 +214,31 @@ model ContactVerificationCode {
 
   @@index([contact, channel, createdAt])
   @@map("contact_verification_codes")
+}
+
+enum UploadPurpose {
+  CATALOGUE
+  REVIEW
+}
+
+/// Every image the upload endpoints wrote to disk (QA P2-15). It is how a
+/// review proves a photo is the reviewer's own upload, how the per-customer
+/// daily quota is counted, and how review photos that were never attached to
+/// a review are found and removed.
+model UploadedImage {
+  id           String        @id @default(uuid()) @db.Uuid
+  filename     String        @unique
+  uploadedById String?       @map("uploaded_by_id") @db.Uuid
+  purpose      UploadPurpose
+  sizeBytes    Int           @map("size_bytes")
+  attachedAt   DateTime?     @map("attached_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([uploadedById, purpose, createdAt])
+  @@index([purpose, attachedAt, createdAt])
+  @@map("uploaded_images")
 }
 
 model Category {

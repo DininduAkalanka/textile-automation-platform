@@ -8,6 +8,7 @@ import {
   IsString,
   IsUrl,
   MinLength,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -40,11 +41,46 @@ export class EnvironmentVariables {
   ALLOW_DEV_OTP_BYPASS?: string;
 
   /**
-   * Swagger OpenAPI docs toggle. Defaults to enabled unless explicitly set to 'false'.
+   * Swagger OpenAPI docs toggle (QA P2-11, common/config/exposure.ts).
+   * Unset: OFF when NODE_ENV=production, ON otherwise. 'true'/'false' force it.
    */
   @IsOptional()
   @IsString()
   SWAGGER_ENABLED?: string;
+
+  /**
+   * Public origin of this API, used to build uploaded-image URLs (QA P2-15).
+   * Optional — on Render, RENDER_EXTERNAL_URL is used automatically. Validated
+   * only when non-empty, so a blank value never stops the server booting.
+   */
+  @ValidateIf((env: EnvironmentVariables) => !!env.PUBLIC_API_URL)
+  @IsUrl({ require_tld: false, protocols: ['http', 'https'] })
+  PUBLIC_API_URL?: string;
+
+  // ─── QA P2-15: review photo uploads (see common/config/limits.ts) ───
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  REVIEW_UPLOADS_PER_DAY?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  REVIEW_UPLOAD_THROTTLE_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  ORPHAN_UPLOAD_TTL_HOURS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  UPLOAD_CLEANUP_INTERVAL_MS?: number;
+
+  @IsOptional()
+  @IsString()
+  UPLOAD_CLEANUP_ENABLED?: string;
 
   @IsOptional()
   @Type(() => Number)
