@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
           setError('');
           reset.mutate({ token, password });
         }}>
-          <p className="text-sm text-white/70">Use 8–64 characters, including an uppercase letter, a lowercase letter and a number.</p>
+          <p className="text-sm text-white/70">Use 8–64 characters, including an uppercase letter, a lowercase letter and a number. Admin and manager accounts need at least 12 characters.</p>
           <FormField label="New password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={64} required className="border-white/15 bg-white/5 text-white" />
           <FormField label="Confirm new password" name="confirmation" type="password" autoComplete="new-password" maxLength={64} required className="border-white/15 bg-white/5 text-white" />
           {(error || reset.isError) && <p role="alert" className="text-sm text-[#FB6B6B]">{error || reset.error?.message}</p>}

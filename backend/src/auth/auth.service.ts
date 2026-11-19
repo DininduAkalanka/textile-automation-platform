@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { normalizeLkPhone } from '../common/phone.util';
+import { assertPasswordAllowedForRole } from './password-policy';
 import { VerificationService } from '../verification/verification.service';
 import { loginLockMinutes, loginMaxFailures } from '../common/config/limits';
 
@@ -198,6 +199,8 @@ export class AuthService {
           'Choose a new password that is different from your current one.',
       });
     }
+
+    assertPasswordAllowedForRole(user.role, newPassword);
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     return this.prisma.$transaction(async (tx) => {

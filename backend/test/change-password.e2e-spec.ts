@@ -4,7 +4,8 @@ import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcrypt';
 import type { Express } from 'express';
-import { UserRole } from '@prisma/client';
+import { createHash, randomBytes } from 'crypto';
+import { UserRole, VerificationChannel } from '@prisma/client';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -116,6 +117,53 @@ describe('Change password (POST /auth/change-password)', () => {
       .set('X-Forwarded-For', ip())
       .send({ currentPassword: OLD, newPassword: 'short' });
     expect(res.status).toBe(400);
+  });
+
+  it('refuses an admin password shorter than 12 characters', async () => {
+    const token = (await login(OLD)).body.data.accessToken as string;
+    const res = await http()
+      .post('/auth/change-password')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', ip())
+      .send({ currentPassword: OLD, newPassword: 'Short#Pass1' }); // 11 chars
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('PASSWORD_TOO_SHORT');
+  });
+
+  it('an admin reset link refuses a short password and still works for a long one', async () => {
+    const token = randomBytes(32).toString('hex');
+    const resetEmail = `${TAG}-reset@example.test`;
+    await prisma.user.create({
+      data: {
+        email: resetEmail,
+        passwordHash: await bcrypt.hash('Whatever#Pass1', 4),
+        firstName: 'Reset',
+        lastName: 'Admin',
+        role: UserRole.ADMIN,
+        resetTokenHash: createHash('sha256').update(token).digest('hex'),
+        resetExpiresAt: new Date(Date.now() + 10 * 60_000),
+        resetChannel: VerificationChannel.EMAIL,
+      },
+    });
+
+    const short = await http()
+      .post('/auth/reset-password')
+      .set('X-Forwarded-For', ip())
+      .send({ token, password: 'Short#Pass1' });
+    expect(short.status).toBe(400);
+    expect(short.body.error.code).toBe('PASSWORD_TOO_SHORT');
+
+    // The refused attempt did not use up the link.
+    const ok = await http()
+      .post('/auth/reset-password')
+      .set('X-Forwarded-For', ip())
+      .send({ token, password: 'Long-Enough#Pass1' });
+    expect(ok.status).toBe(201);
+    const login2 = await http()
+      .post('/auth/login')
+      .set('X-Forwarded-For', ip())
+      .send({ identifier: resetEmail, password: 'Long-Enough#Pass1' });
+    expect(login2.status).toBe(201);
   });
 
   it('changes the password, signs out other devices and keeps this one signed in', async () => {
