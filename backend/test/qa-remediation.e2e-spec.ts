@@ -231,7 +231,12 @@ describe('QA remediation — P0/P1 regression suite', () => {
     );
     app.useGlobalFilters(new HttpExceptionFilter());
     app.useGlobalInterceptors(new TransformInterceptor());
-    await app.init();
+    // Listen ONCE, up front. This suite fires 10-40 simultaneous requests
+    // (P1-3, P1-8). Given a server that is not listening, supertest starts it
+    // for each request and closes it when that request ends — so the first
+    // request to finish shut the shared server under the others, which then
+    // failed with "read ECONNRESET" on slower CI runners.
+    await app.listen(0, '127.0.0.1');
 
     prisma = app.get(PrismaService);
     const config = app.get(ConfigService);
