@@ -835,6 +835,7 @@ export default function Header() {
 
                         {[
                           { label: 'My Orders', href: '/account/orders' },
+                          { label: 'Change Password', href: '/account/security' },
                           ...(user?.role === 'ADMIN' ? [{ label: 'Admin Dashboard', href: '/admin' }] : []),
                         ].map(link => (
                           <Link
@@ -1170,13 +1171,19 @@ export default function Header() {
 
           {/* Quick Account / Sign In */}
           {mounted && isAuthenticated ? (
-            <button
-              onClick={() => { logout(); closeMobile(); }}
-              className="btn btn-outline-brand"
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
-              Sign Out
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', gap: '0.625rem' }}>
+                <Link href="/account/orders" onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>My Orders</Link>
+                <Link href="/account/security" onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Change Password</Link>
+              </div>
+              <button
+                onClick={() => { logout(); closeMobile(); }}
+                className="btn btn-outline-brand"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                Sign Out
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', gap: '0.625rem' }}>
               <Link href="/login"    onClick={closeMobile} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Sign In</Link>

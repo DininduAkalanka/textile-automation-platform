@@ -45,6 +45,9 @@ export default function WorkerLayout({
                 {user.firstName}
               </span>
             )}
+            <Link href="/account/security" className="text-sm text-neutral-600 underline-offset-2 hover:text-neutral-900 hover:underline">
+              Change password
+            </Link>
             <Button variant="outline" size="sm" onClick={logout}>
               Sign out
             </Button>

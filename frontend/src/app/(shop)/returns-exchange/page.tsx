@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { CONTACT_EMAIL, PHONE_MOBILE, whatsappUrl } from '@/lib/site-config';
+import { CONTACT_EMAIL, PHONE_MOBILE, SHOWROOM, whatsappUrl } from '@/lib/site-config';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 interface Section {
@@ -79,9 +79,9 @@ const SECTIONS: Section[] = [
             <circle cx="12" cy="10" r="3" />
           </svg>
           <div>
-            <strong>Nandana Textile Showroom</strong><br />
-            No. 145, Main Street, Kurunegala, Sri Lanka<br />
-            Open Mon–Sat: 8:30 AM – 6:00 PM
+            <strong>{SHOWROOM.listingName} Showroom</strong><br />
+            {SHOWROOM.address}, Sri Lanka<br />
+            Open Mon–Sat: 8:30 AM – 7:00 PM
           </div>
         </div>
       </>

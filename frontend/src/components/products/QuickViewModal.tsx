@@ -390,7 +390,7 @@ export default function QuickViewModal() {
               )}
             </div>
 
-            {/* Koko BNPL Callout */}
+            {/* Installment plan callout (the shop's own plan, paid via PayHere) */}
             <div
               style={{
                 padding: '0.625rem 0.875rem',
@@ -405,8 +405,7 @@ export default function QuickViewModal() {
                 gap: '0.5rem',
               }}
             >
-              <span>Or 3 interest-free installments of <strong style={{ color: 'var(--clr-text)' }}>Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')}</strong> with</span>
-              <span style={{ background: 'var(--clr-text)', color: 'white', padding: '1px 5px', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em' }}>KOKO</span>
+              <span>Or 3 monthly installments of <strong style={{ color: 'var(--clr-text)' }}>Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')}</strong>, no extra charge</span>
             </div>
 
             {/* Description */}

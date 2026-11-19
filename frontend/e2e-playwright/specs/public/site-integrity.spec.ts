@@ -73,15 +73,57 @@ test('the contact form hands the message to WhatsApp instead of faking success',
   await expect(page.getByText('Message Received')).toHaveCount(0);
 });
 
-test('no promotion or feature the shop cannot honour is advertised', async ({ page }) => {
-  for (const path of ['/', '/cart', '/products']) {
-    await page.goto(path);
+test('no promotion, service or branch the shop cannot honour is advertised', async ({ page }) => {
+  const FALSE_CLAIMS = [
+    /NANDANA20/i,
+    /\bkoko\b/i,
+    /mintpay/i,
+    /payzy/i,
+    /search by image/i,
+    /above\s+Rs\.?\s*5,000/i, // delivery is free on every order
+    /kurunegala/i, // the only showroom is in Veyangoda
+    /pickup code/i, // no automatic pickup notification exists
+  ];
+  const check = async (where: string) => {
     const text = await page.locator('body').innerText();
-    for (const claim of [/NANDANA20/i, /\bkoko\b/i, /mintpay/i, /payzy/i, /search by image/i, /orders above\s+Rs\.?\s*5,000/i]) {
-      expect(text, `${path} must not advertise ${claim}`).not.toMatch(claim);
+    for (const claim of FALSE_CLAIMS) {
+      expect(text, `${where} must not advertise ${claim}`).not.toMatch(claim);
     }
+  };
+
+  for (const path of ['/', '/cart', '/contact', '/returns-exchange', '/shipping']) {
+    await page.goto(path);
+    await page.waitForLoadState('networkidle');
+    await check(path);
   }
+
+  // Product cards load after the page itself: wait for them before reading.
+  await page.goto('/products');
+  const firstCard = page.getByRole('article').first();
+  await expect(firstCard).toBeVisible();
+  await check('/products (with product cards)');
+
+  // A product page, including its "View store information" popup.
+  await firstCard.locator('a[href^="/products/"]').first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await check('product page');
+  const storeInfo = page.getByRole('button', { name: /view store information/i });
+  if (await storeInfo.count()) {
+    await storeInfo.click();
+    await expect(page.getByText('Our Showroom')).toBeVisible();
+    await check('product page store popup');
+  }
+
   await expect(page.getByRole('button', { name: /search by image/i })).toHaveCount(0);
+});
+
+test('the footer shows the one real showroom with a working map link', async ({ page }) => {
+  await page.goto('/');
+  const map = page.locator('footer a[href^="https://www.google.com/maps/search/"]');
+  await expect(map).toHaveCount(1);
+  await expect(map).toContainText('50 Main St, Veyangoda 11100');
+  const query = new URL((await map.getAttribute('href'))!).searchParams.get('query');
+  expect(query).toBe('Nandana Textiles, 50 Main St, Veyangoda 11100');
 });
 
 test('Shop the Look only shows real, openable products', async ({ page, request }, testInfo) => {

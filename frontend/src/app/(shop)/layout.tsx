@@ -4,7 +4,6 @@ import { useEffect, Suspense } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import AppPreloader from '@/components/layout/AppPreloader';
 import TopProgressBar from '@/components/layout/TopProgressBar';
 import QuickViewModal from '@/components/products/QuickViewModal';
 import { ChatWidget } from '@/components/chat/chat-widget';
@@ -23,7 +22,6 @@ export default function ShopLayout({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppPreloader />
       <Suspense fallback={null}>
         <TopProgressBar />
       </Suspense>

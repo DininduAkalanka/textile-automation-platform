@@ -6,7 +6,7 @@ import {
   CONTACT_EMAIL,
   PHONE_LANDLINE,
   PHONE_MOBILE,
-  SHOWROOMS,
+  SHOWROOM,
   SITE_NAME,
   activeSocialLinks,
   whatsappUrl,
@@ -40,7 +40,7 @@ const COLS = [
     heading: 'Customer Care',
     links: [
       { label: 'Track My Order', href: '/account/orders' },
-      { label: 'Contact & Showrooms', href: '/contact' },
+      { label: 'Contact & Showroom', href: '/contact' },
       { label: 'Shipping & Delivery', href: '/shipping' },
       { label: 'Returns & Exchange', href: '/returns-exchange' },
       { label: 'Size & Fit Guide', href: '/size-guide' },
@@ -146,14 +146,19 @@ export default function Footer() {
                     </a>
                   </li>
                 ))}
-                {SHOWROOMS.map((s) => (
-                  <li key={s.name}>
-                    <a href={s.mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2.5 text-[0.78rem] text-white/55 no-underline transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}>
-                      <SocialIcon name="map-pin" size={14} className="shrink-0 text-[var(--clr-brand)]" />
-                      {s.name}
-                    </a>
-                  </li>
-                ))}
+                <li>
+                  <a
+                    href={SHOWROOM.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${SHOWROOM.listingName}, ${SHOWROOM.address} — open in Google Maps`}
+                    className="inline-flex items-start gap-2.5 text-[0.78rem] text-white/55 no-underline transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}
+                  >
+                    <SocialIcon name="map-pin" size={14} className="mt-0.5 shrink-0 text-[var(--clr-brand)]" />
+                    {SHOWROOM.address}
+                  </a>
+                </li>
                 <li>
                   <a href={whatsappUrl('Hello Nandana Textile, I have a question.')} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-[var(--r-xs)] bg-[#25D366] px-3 py-2 text-[0.72rem] font-semibold uppercase tracking-wider text-white no-underline transition-opacity hover:opacity-90">
                     <SocialIcon name="whatsapp" size={14} />

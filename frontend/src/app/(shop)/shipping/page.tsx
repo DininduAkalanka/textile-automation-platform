@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { PolicyLayout, PolicySection } from '@/components/legal/policy-layout';
-import { SHOWROOMS, SITE_NAME, whatsappUrl } from '@/lib/site-config';
+import { SHOWROOM, SITE_NAME, whatsappUrl } from '@/lib/site-config';
 
 export const metadata: Metadata = {
   title: 'Shipping & Delivery',
@@ -54,25 +54,21 @@ export default function ShippingPage() {
         </p>
       </PolicySection>
 
-      <PolicySection title="Collecting from a showroom">
+      <PolicySection title="Collecting from our showroom">
         <p>
           Prefer to collect? Place your order, then{' '}
-          <a href={whatsappUrl('Hello Nandana Textile, I would like to collect my order from a showroom. My order number is: ')} target="_blank" rel="noopener noreferrer">
+          <a href={whatsappUrl('Hello Nandana Textile, I would like to collect my order from your Veyangoda showroom. My order number is: ')} target="_blank" rel="noopener noreferrer">
             message us on WhatsApp
           </a>{' '}
-          with your order number and the showroom you prefer. We will confirm when it is ready.
+          with your order number. We will confirm when it is ready to collect from:
         </p>
-        <ul>
-          {SHOWROOMS.map((s) => (
-            <li key={s.name}>
-              <strong>{s.name}</strong>: {s.address} (
-              <a href={s.mapsUrl} target="_blank" rel="noopener noreferrer">
-                map
-              </a>
-              )
-            </li>
-          ))}
-        </ul>
+        <p>
+          <strong>{SHOWROOM.listingName}</strong>, {SHOWROOM.address} (
+          <a href={SHOWROOM.mapsUrl} target="_blank" rel="noopener noreferrer">
+            open in Google Maps
+          </a>
+          )
+        </p>
       </PolicySection>
 
       <PolicySection title="If something goes wrong">

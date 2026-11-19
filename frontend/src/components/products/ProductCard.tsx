@@ -337,10 +337,9 @@ export default function ProductCard({ product, index = 0, isBestseller = false }
               </span>
             )}
           </div>
-          {/* BNPL Installment Display */}
+          {/* The shop's own installment plan (3 monthly payments via PayHere). */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', fontSize: '0.62rem', color: 'var(--clr-text-3)', fontFamily: 'var(--font-mono)' }}>
-            <span>Or 3 x Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')} with</span>
-            <span style={{ fontWeight: 700, color: 'var(--clr-text-2)', background: 'var(--clr-surface-3)', padding: '1px 4px', borderRadius: '2px', fontSize: '0.55rem', letterSpacing: '0.04em' }}>KOKO</span>
+            <span>Or 3 monthly payments of Rs. {Math.round(Number(product.price) / 3).toLocaleString('en-LK')}</span>
           </div>
 
           {/* Available Sizes Pills (Thilakawardhana signature layout) */}

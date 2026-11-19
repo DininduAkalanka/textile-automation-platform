@@ -36,6 +36,7 @@ import { normalizeImageUrl } from '@/lib/image-url';
 import { MeasurementDialog } from '@/components/cart/measurement-dialog';
 import { MeasurementSet, fieldsFor } from '@/lib/measurements';
 import { SIZE_CHART_CM, SIZE_CHART_INCHES } from '@/lib/size-chart';
+import { SHOWROOM } from '@/lib/site-config';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -385,7 +386,7 @@ export default function ProductDetailPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-[var(--clr-brand)] font-bold">✓</span>
-            <span><strong>Free Delivery:</strong> Applied automatically on all orders above Rs. 5,000.</span>
+            <span><strong>Free Delivery:</strong> On every order, anywhere in Sri Lanka.</span>
           </li>
         </ul>
       </div>
@@ -967,7 +968,7 @@ export default function ProductDetailPage() {
                 <p className="font-bold text-neutral-900 uppercase tracking-wide">
                   Pickup Available at Nandana Textile Showroom
                 </p>
-                <p className="text-neutral-500">Usually ready in 4 hours</p>
+                <p className="text-neutral-500">Arrange collection on WhatsApp</p>
                 <button
                   type="button"
                   onClick={() => setShowStoreInfo(true)}
@@ -1294,26 +1295,26 @@ export default function ProductDetailPage() {
             <div className="mt-4 p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-800">
               <div className="flex items-center gap-2 font-bold text-neutral-900 mb-1">
                 <Check size={16} strokeWidth={2.5} className="text-emerald-700" />
-                <span>Ready for In-Store Pickup in 2–4 Hours</span>
+                <span>Collect Your Order from Our Showroom</span>
               </div>
               <p className="text-neutral-600 leading-relaxed text-[11.5px]">
-                Orders placed before 2:00 PM are prepared the same day. You will receive an SMS and email notification with your pickup code once ready. Zero delivery or handling fees.
+                Place your order, then message us on WhatsApp with your order number to collect it from our Veyangoda showroom. We will confirm when it is ready. There is no charge.
               </p>
             </div>
 
-            {/* Showrooms */}
+            {/* Showroom */}
             <div className="mt-4 space-y-3">
-              <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider font-mono text-[11px]">Showroom Locations</p>
+              <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider font-mono text-[11px]">Our Showroom</p>
               
-              {/* Veyangoda Flagship */}
+              {/* Veyangoda showroom (the only one) */}
               <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-neutral-900 text-white rounded-sm mb-1">
-                      FLAGSHIP SHOWROOM
+                      VEYANGODA
                     </span>
                     <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Veyangoda</h4>
-                    <p className="text-xs text-neutral-600 mt-0.5">50 Main Street, Veyangoda, Sri Lanka</p>
+                    <p className="text-xs text-neutral-600 mt-0.5">{SHOWROOM.listingName}, {SHOWROOM.address}, Sri Lanka</p>
                   </div>
                 </div>
                 
@@ -1332,7 +1333,7 @@ export default function ProductDetailPage() {
 
                 <div className="mt-3 flex items-center gap-2">
                   <a
-                    href="https://maps.google.com/?q=Nandana+Textile+Veyangoda"
+                    href={SHOWROOM.mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium transition-colors"
@@ -1351,27 +1352,13 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* Kurunegala Branch */}
-              <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/60 hover:border-neutral-300 transition-colors">
-                <div>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider border border-neutral-300 text-neutral-800 bg-neutral-100 rounded-sm mb-1">
-                    KURUNEGALA BRANCH
-                  </span>
-                  <h4 className="text-sm font-bold text-neutral-900">Nandana Textile — Kurunegala</h4>
-                  <p className="text-xs text-neutral-600 mt-0.5">No. 145, Main Street, Kurunegala, Sri Lanka</p>
-                </div>
-                <div className="mt-2.5 pt-2.5 border-t border-neutral-200/80 text-[11.5px] text-neutral-600">
-                  <span className="font-semibold text-neutral-800">Hours: </span>
-                  <span>Mon – Sat: 8:30 AM – 6:00 PM | Sun: 9:00 AM – 2:00 PM</span>
-                </div>
-              </div>
             </div>
 
             {/* Pickup Instructions */}
             <div className="mt-4 p-3 bg-neutral-100 rounded-xl text-xs text-neutral-700 space-y-1">
               <p className="font-bold text-neutral-900">What to know for pickup:</p>
               <ul className="list-disc pl-4 space-y-0.5 text-[11.5px] text-neutral-600">
-                <li>Bring your Order ID (e.g. #ORD-XXXX) or SMS confirmation.</li>
+                <li>Bring your order number (it starts with TXL-).</li>
                 <li>Fitting rooms available if you wish to try garments before taking them.</li>
                 <li>Free on-the-spot size exchange if stock is available.</li>
               </ul>

@@ -4,10 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const SERVICE_PILLARS = [
-  { label: 'Island-Wide Delivery', note: 'Free on orders above Rs. 5,000 across all 25 districts' },
-  { label: 'Express Showroom Pickup', note: 'Usually ready in 2–4 hours at Veyangoda & Kurunegala' },
+  { label: 'Island-Wide Delivery', note: 'Free on every order, anywhere in Sri Lanka' },
+  { label: 'Showroom Collection', note: 'Collect your order from our Veyangoda showroom' },
   { label: '7-Day Hassle-Free Exchange', note: 'In-store or via nationwide courier collection' },
-  { label: 'Flexible Payment Methods', note: 'Cards, Koko BNPL 3-Installments & Cash on Delivery' },
+  { label: 'Flexible Payment Methods', note: 'Cards, 3 monthly installments & Cash on Delivery' },
 ];
 
 const SPOTLIGHT_DEPARTMENTS = [

@@ -139,6 +139,17 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  /**
+   * Change the signed-in user's password. Other devices are signed out; this
+   * one receives a fresh session (new access token + refresh cookie).
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   async sendVerificationCode(channel: 'EMAIL' | 'SMS' = 'EMAIL') {
     return this.request('/auth/send-code', {
       method: 'POST',

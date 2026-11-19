@@ -50,7 +50,7 @@ export default function SizeGuidePage() {
           <a href={whatsappUrl('Hello Nandana Textile, could you help me choose the right size?')} target="_blank" rel="noopener noreferrer">
             Send us your measurements on WhatsApp
           </a>{' '}
-          and we will recommend a size, or visit a showroom to try garments on. If something doesn&apos;t fit, see{' '}
+          and we will recommend a size, or visit our Veyangoda showroom to try garments on. If something doesn&apos;t fit, see{' '}
           <Link href="/returns-exchange">Returns &amp; Exchange</Link>.
         </p>
       </PolicySection>

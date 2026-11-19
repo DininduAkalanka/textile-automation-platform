@@ -151,6 +151,68 @@ export class AuthService {
     return this.issueSession(user, userAgent);
   }
 
+  /**
+   * A signed-in user changes their own password (pre-handover: there was no
+   * way to do this at all, so a shop owner could not replace a password they
+   * were given).
+   *
+   * - The current password is required, and a wrong one counts towards the
+   *   same temporary lockout as sign-in, so a borrowed or stolen session
+   *   cannot be used to guess it.
+   * - Every existing session is revoked (all other devices are signed out),
+   *   and this device gets a fresh session in the same transaction.
+   * - Errors are 400s with a code, not 401s: a 401 would make the browser
+   *   treat it as an expired session and try to refresh.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    userAgent?: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+    if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+      const minutes = Math.ceil(
+        (user.lockedUntil.getTime() - Date.now()) / 60_000,
+      );
+      throw new BadRequestException({
+        code: 'ACCOUNT_LOCKED',
+        message: `Too many wrong passwords. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`,
+      });
+    }
+
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      await this.recordFailedLogin(user.id);
+      throw new BadRequestException({
+        code: 'WRONG_CURRENT_PASSWORD',
+        message: 'Your current password is not correct.',
+      });
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      throw new BadRequestException({
+        code: 'PASSWORD_UNCHANGED',
+        message:
+          'Choose a new password that is different from your current one.',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      return this.issueSession(user, userAgent, tx);
+    });
+  }
+
   /** Count a wrong password; the Nth in a row locks the account for a while. */
   private async recordFailedLogin(userId: string): Promise<void> {
     const { failedLoginAttempts } = await this.prisma.user.update({

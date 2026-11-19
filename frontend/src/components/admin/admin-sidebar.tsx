@@ -12,6 +12,7 @@ import {
   FileText,
   FolderTree,
   LayoutDashboard,
+  KeyRound,
   LogOut,
   Package,
   Scissors,
@@ -237,6 +238,13 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean } = {}) {
         >
           <Store size={16} aria-hidden />
           View storefront
+        </Link>
+        <Link
+          href="/account/security"
+          className="mb-1 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <KeyRound size={16} aria-hidden />
+          Change password
         </Link>
 
         <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-import { SITE_NAME, whatsappUrl } from '@/lib/site-config';
+import { SHOWROOM, SITE_NAME, whatsappUrl } from '@/lib/site-config';
 
 const INQUIRY_TOPICS = [
   { value: 'general', label: 'General Customer Service' },
@@ -63,7 +63,7 @@ export default function ContactPage() {
               Home
             </Link>
             <span className="text-neutral-300">/</span>
-            <span className="text-neutral-900 font-medium">Contact & Showrooms</span>
+            <span className="text-neutral-900 font-medium">Contact & Showroom</span>
           </nav>
         </div>
       </div>
@@ -73,15 +73,15 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[#CC0000] mb-3">
             <span className="w-5 h-[1.5px] bg-[#CC0000] inline-block" />
-            SHOWROOMS & CUSTOMER CONCIERGE
+            SHOWROOM & CUSTOMER CARE
             <span className="w-5 h-[1.5px] bg-[#CC0000] inline-block" />
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-900 tracking-tight">
             How May We Assist You?
           </h1>
           <p className="mt-3 text-sm sm:text-base text-neutral-600 max-w-2xl mx-auto leading-relaxed font-sans">
-            Visit our physical showrooms in Veyangoda and Kurunegala for in-store order collection, 
-            private fitting rooms, or contact our dedicated uniform and fabric specialists.
+            Visit our showroom in Veyangoda to collect orders and try garments on, or contact our
+            uniform and fabric specialists by phone, WhatsApp or email.
           </p>
         </div>
       </section>
@@ -154,9 +154,9 @@ export default function ContactPage() {
                 </svg>
               </div>
               <h2 className="text-sm font-bold text-neutral-900">In-Store Pickup</h2>
-              <p className="text-[11.5px] text-neutral-500 mt-1 mb-3">Ready in 2–4 hours | Zero fee</p>
+              <p className="text-[11.5px] text-neutral-500 mt-1 mb-3">Collect your order | No fee</p>
               <span className="inline-block text-[11px] font-mono uppercase tracking-wider text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded-sm">
-                Veyangoda & Kurunegala
+                Veyangoda
               </span>
             </div>
 
@@ -172,21 +172,21 @@ export default function ContactPage() {
               PHYSICAL STORES
             </span>
             <h2 className="font-serif text-2xl sm:text-3xl font-bold text-neutral-900">
-              Nandana Textile Showrooms
+              Our Showroom
             </h2>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-              Visit our showrooms to collect orders, try garments in private fitting rooms, or consult our tailoring specialists.
+              Visit us to collect orders, try garments in our fitting rooms, or talk to our tailoring specialists.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 max-w-2xl">
 
-            {/* Veyangoda Flagship */}
+            {/* Veyangoda showroom (the only one) */}
             <div className="bg-white rounded-xl border border-neutral-200/90 p-6 sm:p-7 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 bg-neutral-900 text-white rounded-sm">
-                    FLAGSHIP SHOWROOM
+                    OUR SHOWROOM
                   </span>
                   <span className="text-[11px] font-mono font-medium text-neutral-600">
                     Open Mon – Sat
@@ -200,7 +200,7 @@ export default function ContactPage() {
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
-                  <span>50 Main Street, Veyangoda, Sri Lanka</span>
+                  <span>{SHOWROOM.listingName}, {SHOWROOM.address}, Sri Lanka</span>
                 </p>
 
                 <div className="mt-5 pt-4 border-t border-neutral-100 space-y-2.5 text-xs text-neutral-600 font-sans">
@@ -231,7 +231,7 @@ export default function ContactPage() {
 
               <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center gap-3">
                 <a
-                  href="https://maps.google.com/?q=50+Main+Street+Veyangoda+Nandana+Textile"
+                  href={SHOWROOM.mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 text-center py-2.5 px-4 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
@@ -241,75 +241,6 @@ export default function ContactPage() {
                 </a>
                 <a
                   href="https://wa.me/94717088445?text=Hello%20Nandana%20Textile%20Veyangoda,%20I'd%20like%20to%20check%20showroom%20visiting%20hours"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2.5 px-5 rounded-lg border border-neutral-300 hover:border-neutral-900 text-neutral-900 text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
-                >
-                  <span>WhatsApp</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Kurunegala Branch */}
-            <div className="bg-white rounded-xl border border-neutral-200/90 p-6 sm:p-7 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 border border-neutral-300 text-neutral-800 bg-neutral-50 rounded-sm">
-                    KURUNEGALA BRANCH
-                  </span>
-                  <span className="text-[11px] font-mono font-medium text-neutral-600">
-                    Open Mon – Sat
-                  </span>
-                </div>
-                <h3 className="font-serif text-xl font-bold text-neutral-900">
-                  Nandana Textile — Kurunegala
-                </h3>
-                <p className="text-xs sm:text-sm text-neutral-600 mt-1.5 flex items-start gap-2">
-                  <svg className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <span>No. 145, Main Street, Kurunegala, Sri Lanka</span>
-                </p>
-
-                <div className="mt-5 pt-4 border-t border-neutral-100 space-y-2.5 text-xs text-neutral-600 font-sans">
-                  <div className="flex justify-between py-1 border-b border-neutral-100">
-                    <span className="font-medium text-neutral-800">Monday – Saturday</span>
-                    <span className="font-mono text-neutral-700">8:30 AM – 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-neutral-100">
-                    <span className="font-medium text-neutral-800">Sunday & Poya Days</span>
-                    <span className="font-mono text-neutral-700">9:00 AM – 2:00 PM</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="font-medium text-neutral-800">Direct Hotline</span>
-                    <a href="tel:0717088445" className="hover:text-[#CC0000] font-mono font-semibold text-neutral-900">071 708 8445</a>
-                  </div>
-                </div>
-
-                <div className="mt-5 p-3.5 bg-neutral-50 rounded-lg border border-neutral-100 text-xs text-neutral-600">
-                  <p className="font-bold text-neutral-900 mb-2 uppercase tracking-wider text-[10px] font-mono">Showroom Services:</p>
-                  <div className="flex flex-wrap gap-1.5 text-[11px]">
-                    <span className="bg-white px-2 py-0.5 rounded-sm border border-neutral-200">Textile Yardage & Fabric Rolls</span>
-                    <span className="bg-white px-2 py-0.5 rounded-sm border border-neutral-200">Online Order Pickup Counter</span>
-                    <span className="bg-white px-2 py-0.5 rounded-sm border border-neutral-200">In-Store Returns & Exchanges</span>
-                    <span className="bg-white px-2 py-0.5 rounded-sm border border-neutral-200">Institutional Uniform Desk</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center gap-3">
-                <a
-                  href="https://maps.google.com/?q=145+Main+Street+Kurunegala+Nandana+Textile"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center py-2.5 px-4 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
-                >
-                  <span>Directions on Map</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-                </a>
-                <a
-                  href="https://wa.me/94717088445?text=Hello%20Nandana%20Textile%20Kurunegala,%20I'd%20like%20to%20inquire%20about%20store%20pickup"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-2.5 px-5 rounded-lg border border-neutral-300 hover:border-neutral-900 text-neutral-900 text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
@@ -494,7 +425,7 @@ export default function ContactPage() {
                   <div>
                     <p className="font-bold text-neutral-900">Place Your Order</p>
                     <p className="text-neutral-600 mt-0.5 text-[11.5px] leading-relaxed">
-                      Order online as usual, then message us on WhatsApp with your order number (TXL-…) and the showroom you prefer: Veyangoda or Kurunegala.
+                      Order online as usual, then message us on WhatsApp with your order number (TXL-…) and tell us you would like to collect it from our Veyangoda showroom.
                     </p>
                   </div>
                 </div>

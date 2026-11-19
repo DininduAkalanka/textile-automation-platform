@@ -28,20 +28,20 @@ export const WHATSAPP_NUMBER = '94717088445';
 
 export const CONTACT_EMAIL = 'info@nandanatextile.lk';
 
-export const SHOWROOMS = [
-  {
-    name: 'Veyangoda Showroom',
-    address: '50 Main Street, Veyangoda',
-    mapsUrl: 'https://maps.google.com/?q=50+Main+Street+Veyangoda+Nandana+Textile',
-    phone: PHONE_LANDLINE,
-  },
-  {
-    name: 'Kurunegala Showroom',
-    address: '145 Main Street, Kurunegala',
-    mapsUrl: 'https://maps.google.com/?q=145+Main+Street+Kurunegala+Nandana+Textile',
-    phone: PHONE_MOBILE,
-  },
-] as const;
+/**
+ * The shop has ONE showroom, in Veyangoda. (Earlier copy also listed a
+ * Kurunegala branch that does not exist.) The maps link searches for the
+ * exact Google Maps listing name and address.
+ */
+export const SHOWROOM = {
+  name: 'Veyangoda Showroom',
+  listingName: 'Nandana Textiles',
+  address: '50 Main St, Veyangoda 11100',
+  mapsUrl:
+    'https://www.google.com/maps/search/?api=1&query=' +
+    encodeURIComponent('Nandana Textiles, 50 Main St, Veyangoda 11100'),
+  phone: PHONE_LANDLINE,
+} as const;
 
 export type SocialId = 'facebook' | 'instagram' | 'whatsapp' | 'tiktok' | 'youtube';
 
