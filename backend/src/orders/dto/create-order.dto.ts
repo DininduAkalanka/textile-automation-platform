@@ -1,21 +1,35 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
   IsInt,
+  Max,
   Min,
   IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  MAX_LINES_PER_ORDER_AT_LOAD,
+  MAX_QTY_PER_LINE_AT_LOAD,
+} from '../../common/config/limits';
 
 export class OrderItemDto {
   @IsUUID()
   productId: string;
 
+  // QA P0-2: one anonymous request could reserve a product's entire stock
+  // (quantity 30 took a product from 30 sellable to 0). A per-line cap bounds
+  // what any single order can hold; bulk orders go through the shop.
   @IsInt({ message: 'Quantity must be an integer' })
   @Min(1)
+  @Max(MAX_QTY_PER_LINE_AT_LOAD, {
+    message: `Quantity per item cannot exceed ${MAX_QTY_PER_LINE_AT_LOAD}. Contact the shop for bulk orders.`,
+  })
   quantity: number;
 
   /**
@@ -70,7 +84,10 @@ export class AddressDto {
 }
 
 export class CreateOrderDto {
+  // QA P2-1: an empty cart created a Rs 0 order that COD then "confirmed".
   @IsArray()
+  @ArrayMinSize(1, { message: 'An order needs at least one item' })
+  @ArrayMaxSize(MAX_LINES_PER_ORDER_AT_LOAD)
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
@@ -88,5 +105,6 @@ export class CreateOrderDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   notes?: string;
 }

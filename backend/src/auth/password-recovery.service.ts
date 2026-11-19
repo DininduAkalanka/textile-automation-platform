@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { VerificationChannel } from '@prisma/client';
 import { isEmail } from 'class-validator';
 import { createHash, randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
@@ -34,17 +35,26 @@ export class PasswordRecoveryService {
 
     const token = randomBytes(32).toString('hex');
     const now = Date.now();
+    // QA P1-8: the link used to go only to VERIFIED contacts. A guest checkout
+    // could create an unverified account for someone else's email, after which
+    // the real owner could neither register ("already exists") nor reset — they
+    // were locked out for good. The link is delivered to the contact itself, so
+    // whoever can open it owns that contact; reset() then marks it verified.
     // The conditional write gives concurrent requests the same resend cooldown.
     const issued = await this.prisma.user.updateMany({
       where: {
         isActive: true,
-        ...(email ? { email, emailVerified: true } : { phone, phoneVerified: true }),
+        ...(email ? { email } : { phone }),
         OR: [
           { resetExpiresAt: null },
           { resetExpiresAt: { lte: new Date(now + LINK_TTL - RESEND_INTERVAL) } },
         ],
       },
-      data: { resetTokenHash: hashToken(token), resetExpiresAt: new Date(now + LINK_TTL) },
+      data: {
+        resetTokenHash: hashToken(token),
+        resetExpiresAt: new Date(now + LINK_TTL),
+        resetChannel: email ? VerificationChannel.EMAIL : VerificationChannel.SMS,
+      },
     });
 
     if (issued.count) {
@@ -67,14 +77,28 @@ export class PasswordRecoveryService {
   async reset(token: string, password: string) {
     const resetTokenHash = hashToken(token);
     const valid = { resetTokenHash, resetExpiresAt: { gt: new Date() }, isActive: true };
-    const user = await this.prisma.user.findFirst({ where: valid, select: { id: true } });
+    const user = await this.prisma.user.findFirst({
+      where: valid,
+      select: { id: true, resetChannel: true },
+    });
     if (!user) throw invalidLink();
 
     const passwordHash = await bcrypt.hash(password, 12);
     await this.prisma.$transaction(async (tx) => {
       const consumed = await tx.user.updateMany({
         where: { id: user.id, resetTokenHash, resetExpiresAt: { gt: new Date() }, isActive: true },
-        data: { passwordHash, resetTokenHash: null, resetExpiresAt: null },
+        data: {
+          passwordHash,
+          resetTokenHash: null,
+          resetExpiresAt: null,
+          resetChannel: null,
+          // The link reached this contact, which proves ownership (QA P1-8).
+          ...(user.resetChannel === VerificationChannel.EMAIL ? { emailVerified: true } : {}),
+          ...(user.resetChannel === VerificationChannel.SMS ? { phoneVerified: true } : {}),
+          // A fresh password also ends any brute-force lockout.
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
       });
       if (!consumed.count) throw invalidLink();
       await tx.refreshToken.updateMany({

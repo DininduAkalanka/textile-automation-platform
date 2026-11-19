@@ -115,6 +115,9 @@ export default function CheckoutPage() {
   const [otpSending, setOtpSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpError, setOtpError] = useState('');
+  // The email/phone typed into the guest form already belongs to an account:
+  // the shopper must sign in (QA P0-1 — guest checkout never logs anyone in).
+  const [loginRequired, setLoginRequired] = useState(false);
 
   const [address, setAddress] = useState({
     fullName: '',
@@ -161,19 +164,62 @@ export default function CheckoutPage() {
     installment: 'Monthly Installments (3x Plan)',
   };
 
+  const resolvedPhone = address.phone || phone;
+  const resolvedEmail = email || user?.email || '';
+  // Signed-in customers verify their account contact; guests verify the email
+  // they typed (the guest form always has one).
+  const otpChannel: 'EMAIL' | 'SMS' = isAuthenticated && !user?.email ? 'SMS' : 'EMAIL';
+  const otpDestination = otpChannel === 'EMAIL' ? resolvedEmail : resolvedPhone;
+
+  /** The email/phone already has an account: stop and ask them to sign in. */
+  const showLoginRequired = (message?: string) => {
+    setOtpModalOpen(false);
+    setLoginRequired(true);
+    setError(
+      message ||
+        'An account with this email or phone number already exists. Sign in to continue.',
+    );
+  };
+
   const handleSendOtp = async () => {
     setOtpSending(true);
     setOtpError('');
     try {
       if (isAuthenticated) {
-        await api.sendVerificationCode('EMAIL');
+        await api.sendVerificationCode(otpChannel);
+      } else {
+        // QA P1-8: guests had no way to receive a code at all — the only send
+        // endpoint required a login. This one is public and rate-limited.
+        await api.sendGuestCode({
+          email: resolvedEmail,
+          phone: resolvedPhone,
+          channel: 'EMAIL',
+        });
       }
       setOtpSent(true);
     } catch (err: any) {
+      if (err.code === 'LOGIN_REQUIRED') {
+        showLoginRequired(err.message);
+        return;
+      }
+      // Already verified (a signed-in customer): nothing to send, just retry.
+      if (err.code === 'ALREADY_VERIFIED') {
+        setOtpSent(true);
+        return;
+      }
       setOtpError(err.message || 'Could not send verification code.');
     } finally {
       setOtpSending(false);
     }
+  };
+
+  /** Plan an installment order, then pay the FIRST installment through PayHere. */
+  const startInstallmentPlan = async (orderId: string) => {
+    const plan = await api.createInstallmentPayment(orderId, 3);
+    const first = plan.installments.find((i) => i.installmentNo === 1) ?? plan.installments[0];
+    const { checkoutUrl, params } = await api.createInstallmentPayherePayment(first.id);
+    clearCart();
+    postToPayHere(checkoutUrl, params);
   };
 
   const handlePlaceOrder = async () => {
@@ -192,6 +238,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Same rule as registration (the API enforces it too).
+    if (method === 'installment' && !isAuthenticated && password.length < 8) {
+      setLoading(false);
+      setError('Create a password of at least 8 characters to manage your installment plan.');
+      return;
+    }
+
     try {
       const orderPayloadItems = items.map((item) => ({
         productId: item.product.id,
@@ -199,9 +252,6 @@ export default function CheckoutPage() {
         measurements: item.measurements,
         selectedAttributes: item.selectedSize ? { size: item.selectedSize } : undefined,
       }));
-
-      const resolvedPhone = address.phone || phone;
-      const resolvedEmail = email || user?.email || '';
 
       // A. Guest Checkout Flow (Express & Frictionless)
       if (!isAuthenticated) {
@@ -216,10 +266,11 @@ export default function CheckoutPage() {
           fullName: address.fullName,
           paymentMethod: method.toUpperCase() as any,
           verificationCode: otpCode || undefined,
+          verificationChannel: otpCode ? 'EMAIL' : undefined,
           password: password || undefined,
         });
 
-        // Silently log in the newly provisioned account
+        // Log in the account that was just created for this order (and only it).
         if (guestRes.session?.user && guestRes.session?.accessToken) {
           setAuth(guestRes.session.user, guestRes.session.accessToken);
         }
@@ -227,15 +278,14 @@ export default function CheckoutPage() {
         const order = guestRes.order;
 
         if (method === 'cod') {
+          // The API records the COD payment and confirms the order itself.
           clearCart();
           router.push(`/account/orders/${order.id}?success=true`);
           return;
         }
 
         if (method === 'installment') {
-          await api.createInstallmentPayment(order.id, 3);
-          clearCart();
-          router.push(`/account/orders/${order.id}/installments?success=true`);
+          await startInstallmentPlan(order.id);
           return;
         }
 
@@ -247,6 +297,14 @@ export default function CheckoutPage() {
       }
 
       // B. Authenticated Customer Checkout Flow
+      // A signed-in customer who was asked for a code: verify it first. (The
+      // code used to be collected here and then never checked.)
+      if (otpCode) {
+        await api.verifyContactCode(otpChannel, otpCode);
+        setOtpModalOpen(false);
+        setOtpCode('');
+      }
+
       const order = await api.createOrder({
         items: orderPayloadItems,
         shippingAddress: {
@@ -263,9 +321,7 @@ export default function CheckoutPage() {
       }
 
       if (method === 'installment') {
-        await api.createInstallmentPayment(order.id, 3);
-        clearCart();
-        router.push(`/account/orders/${order.id}/installments?success=true`);
+        await startInstallmentPlan(order.id);
         return;
       }
 
@@ -274,13 +330,21 @@ export default function CheckoutPage() {
       clearCart();
       postToPayHere(checkoutUrl, params);
     } catch (err: any) {
+      if (err.code === 'LOGIN_REQUIRED') {
+        showLoginRequired(err.message);
+        return;
+      }
       if (err.code === 'VERIFICATION_REQUIRED' || err.code === 'CONTACT_UNVERIFIED') {
         setOtpModalOpen(true);
         handleSendOtp();
         return;
       }
-      if (err.code === 'OTP_INVALID') {
-        setOtpError('Invalid OTP code. Please enter the 6-digit verification code.');
+      if (err.code === 'OTP_INVALID' || err.code === 'OTP_LOCKED') {
+        setOtpError(
+          err.code === 'OTP_LOCKED'
+            ? 'Too many incorrect attempts. Request a new code.'
+            : 'Invalid code. Please enter the 6-digit code we sent you.',
+        );
         setOtpModalOpen(true);
         return;
       }
@@ -446,11 +510,21 @@ export default function CheckoutPage() {
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', color: '#991b1b', padding: '0.875rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div data-testid="checkout-error" role="alert" style={{ background: '#fef2f2', color: '#991b1b', padding: '0.875rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', marginBottom: '1.5rem', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div className="flex items-center gap-2">
             <AlertCircle size={18} className="shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
+          {loginRequired && (
+            <Link
+              href="/login?returnTo=/checkout"
+              data-testid="checkout-login-required-signin"
+              className="btn btn-sm btn-primary"
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+            >
+              Sign in to continue →
+            </Link>
+          )}
           {items.some((i) => !isComplete(i.product, i.measurements, i.selectedSize)) && (
             <button
               type="button"
@@ -508,7 +582,13 @@ export default function CheckoutPage() {
                       className="input"
                       autoComplete="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (loginRequired) {
+                          setLoginRequired(false);
+                          setError('');
+                        }
+                      }}
                       placeholder="you@example.com"
                       disabled={isAuthenticated}
                       required
@@ -531,6 +611,10 @@ export default function CheckoutPage() {
                       onChange={(e) => {
                         setPhone(e.target.value);
                         setAddress({ ...address, phone: e.target.value });
+                        if (loginRequired) {
+                          setLoginRequired(false);
+                          setError('');
+                        }
                       }}
                       placeholder="077 123 4567"
                       required
@@ -678,7 +762,7 @@ export default function CheckoutPage() {
                 onSelect={() => setMethod('installment')}
                 icon="📅"
                 title="Monthly Installments (3x Plan)"
-                subtitle="Split into 3 equal monthly payments. Pay 1st installment today."
+                subtitle="Split into 3 monthly payments. Pay the 1st today by card (PayHere); pay the rest from My Orders."
                 right={`${fmt(totalValue / 3)} / mo`}
                 rightSub="3 Monthly Payments"
               >
@@ -687,10 +771,12 @@ export default function CheckoutPage() {
                     <label className="input-label">Create Password for Installment Schedule *</label>
                     <input
                       type="password"
+                      data-testid="checkout-installment-password-input"
                       className="input"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter a password (min 6 characters)"
+                      placeholder="Enter a password (min 8 characters)"
+                      minLength={8}
                       required
                     />
                     <span style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)', marginTop: '0.25rem', display: 'block' }}>
@@ -742,7 +828,7 @@ export default function CheckoutPage() {
                     <p style={{ fontSize: '0.8125rem', color: 'var(--clr-text-2)' }}>
                       {method === 'payhere' && <>Pay <strong>{fmt(totalValue)}</strong> securely via PayHere Gateway</>}
                       {method === 'cod' && <>Pay <strong>{fmt(totalValue)}</strong> in cash upon delivery</>}
-                      {method === 'installment' && <>Pay 1st installment <strong>{fmt(totalValue / 3)}</strong> today</>}
+                      {method === 'installment' && <>Pay 1st installment <strong>{fmt(totalValue / 3)}</strong> today by card via PayHere</>}
                     </p>
                   </div>
                 </div>
@@ -913,10 +999,14 @@ export default function CheckoutPage() {
               📱
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-              Verify Mobile for Cash on Delivery
+              {otpChannel === 'EMAIL' ? 'Verify your email' : 'Verify your mobile'}
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
-              To prevent fake courier dispatches, enter the 6-digit OTP code sent to your contact.
+            <p data-testid="checkout-otp-hint" style={{ fontSize: '0.875rem', color: 'var(--clr-text-2)', marginBottom: '1.5rem' }}>
+              {otpSending
+                ? 'Sending your code…'
+                : otpSent
+                  ? <>Enter the 6-digit code we sent to <strong>{otpDestination}</strong>. It expires in 5 minutes.</>
+                  : 'To prevent fake courier dispatches, we need to confirm your contact with a 6-digit code.'}
             </p>
 
             {otpError && (
@@ -940,6 +1030,17 @@ export default function CheckoutPage() {
                 }}
               />
             </div>
+
+            <button
+              type="button"
+              data-testid="checkout-otp-resend-btn"
+              className="btn btn-sm btn-outline"
+              style={{ marginBottom: '1rem' }}
+              onClick={handleSendOtp}
+              disabled={otpSending}
+            >
+              {otpSending ? 'Sending…' : otpSent ? 'Resend code' : 'Send code'}
+            </button>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setOtpModalOpen(false)}>

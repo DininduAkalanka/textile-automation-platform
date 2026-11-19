@@ -175,7 +175,9 @@ describe('Phase 2: Platform Critical User Journeys', () => {
       .send({
         email: `guest-${TAG}@example.com`,
         fullName: 'Kamal Gunaratne',
-        phone: '+94770001122',
+        // Unique per run: since QA P0-1 a contact that already has an account
+        // is refused (LOGIN_REQUIRED) instead of being silently reused.
+        phone: `+9477${String(Date.now()).slice(-7)}`,
         paymentMethod: PaymentMethod.PAYHERE,
         items: [
           {

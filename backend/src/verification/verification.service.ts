@@ -1,15 +1,77 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { VerificationChannel } from '@prisma/client';
-import { randomInt, createHash } from 'crypto';
+import { randomInt, createHash, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { SmsService } from '../sms/sms.service';
 import { VerificationCodeEmail } from '../email/templates/verification-code-email';
 
-const CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute between sends
-const MAX_SENDS_PER_HOUR = 5;
-const MAX_ATTEMPTS = 5; // wrong guesses before a code locks
+export const CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute between sends
+export const MAX_SENDS_PER_HOUR = 5;
+export const MAX_ATTEMPTS = 5; // guesses before a code locks
+
+export const otpInvalid = (message = 'That code is invalid or has expired. Request a new one.') =>
+  new BadRequestException({ code: 'OTP_INVALID', message });
+
+export const otpLocked = () =>
+  new BadRequestException({
+    code: 'OTP_LOCKED',
+    message: 'Too many incorrect attempts. Request a new code.',
+  });
+
+export const sha256Hex = (value: string) =>
+  createHash('sha256').update(value).digest('hex');
+
+/** The guarded "claim one attempt" update, shared by both code tables. */
+export const claimAttemptArgs = (id: string) => ({
+  where: { id, attempts: { lt: MAX_ATTEMPTS }, consumedAt: null },
+  data: { attempts: { increment: 1 } },
+});
+
+type ClaimAttempt = (
+  args: ReturnType<typeof claimAttemptArgs>,
+) => Promise<{ count: number }>;
+
+/**
+ * QA P1-3 — claim the attempt BEFORE comparing the code.
+ *
+ * The old order was: read `attempts`, compare the code, and only on a WRONG
+ * guess increment. A burst of concurrent guesses all read the same stale
+ * `attempts` (say 0), all passed the lock check, and every one of them got its
+ * comparison — a 40-request burst let the 31st guess through.
+ *
+ * Now each request must first win a guarded increment (attempts < MAX). The
+ * database serializes those UPDATEs, so across ANY amount of concurrency at
+ * most MAX_ATTEMPTS requests ever reach the comparison. A request that loses
+ * the claim is rejected without the code ever being looked at.
+ *
+ * The comparison is constant-time over the two SHA-256 digests.
+ */
+export async function claimAttemptAndCompare(
+  claim: ClaimAttempt,
+  record: { id: string; attempts: number; codeHash: string },
+  code: string,
+): Promise<void> {
+  const claimed = await claim(claimAttemptArgs(record.id));
+  if (claimed.count !== 1) throw otpLocked();
+
+  const isDevMatch =
+    process.env.NODE_ENV !== 'production' &&
+    process.env.ALLOW_DEV_OTP_BYPASS === 'true' &&
+    code === '123456';
+  const expected = Buffer.from(record.codeHash, 'hex');
+  const actual = Buffer.from(sha256Hex(String(code)), 'hex');
+  const matches =
+    expected.length === actual.length && timingSafeEqual(expected, actual);
+
+  if (!isDevMatch && !matches) {
+    // `record.attempts` is from before our claim; it only picks the message.
+    // The security limit was already enforced by the guarded claim above.
+    if (record.attempts + 1 >= MAX_ATTEMPTS) throw otpLocked();
+    throw otpInvalid('Incorrect code. Please try again.');
+  }
+}
 
 /**
  * Owns the one-time-code lifecycle for verifying a contact (email or phone).
@@ -117,62 +179,29 @@ export class VerificationService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!record) {
-      throw new BadRequestException({
-        code: 'OTP_INVALID',
-        message: 'That code is invalid or has expired. Request a new one.',
-      });
-    }
-    if (record.attempts >= MAX_ATTEMPTS) {
-      throw new BadRequestException({
-        code: 'OTP_LOCKED',
-        message: 'Too many incorrect attempts. Request a new code.',
-      });
-    }
+    if (!record) throw otpInvalid();
 
-    const isDevMatch =
-      process.env.NODE_ENV !== 'production' &&
-      process.env.ALLOW_DEV_OTP_BYPASS === 'true' &&
-      code === '123456';
-    if (!isDevMatch && this.sha256(code) !== record.codeHash) {
-      // Atomic increment under race conditions (QA-002)
-      // Only increments if current attempts < MAX_ATTEMPTS
-      const updateResult = await this.prisma.verificationCode.updateMany({
-        where: {
-          id: record.id,
-          attempts: { lt: MAX_ATTEMPTS },
-        },
-        data: {
-          attempts: { increment: 1 },
-        },
-      });
+    await claimAttemptAndCompare(
+      (args) => this.prisma.verificationCode.updateMany(args),
+      record,
+      code,
+    );
 
-      // If no row was updated or if this increment reached the limit, lock out
-      if (updateResult.count === 0 || record.attempts + 1 >= MAX_ATTEMPTS) {
-        throw new BadRequestException({
-          code: 'OTP_LOCKED',
-          message: 'Too many incorrect attempts. Request a new code.',
-        });
-      }
-
-      throw new BadRequestException({
-        code: 'OTP_INVALID',
-        message: 'Incorrect code. Please try again.',
-      });
-    }
-
+    // Consume exactly once: two correct submissions racing each other must not
+    // both succeed, so the consume is itself guarded on consumedAt IS NULL.
     const isEmail = channel === VerificationChannel.EMAIL;
-    const [, user] = await this.prisma.$transaction([
-      this.prisma.verificationCode.update({
-        where: { id: record.id },
+    const user = await this.prisma.$transaction(async (tx) => {
+      const consumed = await tx.verificationCode.updateMany({
+        where: { id: record.id, consumedAt: null },
         data: { consumedAt: new Date() },
-      }),
-      this.prisma.user.update({
+      });
+      if (consumed.count !== 1) throw otpInvalid();
+      return tx.user.update({
         where: { id: userId },
         data: isEmail ? { emailVerified: true } : { phoneVerified: true },
         select: { emailVerified: true, phoneVerified: true },
-      }),
-    ]);
+      });
+    });
 
     return {
       emailVerified: user.emailVerified,

@@ -4,6 +4,9 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { getToken, setToken, clearToken } from '@/lib/token-store';
+import { getResolvedApiUrl } from '@/lib/api-url';
+
+export { getResolvedApiUrl };
 
 /**
  * The single HTTP client (doc 05 §3.5, CODING_STANDARDS §4.1).
@@ -28,31 +31,8 @@ import { getToken, setToken, clearToken } from '@/lib/token-store';
  * gone, so we clear it and let the caller redirect.
  */
 
-const PRODUCTION_API_URL = 'https://textile-automation-platform.onrender.com/api/v1';
-const LOCAL_API_URL = 'http://localhost:3001/api/v1';
-
-export function getResolvedApiUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return LOCAL_API_URL;
-    }
-    // Only route to production Render if visiting the production frontend domain
-    if (hostname === 'textile-automation-platform.vercel.app') {
-      return PRODUCTION_API_URL;
-    }
-    // Default to local/relative API to prevent staging or LAN test runs from silently hitting live production (QA-013)
-    return LOCAL_API_URL;
-  }
-  if (process.env.VERCEL_ENV === 'production') {
-    return PRODUCTION_API_URL;
-  }
-  return LOCAL_API_URL;
-}
-
+// The API address rule lives in lib/api-url.ts (QA P1-10) and is shared with
+// lib/api.ts, so the two clients can never disagree about where requests go.
 const API_URL = getResolvedApiUrl();
 
 /** Set by the auth store. Kept out of module state so tests can reset it. */
@@ -74,16 +54,10 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  // Ensure production browsers never hit loopback address space
-  if (
-    typeof window !== 'undefined' &&
-    !['localhost', '127.0.0.1'].includes(window.location.hostname) &&
-    config.baseURL &&
-    (config.baseURL.includes('localhost') || config.baseURL.includes('127.0.0.1'))
-  ) {
-    config.baseURL = 'https://textile-automation-platform.onrender.com/api/v1';
-  }
-
+  // QA P1-10: there used to be a rewrite here that sent any localhost baseURL
+  // to the LIVE production API whenever the page host was not localhost — so a
+  // LAN IP, staging host or preview link placed real production orders. The
+  // baseURL is now decided once, by getResolvedApiUrl(), and never rewritten.
   return config;
 });
 

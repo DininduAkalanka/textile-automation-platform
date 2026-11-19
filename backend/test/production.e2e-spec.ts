@@ -812,40 +812,43 @@ describe('Production pipeline (Phase 6)', () => {
   });
 
   /**
-   * KNOWN LIMITATION — documented, not accepted.
+   * FORMERLY A KNOWN LIMITATION — fixed by the QA remediation (P2-2).
    *
-   * OrdersService.create compares `products.length !== productIds.length` after
-   * a findMany, which dedupes. So the SAME product cannot appear twice in one
-   * order — and the obvious textile case is exactly that: two school uniforms of
-   * the same product, for two children, with DIFFERENT measurements.
-   *
-   * Today a parent must place two separate orders. Fixing it means keying cart
-   * lines by (productId + measurements) rather than productId, and letting the
-   * order carry duplicate productIds — a real change to the cart and the order
-   * shape, so it is deliberately not smuggled into this session.
-   *
-   * This test asserts the CURRENT behaviour so the day someone fixes it, this
-   * fails and forces them to notice the decision.
+   * OrdersService.create used to compare `products.length !== productIds.length`
+   * after a findMany, which dedupes, so the SAME product could not appear twice
+   * in one order — and the obvious textile case is exactly that: two school
+   * uniforms of the same product, for two children, with DIFFERENT
+   * measurements. It now compares against the unique ids. The order line was
+   * always one row per item, so nothing else in the order shape changed.
    */
-  describe('known limitation: same product twice in one order', () => {
-    it('is currently rejected — two children, one uniform product, needs two orders', async () => {
-      await expect(
-        orders.create(customerId, {
-          items: [
-            {
-              productId: uniformId,
-              quantity: 1,
-              measurements: { ...measurements, personName: 'Child One' },
-            },
-            {
-              productId: uniformId,
-              quantity: 1,
-              measurements: { ...measurements, personName: 'Child Two' },
-            },
-          ],
-          shippingAddress: address,
-        }),
-      ).rejects.toThrow(BadRequestException);
+  describe('same product twice in one order (QA P2-2)', () => {
+    it('accepts it — two children, one uniform product, one order, one task each', async () => {
+      const order = await orders.create(customerId, {
+        items: [
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: { ...measurements, personName: 'Child One' },
+          },
+          {
+            productId: uniformId,
+            quantity: 1,
+            measurements: { ...measurements, personName: 'Child Two' },
+          },
+        ],
+        shippingAddress: address,
+      });
+
+      expect(order.items).toHaveLength(2);
+      expect(
+        order.items.map((i) => (i.measurements as { personName: string }).personName).sort(),
+      ).toEqual(['Child One', 'Child Two']);
+
+      await orders.confirmOrder(order.id);
+      const tasks = await prisma.productionTask.findMany({
+        where: { orderId: order.id },
+      });
+      expect(tasks).toHaveLength(2);
     });
   });
 });

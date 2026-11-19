@@ -224,11 +224,53 @@ describe('VerificationService', () => {
         attempts: 5, // already at the cap
         codeHash: sha256('123456'),
       });
+      // The guarded claim (attempts < 5) matches no row at the cap.
+      prisma.verificationCode.updateMany.mockResolvedValueOnce({ count: 0 });
 
       const err = await caught(() =>
         service.verifyCode('u1', VerificationChannel.EMAIL, '123456'),
       );
       expect(err.getResponse()).toMatchObject({ code: 'OTP_LOCKED' });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('QA P1-3: claims the attempt BEFORE comparing — a lost claim never reaches the comparison', async () => {
+      // A stale read says 0 attempts (what every request in a burst sees)...
+      prisma.verificationCode.findFirst.mockResolvedValue({
+        id: 'c1',
+        attempts: 0,
+        codeHash: sha256('654321'),
+      });
+      // ...but the database has already handed out all 5 attempts.
+      prisma.verificationCode.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      // Even the CORRECT code is refused: it never got a claim.
+      const err = await caught(() =>
+        service.verifyCode('u1', VerificationChannel.EMAIL, '654321'),
+      );
+      expect(err.getResponse()).toMatchObject({ code: 'OTP_LOCKED' });
+      expect(prisma.verificationCode.updateMany).toHaveBeenCalledWith({
+        where: { id: 'c1', attempts: { lt: 5 }, consumedAt: null },
+        data: { attempts: { increment: 1 } },
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('a code can only be consumed once (two correct submissions race)', async () => {
+      prisma.verificationCode.findFirst.mockResolvedValue({
+        id: 'c1',
+        attempts: 0,
+        codeHash: sha256('654321'),
+      });
+      prisma.verificationCode.updateMany
+        .mockResolvedValueOnce({ count: 1 }) // claim
+        .mockResolvedValueOnce({ count: 0 }); // consume — the other request won
+
+      const err = await caught(() =>
+        service.verifyCode('u1', VerificationChannel.EMAIL, '654321'),
+      );
+      expect(err.getResponse()).toMatchObject({ code: 'OTP_INVALID' });
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 });

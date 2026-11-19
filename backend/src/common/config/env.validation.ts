@@ -51,6 +51,61 @@ export class EnvironmentVariables {
   @IsInt()
   THROTTLE_LIMIT?: number;
 
+  // ─── QA remediation limits (all optional; see common/config/limits.ts) ───
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  TRUST_PROXY_HOPS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  ORDER_RESERVATION_TTL_MINUTES?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  ORDER_EXPIRY_SWEEP_INTERVAL_MS?: number;
+
+  @IsOptional()
+  @IsString()
+  ORDER_EXPIRY_SWEEP_ENABLED?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  MAX_OPEN_PENDING_ORDERS_PER_USER?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  MAX_OPEN_GUEST_ORDERS_PER_IP?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  MAX_QTY_PER_LINE?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  MAX_LINES_PER_ORDER?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  GUEST_CHECKOUT_THROTTLE_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  LOGIN_MAX_FAILURES?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  LOGIN_LOCK_MINUTES?: number;
+
   // process.env values are always strings ("3001"), so the target type must be
   // stated explicitly for the coercion to happen.
   @IsOptional()

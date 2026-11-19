@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
+import { OrderExpiryService } from './order-expiry.service';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ProductionModule } from '../production/production.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -23,7 +24,8 @@ import { VerificationModule } from '../verification/verification.module';
     VerificationModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService],
-  exports: [OrdersService],
+  // OrderExpiryService: releases stock held by unpaid orders (QA P0-2).
+  providers: [OrdersService, OrderExpiryService],
+  exports: [OrdersService, OrderExpiryService],
 })
 export class OrdersModule {}

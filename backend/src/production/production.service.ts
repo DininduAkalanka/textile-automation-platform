@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -110,6 +111,8 @@ export class ProductionService {
       where: {
         // A finished QC task has left the floor; it would only clutter the board.
         NOT: { stage: ProductionStage.QUALITY_CHECK, status: TaskStatus.DONE },
+        // QA P1-9: a cancelled order's tasks are not work.
+        order: { status: { not: OrderStatus.CANCELLED } },
       },
       include: {
         order: { select: { orderNumber: true, createdAt: true } },
@@ -197,6 +200,8 @@ export class ProductionService {
             stage: ProductionStage.QUALITY_CHECK,
             status: TaskStatus.DONE,
           },
+          // QA P1-9: never queue cloth-cutting for an order that was cancelled.
+          order: { status: { not: OrderStatus.CANCELLED } },
         },
         include,
         orderBy: { createdAt: 'asc' },
@@ -241,12 +246,20 @@ export class ProductionService {
   /** BR5: a task must be assigned to a worker before it can be started. */
   async assign(taskId: string, workerId: string) {
     const [task, worker] = await Promise.all([
-      this.prisma.productionTask.findUnique({ where: { id: taskId } }),
+      this.prisma.productionTask.findUnique({
+        where: { id: taskId },
+        include: { order: { select: { status: true } } },
+      }),
       this.prisma.worker.findUnique({ where: { id: workerId } }),
     ]);
 
     if (!task) throw new NotFoundException('Task not found');
     if (!worker) throw new NotFoundException('Worker not found');
+    if (task.order.status === OrderStatus.CANCELLED) {
+      throw new ConflictException(
+        'This order was cancelled — its production tasks are closed',
+      );
+    }
     if (!worker.isActive) {
       throw new BadRequestException('That worker is no longer active');
     }
@@ -282,6 +295,30 @@ export class ProductionService {
     note?: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      const found = await tx.productionTask.findUnique({
+        where: { id: taskId },
+        select: { orderId: true },
+      });
+      if (!found) throw new NotFoundException('Task not found');
+
+      // QA P1-9: lock the ORDER first — the same row lock cancel() takes — so a
+      // worker starting a task and an admin cancelling the order run one after
+      // the other. Then refuse work on a cancelled (or delivered) order: a
+      // cancelled order's CUTTING task used to accept "start" and cloth was cut
+      // for an order that no longer existed.
+      const locked = await tx.$queryRaw<Array<{ status: OrderStatus }>>`
+        SELECT status FROM orders WHERE id = ${found.orderId}::uuid FOR UPDATE`;
+      const orderStatus = locked[0]?.status;
+      if (orderStatus === OrderStatus.CANCELLED) {
+        throw new ConflictException(
+          'This order was cancelled — its production tasks are closed',
+        );
+      }
+      if (orderStatus === OrderStatus.DELIVERED) {
+        throw new ConflictException('This order has already been delivered');
+      }
+
+      // Re-read under the lock so the transition is applied to current state.
       const task = await tx.productionTask.findUnique({
         where: { id: taskId },
         include: { worker: true },

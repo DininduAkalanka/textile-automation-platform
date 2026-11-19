@@ -9,15 +9,19 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { trustProxyHops } from './common/config/limits';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
 
-  // Trust proxy for reverse proxies (Render / ALB / Vercel)
-  // Ensures req.ip correctly resolves the client IP for rate limiting and audit logging.
-  app.set('trust proxy', 1);
+  // QA P1-4: trust X-Forwarded-For only from the real number of proxy hops.
+  // A hard-coded 1 let any client on a direct deployment (docker-compose / VPS)
+  // pick its own IP with a spoofed header and walk straight past every
+  // per-IP rate limit. 0 = trust none (req.ip is the socket address); Render
+  // (RENDER=true) gets its single proxy hop; TRUST_PROXY_HOPS overrides both.
+  app.set('trust proxy', trustProxyHops());
 
   // Security headers: HSTS, X-Content-Type-Options, frame-deny, etc.
   // (doc 09 §13, doc 05 §10). CSP is left off because this API serves JSON

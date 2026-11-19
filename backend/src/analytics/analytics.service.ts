@@ -24,6 +24,37 @@ import { PrismaService } from '../prisma/prisma.service';
  * of request/response concerns.
  */
 
+/**
+ * Every rupee actually received, one row per receipt (QA P1-2, P1-7).
+ *
+ *  - A FULL payment counts once, when it completed.
+ *  - An INSTALLMENT plan counts each installment when THAT installment was
+ *    paid. Counting the plan's payment row instead reported the whole amount
+ *    on day one after an admin "mark paid" — while every installment was unpaid.
+ *  - Money on a CANCELLED order is never revenue: it is either refunded or a
+ *    refund the shop owes (a payment that arrived after cancellation).
+ */
+const REVENUE_EVENTS = Prisma.sql`
+  SELECT p.order_id                         AS order_id,
+         p.amount                           AS amount,
+         COALESCE(p.paid_at, p.created_at)  AS received_at
+    FROM payments p
+    JOIN orders o ON o.id = p.order_id
+   WHERE p.status = 'COMPLETED'
+     AND p.payment_plan = 'FULL'
+     AND o.status <> 'CANCELLED'
+  UNION ALL
+  SELECT p.order_id                         AS order_id,
+         i.amount                           AS amount,
+         COALESCE(i.paid_at, i.created_at)  AS received_at
+    FROM installments i
+    JOIN payments p ON p.id = i.payment_id
+    JOIN orders o   ON o.id = p.order_id
+   WHERE i.status = 'COMPLETED'
+     AND p.payment_plan = 'INSTALLMENT'
+     AND o.status <> 'CANCELLED'
+`;
+
 export interface DateRange {
   from: Date;
   to: Date;
@@ -158,11 +189,10 @@ export class AnalyticsService {
     const rows = await this.prisma.$queryRaw<
       Array<{ revenue: string; paidOrders: number }>
     >`
-      SELECT COALESCE(SUM(amount), 0)::text            AS "revenue",
-             COUNT(DISTINCT order_id)::int             AS "paidOrders"
-        FROM payments
-       WHERE status = 'COMPLETED'
-         AND COALESCE(paid_at, created_at) BETWEEN ${from} AND ${to}
+      SELECT COALESCE(SUM(r.amount), 0)::text          AS "revenue",
+             COUNT(DISTINCT r.order_id)::int           AS "paidOrders"
+        FROM (${REVENUE_EVENTS}) r
+       WHERE r.received_at BETWEEN ${from} AND ${to}
     `;
     return rows[0];
   }
@@ -179,10 +209,9 @@ export class AnalyticsService {
       }>
     >`
       SELECT
-        (SELECT COALESCE(SUM(amount), 0)
-           FROM payments
-          WHERE status = 'COMPLETED'
-            AND COALESCE(paid_at, created_at) BETWEEN ${from} AND ${to})::text
+        (SELECT COALESCE(SUM(r.amount), 0)
+           FROM (${REVENUE_EVENTS}) r
+          WHERE r.received_at BETWEEN ${from} AND ${to})::text
           AS "revenue",
         (SELECT COUNT(*) FROM orders
           WHERE created_at >= date_trunc('day', now()))::int AS "ordersToday",
@@ -208,12 +237,11 @@ export class AnalyticsService {
         SELECT generate_series(${from}::date, ${to}::date, interval '1 day')::date AS day
       )
       SELECT to_char(d.day, 'YYYY-MM-DD')          AS "date",
-             COALESCE(SUM(p.amount), 0)::text      AS "revenue",
-             COUNT(p.id)::int                      AS "orders"
+             COALESCE(SUM(r.amount), 0)::text      AS "revenue",
+             COUNT(DISTINCT r.order_id)::int       AS "orders"
         FROM days d
-        LEFT JOIN payments p
-               ON p.status = 'COMPLETED'
-              AND date(COALESCE(p.paid_at, p.created_at)) = d.day
+        LEFT JOIN (${REVENUE_EVENTS}) r
+               ON date(r.received_at) = d.day
        GROUP BY d.day
        ORDER BY d.day
     `;
@@ -233,6 +261,7 @@ export class AnalyticsService {
         JOIN payments p  ON p.order_id = o.id AND p.status = 'COMPLETED'
         JOIN products pr ON pr.id = oi.product_id
        WHERE COALESCE(p.paid_at, p.created_at) BETWEEN ${from} AND ${to}
+         AND o.status <> 'CANCELLED' -- QA P1-2: refunded/owed, not sold
        GROUP BY pr.id, pr.name
        ORDER BY SUM(oi.total_price) DESC
        LIMIT ${limit}
@@ -290,6 +319,7 @@ export class AnalyticsService {
         JOIN payments p  ON p.order_id = o.id AND p.status = 'COMPLETED'
         JOIN products pr ON pr.id = oi.product_id
        WHERE COALESCE(p.paid_at, p.created_at) BETWEEN ${from} AND ${to}
+         AND o.status <> 'CANCELLED' -- QA P1-2: refunded/owed, not sold
        GROUP BY pr.name, pr.product_type
        ORDER BY SUM(oi.total_price) DESC
     `;

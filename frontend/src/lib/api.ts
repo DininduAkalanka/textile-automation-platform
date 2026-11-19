@@ -1,25 +1,11 @@
-import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
+import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, InstallmentPlanResponse, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
 import { getToken, setToken, clearToken } from '@/lib/token-store';
+import { getResolvedApiUrl } from '@/lib/api-url';
 
-const PRODUCTION_API_URL = 'https://textile-automation-platform.onrender.com/api/v1';
-const LOCAL_API_URL = 'http://localhost:3001/api/v1';
-
-export function getResolvedApiUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return LOCAL_API_URL;
-    }
-    return PRODUCTION_API_URL;
-  }
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-    return PRODUCTION_API_URL;
-  }
-  return LOCAL_API_URL;
-}
+// QA P1-10: this client used to send EVERY non-localhost host (LAN IP, staging,
+// preview links) to the live production API. It now shares the one rule in
+// lib/api-url.ts with services/http.ts.
+export { getResolvedApiUrl };
 
 class ApiClient {
   private getToken(): string | null {
@@ -258,7 +244,11 @@ class ApiClient {
 
   /**
    * Public Express / Guest Checkout endpoint.
-   * Auto-provisions user account and creates order with session return.
+   *
+   * Creates a NEW customer account for the order and returns a session for it.
+   * A contact that already has an account is refused with LOGIN_REQUIRED (the
+   * shopper must sign in) — it never logs anyone into an existing account.
+   * Cash on Delivery needs a code from sendGuestCode() first.
    */
   async guestCheckout(data: {
     items: {
@@ -269,6 +259,7 @@ class ApiClient {
         label?: string;
         values: Record<string, number>;
       };
+      selectedAttributes?: { size: string };
     }[];
     shippingAddress: any;
     billingAddress?: any;
@@ -277,16 +268,29 @@ class ApiClient {
     fullName: string;
     paymentMethod: 'PAYHERE' | 'COD' | 'INSTALLMENT' | 'STRIPE';
     verificationCode?: string;
+    verificationChannel?: 'EMAIL' | 'SMS';
     password?: string;
     notes?: string;
-  }): Promise<{ order: Order; session: { accessToken: string; refreshToken: string; user: any } }> {
-    return this.request<{ order: Order; session: { accessToken: string; refreshToken: string; user: any } }>(
+  }): Promise<{ order: Order; session: { accessToken: string; user: any } | null }> {
+    return this.request<{ order: Order; session: { accessToken: string; user: any } | null }>(
       '/orders/guest-checkout',
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
     );
+  }
+
+  /** Send a guest a one-time code before a Cash-on-Delivery order. */
+  async sendGuestCode(data: {
+    email: string;
+    phone: string;
+    channel?: 'EMAIL' | 'SMS';
+  }): Promise<{ channel: 'EMAIL' | 'SMS'; expiresAt: string }> {
+    return this.request('/orders/guest-checkout/send-code', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   /**
@@ -321,10 +325,31 @@ class ApiClient {
     });
   }
 
-  async createInstallmentPayment(orderId: string, installmentCount = 3): Promise<any> {
-    return this.request('/payments/installments/create', {
+  async createInstallmentPayment(
+    orderId: string,
+    installmentCount = 3,
+  ): Promise<InstallmentPlanResponse> {
+    return this.request<InstallmentPlanResponse>('/payments/installments/create', {
       method: 'POST',
       body: JSON.stringify({ orderId, installmentCount }),
+    });
+  }
+
+  /** A PayHere checkout for one installment (installments are paid in order). */
+  async createInstallmentPayherePayment(
+    installmentId: string,
+  ): Promise<PayhereCheckoutResponse & { installmentNo: number }> {
+    return this.request('/payments/installments/payhere', {
+      method: 'POST',
+      body: JSON.stringify({ installmentId }),
+    });
+  }
+
+  /** Admin: record ONE installment received (cash / bank transfer). */
+  async markInstallmentPaid(installmentId: string, note?: string) {
+    return this.request(`/payments/admin/installments/${installmentId}/mark-paid`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
     });
   }
 

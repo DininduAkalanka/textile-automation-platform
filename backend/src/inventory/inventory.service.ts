@@ -77,6 +77,69 @@ export class InventoryService {
     });
   }
 
+  // ═══ QA P1-6: per-size stock, race-safe ═══════════════════════════════════
+  //
+  // Per-size counts live in products.attributes.sizeStock (JSONB). Checkout
+  // used to read that object OUTSIDE the transaction and write the whole thing
+  // back: ten parallel orders for size M (stock 2) all read "2", all passed,
+  // and all wrote "1" — ten orders for two shirts. Each change is now ONE
+  // guarded UPDATE of just that key, the same technique reserve() uses on the
+  // ledger: Postgres row-locks the product, re-checks the WHERE after waiting,
+  // and the loser of a race matches zero rows instead of overwriting.
+
+  /** Take `quantity` of `size` from the per-size count, or refuse. */
+  async reserveSize(
+    tx: Tx,
+    productId: string,
+    size: string,
+    quantity: number,
+    productName?: string,
+  ): Promise<void> {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      UPDATE products
+         SET attributes = jsonb_set(
+               attributes,
+               '{sizeStock}',
+               (attributes->'sizeStock') || jsonb_build_object(
+                 ${size}::text,
+                 (attributes->'sizeStock'->>${size}::text)::numeric - ${quantity}::int
+               )
+             ),
+             updated_at = now()
+       WHERE id = ${productId}::uuid
+         AND jsonb_typeof(attributes->'sizeStock'->${size}::text) = 'number'
+         AND (attributes->'sizeStock'->>${size}::text)::numeric >= ${quantity}::int
+      RETURNING id`;
+
+    if (rows.length !== 1) {
+      throw new BadRequestException(
+        `Insufficient stock for size "${size}" of "${productName ?? productId}"`,
+      );
+    }
+  }
+
+  /** Give `quantity` of `size` back (cancellation / expiry). No-op for an untracked size. */
+  async restoreSize(
+    tx: Tx,
+    productId: string,
+    size: string,
+    quantity: number,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE products
+         SET attributes = jsonb_set(
+               attributes,
+               '{sizeStock}',
+               (attributes->'sizeStock') || jsonb_build_object(
+                 ${size}::text,
+                 (attributes->'sizeStock'->>${size}::text)::numeric + ${quantity}::int
+               )
+             ),
+             updated_at = now()
+       WHERE id = ${productId}::uuid
+         AND jsonb_typeof(attributes->'sizeStock'->${size}::text) = 'number'`;
+  }
+
   /** Payment/COD confirmed: convert reservation into a sale. */
   async sale(
     tx: Tx,
@@ -356,25 +419,48 @@ export class InventoryService {
           where: { id: productId },
           select: { attributes: true },
         });
-        const currentAttrs = (product?.attributes as Record<string, any>) || {};
-        const sizeStock = { ...((currentAttrs.sizeStock as Record<string, number>) || {}) };
-        const currentSizeStock = typeof sizeStock[trimmedSize] === 'number' ? sizeStock[trimmedSize] : 0;
-        const newSizeStock = currentSizeStock + change;
-        if (newSizeStock < 0) {
+        const attrs = (product?.attributes as Record<string, unknown>) || {};
+        const sizeStock = (attrs.sizeStock as Record<string, unknown>) || {};
+
+        // QA P2-3: a size must be one the product actually has (its size list
+        // or an already-tracked key). "NOPE" used to become a phantom size.
+        const known = new Set<string>(Object.keys(sizeStock));
+        if (typeof attrs.size === 'string') {
+          attrs.size
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .forEach((s) => known.add(s));
+        }
+        if (known.size > 0 && !known.has(trimmedSize)) {
           throw new BadRequestException(
-            `Size "${trimmedSize}" currently has ${currentSizeStock} in stock. Adjusting by ${change} would leave it below zero.`,
+            `"${trimmedSize}" is not a size of this product. Known sizes: ${[...known].join(', ')}.`,
           );
         }
-        sizeStock[trimmedSize] = newSizeStock;
-        await tx.product.update({
-          where: { id: productId },
-          data: {
-            attributes: {
-              ...currentAttrs,
-              sizeStock,
-            },
-          },
-        });
+
+        // QA P1-6: one guarded UPDATE of just this key — never a read-modify-
+        // write of the whole attributes object, which a concurrent checkout's
+        // size reservation would silently overwrite (or be overwritten by).
+        const updated = await tx.$queryRaw<Array<{ remaining: string }>>`
+          UPDATE products
+             SET attributes = jsonb_set(
+                   COALESCE(attributes, '{}'::jsonb),
+                   '{sizeStock}',
+                   COALESCE(attributes->'sizeStock', '{}'::jsonb) || jsonb_build_object(
+                     ${trimmedSize}::text,
+                     COALESCE((attributes->'sizeStock'->>${trimmedSize}::text)::numeric, 0) + ${change}::int
+                   )
+                 ),
+                 updated_at = now()
+           WHERE id = ${productId}::uuid
+             AND COALESCE((attributes->'sizeStock'->>${trimmedSize}::text)::numeric, 0) + ${change}::int >= 0
+          RETURNING (attributes->'sizeStock'->>${trimmedSize}::text) AS remaining`;
+        if (updated.length !== 1) {
+          const current = Number(sizeStock[trimmedSize] ?? 0);
+          throw new BadRequestException(
+            `Size "${trimmedSize}" currently has ${current} in stock. Adjusting by ${change} would leave it below zero.`,
+          );
+        }
         effectiveNote = `[Size: ${trimmedSize}]${effectiveNote ? ` ${effectiveNote}` : ''}`;
       }
 

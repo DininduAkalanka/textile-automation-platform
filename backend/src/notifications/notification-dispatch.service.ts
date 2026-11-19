@@ -216,6 +216,47 @@ export class NotificationDispatchService {
   }
 
   /**
+   * QA P1-2: money arrived for an order that had already been cancelled (a
+   * customer paid on PayHere after the reservation expired, or after an admin
+   * cancelled). It is NOT revenue and the customer must be refunded. Emails
+   * ADMIN_ALERT_EMAIL; skipped with a log when unset. Never throws.
+   */
+  async sendAdminRefundNeeded(input: {
+    orderNumber: string;
+    amount: string;
+    currency: string;
+    transactionId: string;
+  }): Promise<void> {
+    try {
+      const to = this.config.get<string>('ADMIN_ALERT_EMAIL');
+      if (!to) {
+        this.logger.warn(
+          `ADMIN_ALERT_EMAIL not set — refund-needed alert for ${input.orderNumber} not emailed`,
+        );
+        return;
+      }
+      const esc = (s: string) =>
+        s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      await this.emailService.send({
+        to,
+        subject: `⚠ Payment received on CANCELLED order ${input.orderNumber} — refund needed`,
+        html:
+          `<p>A payment of <strong>${esc(input.currency)} ${esc(input.amount)}</strong> ` +
+          `(gateway transaction ${esc(input.transactionId)}) arrived for order ` +
+          `<strong>${esc(input.orderNumber)}</strong>, which had already been cancelled.</p>` +
+          `<p>It has NOT been counted as revenue. Refund the customer from the PayHere ` +
+          `merchant portal, or contact them to place the order again.</p>`,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Admin refund-needed dispatch failed for ${input.orderNumber}: ${
+          err instanceof Error ? err.message : 'unknown error'
+        }`,
+      );
+    }
+  }
+
+  /**
    * A correctly-signed webhook carried the WRONG amount — tampering or gateway
    * misconfiguration. Emails ADMIN_ALERT_EMAIL; skipped with a log when unset
    * (ownership of that check lives here so callers never need to).

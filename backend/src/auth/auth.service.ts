@@ -14,9 +14,18 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { normalizeLkPhone } from '../common/phone.util';
 import { VerificationService } from '../verification/verification.service';
+import { loginLockMinutes, loginMaxFailures } from '../common/config/limits';
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/** A guest used a contact that already has an account (QA P0-1). */
+export const loginRequired = () =>
+  new ConflictException({
+    code: 'LOGIN_REQUIRED',
+    message:
+      'An account with this email or phone number already exists. Sign in to continue.',
+  });
 
 type SessionUser = {
   id: string;
@@ -60,8 +69,11 @@ export class AuthService {
       where: { OR: orConditions },
     });
     if (existing) {
+      // QA P1-8: an earlier guest checkout may have created an unverified
+      // account for this contact. Point the owner at the reset flow, which
+      // now lets them claim it (receiving the link proves ownership).
       throw new ConflictException(
-        'An account with that email or phone number already exists',
+        'An account with that email or phone number already exists. Sign in, or use "Forgot password" to claim it.',
       );
     }
 
@@ -95,10 +107,21 @@ export class AuthService {
   async login(dto: LoginDto, userAgent?: string) {
     const user = await this.findByIdentifier(dto.identifier);
     if (!user) {
+      // QA P1-4: an unknown identifier used to answer in ~5 ms while a known
+      // one paid for bcrypt (~300 ms) — a stopwatch was enough to tell which
+      // emails are registered. Spend the same bcrypt time either way.
+      await bcrypt.compare(dto.password, await this.timingEqualizerHash());
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is deactivated');
+
+    // QA P1-4: per-account lockout. Per-IP throttling alone cannot stop
+    // credential stuffing spread across many addresses.
+    if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+      const minutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60_000);
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_LOCKED',
+        message: `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}, or reset your password.`,
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -106,12 +129,52 @@ export class AuthService {
       user.passwordHash,
     );
     if (!isPasswordValid) {
+      await this.recordFailedLogin(user.id);
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Checked only AFTER the password, so a wrong guess cannot learn that an
+    // account exists but is deactivated.
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     // Note: NO verification gate here (unlike an email-only design). Contact
     // verification is enforced at checkout, so login stays low-friction.
     return this.issueSession(user, userAgent);
+  }
+
+  /** Count a wrong password; the Nth in a row locks the account for a while. */
+  private async recordFailedLogin(userId: string): Promise<void> {
+    const { failedLoginAttempts } = await this.prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
+    if (failedLoginAttempts >= loginMaxFailures()) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: new Date(Date.now() + loginLockMinutes() * 60_000),
+        },
+      });
+    }
+  }
+
+  private equalizerHash: Promise<string> | null = null;
+
+  /** A real bcrypt hash (same cost as stored passwords), computed once. */
+  private timingEqualizerHash(): Promise<string> {
+    this.equalizerHash ??= bcrypt.hash(randomBytes(16).toString('hex'), 12);
+    return this.equalizerHash;
   }
 
   /** Resolve a login identifier that may be an email or an LK phone number. */
@@ -154,6 +217,16 @@ export class AuthService {
     }
     if (record.expiresAt.getTime() < Date.now()) {
       throw new UnauthorizedException('Refresh token expired');
+    }
+    // QA P1-5: a deactivated account used to keep minting fresh access tokens
+    // through refresh for as long as it kept rotating (a rolling 7-day
+    // session). Refuse, and revoke every refresh token the account still holds.
+    if (!record.user.isActive) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException('Account is deactivated');
     }
 
     // Serialize rotation with a password reset, which also locks the user before
@@ -203,63 +276,60 @@ export class AuthService {
   }
 
   /**
-   * Auto-provisions a new customer account or finds an existing user
-   * for guest checkout, issuing an active session so the customer
-   * is logged in immediately upon order completion.
+   * Guest checkout account creation (QA P0-1).
+   *
+   * This replaces provisionOrFindGuestUser(), which FOUND an existing account
+   * by email/phone and handed back a fresh session for it — no password, no
+   * code. Posting a guest checkout with admin@… returned an ADMIN token.
+   *
+   * There is no "find" any more. The caller has already refused contacts that
+   * belong to an account (LOGIN_REQUIRED), and the unique constraints on
+   * email/phone refuse a racing duplicate here. Only a brand-new CUSTOMER is
+   * ever created, and only that new account ever gets a session.
    */
-  async provisionOrFindGuestUser(
-    email: string,
-    phone: string,
-    fullName: string,
-    password?: string,
-    userAgent?: string,
-  ) {
-    const normEmail = email?.trim().toLowerCase() || null;
-    const normPhone = phone ? normalizeLkPhone(phone) : null;
+  async createGuestUser(input: {
+    email: string | null;
+    phone: string | null;
+    fullName: string;
+    password?: string;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+  }) {
+    const parts = input.fullName.trim().split(/\s+/);
+    const firstName = (parts[0] || 'Guest').slice(0, 50);
+    const lastName = (parts.slice(1).join(' ') || 'Customer').slice(0, 50);
+    const passwordHash = await bcrypt.hash(
+      input.password || randomBytes(16).toString('hex'),
+      12,
+    );
 
-    const orConditions: { email?: string; phone?: string }[] = [];
-    if (normEmail) orConditions.push({ email: normEmail });
-    if (normPhone) orConditions.push({ phone: normPhone });
-
-    let user = orConditions.length > 0
-      ? await this.prisma.user.findFirst({ where: { OR: orConditions } })
-      : null;
-
-    if (!user) {
-      const parts = fullName.trim().split(/\s+/);
-      const firstName = parts[0] || 'Guest';
-      const lastName = parts.slice(1).join(' ') || 'Customer';
-      const passwordToHash = password || randomBytes(16).toString('hex');
-      const passwordHash = await bcrypt.hash(passwordToHash, 12);
-
-      user = await this.prisma.user.create({
+    try {
+      return await this.prisma.user.create({
         data: {
-          email: normEmail,
-          phone: normPhone,
+          email: input.email,
+          phone: input.phone,
           firstName,
           lastName,
           passwordHash,
           role: 'CUSTOMER',
-          emailVerified: false,
-          phoneVerified: false,
+          emailVerified: input.emailVerified,
+          phoneVerified: input.phoneVerified,
         },
       });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw loginRequired();
+      }
+      throw e;
     }
+  }
 
-    const session = await this.issueSession(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailVerified: user.emailVerified,
-        phoneVerified: user.phoneVerified,
-      },
-      userAgent,
-    );
-
-    return { user, session };
+  /** Session for an account createGuestUser() just made — never for any other. */
+  issueGuestSession(user: SessionUser, userAgent?: string) {
+    return this.issueSession(user, userAgent);
   }
 
   // ─── Helpers ────────────────────────────────────────────
