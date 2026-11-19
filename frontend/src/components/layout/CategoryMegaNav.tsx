@@ -69,8 +69,6 @@ export const CATEGORIES_DATA: CategoryItem[] = [
         links: [
           { label: 'Executive Formal Shirts', href: '/products?category=men&sub=shirts' },
           { label: 'Casual Linen Shirts', href: '/products?category=men&sub=casual' },
-          { label: 'Trendy Street Style', href: '/products?category=teenagers&sub=street' },
-          { label: 'Activewear & Sportswear', href: '/products?category=teenagers&sub=sports' },
         ],
       },
       {
@@ -116,12 +114,14 @@ export const CATEGORIES_DATA: CategoryItem[] = [
         ],
       },
       {
+        // Each label opens what it names (these used to open sarees, tops
+        // and trousers). Fabric search also finds the client's real fabrics.
         title: 'FABRIC MATERIALS',
-        viewAllHref: '/products?category=women',
+        viewAllHref: '/products?search=fabric',
         links: [
-          { label: 'Handloom Cotton Fabrics', href: '/products?category=women&sub=sarees' },
-          { label: 'Cotton-Rich Cuts', href: '/products?category=women&sub=tops' },
-          { label: 'Stretch Poly-Crepe', href: '/products?category=women&sub=bottoms' },
+          { label: 'Cotton Fabrics', href: '/products?search=cotton' },
+          { label: 'Silk Fabrics', href: '/products?search=silk' },
+          { label: 'All Fabrics', href: '/products?search=fabric' },
         ],
       },
     ],
@@ -380,6 +380,7 @@ export function CategoryMegaNav() {
               >
                 <Link
                   href={cat.href}
+                  onClick={() => setActiveId(null)}
                   className={`relative inline-flex items-center gap-1.5 px-3.5 py-3 text-xs lg:text-[0.8125rem] font-bold uppercase tracking-wider transition-all duration-150 ${
                     isActive
                       ? 'text-white bg-black/15'

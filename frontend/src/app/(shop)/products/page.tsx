@@ -34,6 +34,15 @@ function ProductsContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  // Filter list: only categories a shopper can find products in (archived
+  // products don't count). Empty ones like the test "shorts" category used to
+  // be listed and opened an empty page. With no counts from the API, all show.
+  const filterCategories = categories.filter((cat) => {
+    const count = (c: Category) => c.activeProductCount ?? c._count?.products;
+    const own = count(cat);
+    if (own === undefined || own > 0) return true;
+    return categories.some((child) => child.parentId === cat.id && (count(child) ?? 0) > 0);
+  });
   const [loading, setLoading] = useState(true);
   // A failed load is shown as an error with Retry, never as "No products".
   const [loadError, setLoadError] = useState(false);
@@ -337,7 +346,7 @@ function ProductsContent() {
                       New Arrivals
                     </button>
 
-                    {categories.map((cat) => {
+                    {filterCategories.map((cat) => {
                       const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
                       return (
                         <button
@@ -495,7 +504,7 @@ function ProductsContent() {
                   New Arrivals
                 </button>
 
-                {categories.map((cat) => {
+                {filterCategories.map((cat) => {
                   const isSelected = categoryId === cat.id || (categorySlug === cat.slug && categorySlug !== 'new-arrivals');
                   return (
                     <button
