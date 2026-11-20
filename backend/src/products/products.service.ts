@@ -380,9 +380,15 @@ export class ProductsService {
     };
   }
 
+  /**
+   * The storefront product page. Like findAll(), it only ever returns ACTIVE
+   * products: before the handover audit an archived product vanished from the
+   * listing but still opened (price, Add to Bag) from an old link, a shared
+   * post or a search engine. Admin screens never use these two lookups.
+   */
   async findBySlug(slug: string) {
-    let product = await this.prisma.product.findUnique({
-      where: { slug },
+    let product = await this.prisma.product.findFirst({
+      where: { slug, isActive: true },
       include: { category: true },
     });
 
@@ -392,8 +398,8 @@ export class ProductsService {
           slug,
         );
       if (isUuid) {
-        product = await this.prisma.product.findUnique({
-          where: { id: slug },
+        product = await this.prisma.product.findFirst({
+          where: { id: slug, isActive: true },
           include: { category: true },
         });
       }
@@ -407,6 +413,23 @@ export class ProductsService {
   }
 
   async findById(id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, isActive: true },
+      include: { category: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return product;
+  }
+
+  /**
+   * Admin-only existence check: active OR archived. Edit, restore, archive and
+   * permanent delete must still find a product the shop no longer shows.
+   */
+  private async findAnyById(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: { category: true },
@@ -559,7 +582,7 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto) {
-    await this.findById(id);
+    await this.findAnyById(id);
 
     const data: any = { ...dto };
 
@@ -584,7 +607,7 @@ export class ProductsService {
   }
 
   async remove(id: string) {
-    await this.findById(id);
+    await this.findAnyById(id);
 
     // Soft delete
     return this.prisma.product.update({
@@ -600,7 +623,7 @@ export class ProductsService {
    * dialog can say "appears in 52 orders" without a second call.
    */
   async deletionCheck(id: string) {
-    await this.findById(id);
+    await this.findAnyById(id);
     const orderCount = await this.prisma.orderItem.count({
       where: { productId: id },
     });
@@ -620,7 +643,7 @@ export class ProductsService {
    * inventory row (and any manual stock movements) cascade away with it.
    */
   async hardDelete(id: string) {
-    const product = await this.findById(id);
+    const product = await this.findAnyById(id);
 
     const orderCount = await this.prisma.orderItem.count({
       where: { productId: id },
@@ -664,7 +687,7 @@ export class ProductsService {
   async createCategory(data: {
     name: string;
     description?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     parentId?: string;
   }) {
     const slug = this.generateSlug(data.name);
@@ -696,7 +719,7 @@ export class ProductsService {
     data: {
       name?: string;
       description?: string;
-      imageUrl?: string;
+      imageUrl?: string | null;
       parentId?: string | null;
     },
   ) {

@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -23,11 +24,16 @@ export class CreateCategoryDto {
   @MaxLength(500)
   description?: string;
 
+  // An empty field means "no image" (stored as null; on update it removes
+  // the image) rather than being rejected as an invalid address.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? null : value,
+  )
   @IsString()
   @IsOptional()
   @MaxLength(2048)
   @Matches(IMAGE_URL_PATTERN, { message: `imageUrl ${IMAGE_URL_MESSAGE}` })
-  imageUrl?: string;
+  imageUrl?: string | null;
 
   /** Omitted = top-level category. Depth-2 cap is enforced in the service. */
   @IsUUID()

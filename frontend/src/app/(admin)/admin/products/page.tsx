@@ -649,6 +649,9 @@ function DeleteProductDialog({
       onClick={busy ? undefined : onCancel}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-product-title"
         className="w-full max-w-md rounded-2xl border border-[#EAE8E1] bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -661,7 +664,7 @@ function DeleteProductDialog({
           >
             {deletable ? <Trash2 size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
           </span>
-          <h2 className="font-display text-lg font-bold tracking-tight text-[#0F0F0F]">
+          <h2 id="delete-product-title" className="font-display text-lg font-bold tracking-tight text-[#0F0F0F]">
             {isLoading || isError
               ? 'Delete product?'
               : deletable

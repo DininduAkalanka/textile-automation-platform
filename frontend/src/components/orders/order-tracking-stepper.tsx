@@ -14,7 +14,7 @@ const STEP_LABEL: Record<OrderStatus, string> = {
   CONFIRMED: 'Confirmed',
   IN_PRODUCTION: 'In production',
   QUALITY_CHECK: 'Quality check',
-  COMPLETED: 'Completed',
+  COMPLETED: 'Ready for delivery',
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
 };

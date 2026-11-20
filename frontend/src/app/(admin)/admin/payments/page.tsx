@@ -33,6 +33,10 @@ const STATUS_FILTERS = [
 
 export default function AdminPaymentsPage() {
   const { user, isAuthenticated } = useAuthStore();
+  // The sign-in lives in browser storage, so the server always rendered the
+  // "Admin Access Required" box; render nothing auth-dependent until mounted.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('');
@@ -60,6 +64,10 @@ export default function AdminPaymentsPage() {
     if (isAuthenticated && user?.role === 'ADMIN') load();
     else setLoading(false);
   }, [isAuthenticated, user, load]);
+
+  if (!mounted) {
+    return <div className="h-64 animate-pulse rounded-2xl bg-white" aria-busy="true" />;
+  }
 
   if (!isAuthenticated || user?.role !== 'ADMIN') {
     return (

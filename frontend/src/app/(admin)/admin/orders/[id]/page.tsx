@@ -128,7 +128,14 @@ export default function AdminOrderDetailPage({
 
     if (pendingAction.action === 'confirm' || pendingAction.action === 'mark_collected') {
       markPaid.mutate(
-        { orderId: order.id, note: trimmedNote },
+        {
+          orderId: order.id,
+          note: trimmedNote,
+          successMessage:
+            pendingAction.action === 'confirm'
+              ? `Order ${order.orderNumber} confirmed`
+              : `Cash recorded as collected for ${order.orderNumber}`,
+        },
         { onSuccess: closeDialog },
       );
       return;
@@ -469,8 +476,8 @@ export default function AdminOrderDetailPage({
           no second, client-side copy of "does this action need that checkbox". */}
       {pendingAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-[15px] font-semibold text-[#0F0F0F]">
+          <div role="dialog" aria-modal="true" aria-labelledby="order-action-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 id="order-action-title" className="text-[15px] font-semibold text-[#0F0F0F]">
               {DIALOG_COPY[pendingAction.action].title}
             </h2>
             <p className="mt-1 text-[13px] text-[#928E82]">

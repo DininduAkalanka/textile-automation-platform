@@ -5,14 +5,14 @@ import { http, unwrap } from './http';
 export interface CategoryInput {
   name: string;
   description?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   parentId?: string;
 }
 
 export interface CategoryUpdateInput {
   name?: string;
   description?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   /** Explicit null promotes back to top-level; omitted leaves it alone. */
   parentId?: string | null;
 }

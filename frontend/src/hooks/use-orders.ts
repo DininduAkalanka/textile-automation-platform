@@ -112,16 +112,26 @@ export function useOrderAction() {
 }
 
 /** "Confirm order" and "Mark cash collected" — the same payment action under
- *  two labels; see AdminOrderAction's docblock in types/index.ts. */
+ *  two labels; see AdminOrderAction's docblock in types/index.ts.
+ *
+ *  The endpoint returns the PAYMENT, not the order: refresh by the orderId we
+ *  sent. (Reading `.id` off the response refreshed nothing, so the buttons
+ *  stayed stale until the 20-second poll and the toast said "Order undefined".) */
 export function useMarkPaid() {
   const invalidate = useInvalidateOrders();
 
   return useMutation({
-    mutationFn: ({ orderId, note }: { orderId: string; note?: string }) =>
-      paymentsService.markPaid(orderId, note),
-    onSuccess: (order) => {
-      toast.success(`Order ${order.orderNumber} confirmed`);
-      invalidate(order.id);
+    mutationFn: ({
+      orderId,
+      note,
+    }: {
+      orderId: string;
+      note?: string;
+      successMessage?: string;
+    }) => paymentsService.markPaid(orderId, note),
+    onSuccess: (_payment, { orderId, successMessage }) => {
+      toast.success(successMessage ?? 'Payment recorded');
+      invalidate(orderId);
     },
     onError: (error: Error) => toast.error(error.message),
   });

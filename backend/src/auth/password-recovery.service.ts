@@ -9,6 +9,7 @@ import { normalizeLkPhone } from '../common/phone.util';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
+import { assertPasswordAllowedForRole } from './password-policy';
 
 const LINK_TTL = 15 * 60_000;
 const RESEND_INTERVAL = 60_000;
@@ -79,9 +80,12 @@ export class PasswordRecoveryService {
     const valid = { resetTokenHash, resetExpiresAt: { gt: new Date() }, isActive: true };
     const user = await this.prisma.user.findFirst({
       where: valid,
-      select: { id: true, resetChannel: true },
+      select: { id: true, resetChannel: true, role: true },
     });
     if (!user) throw invalidLink();
+    // Checked BEFORE the link is consumed, so a staff member who picked a
+    // too-short password can simply try again with the same link.
+    assertPasswordAllowedForRole(user.role, password);
 
     const passwordHash = await bcrypt.hash(password, 12);
     await this.prisma.$transaction(async (tx) => {

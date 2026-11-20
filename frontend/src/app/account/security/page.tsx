@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { api } from '@/lib/api';
+import { registerSchema } from '@/lib/schemas';
 import { useAuthStore } from '@/store/useAuthStore';
 
-const MIN_LENGTH = 8;
+/** Admins and managers can see every order and customer: longer passwords (the API enforces the same). */
+const STAFF_ROLES = new Set(['ADMIN', 'MANAGER']);
+const STAFF_MIN_LENGTH = 12;
 
 /**
  * Change password — for every signed-in account (customer, admin, worker).
@@ -41,9 +44,16 @@ export default function AccountSecurityPage() {
     );
   }
 
+  const isStaff = STAFF_ROLES.has(String(user?.role ?? ''));
+  const minLength = isStaff ? STAFF_MIN_LENGTH : 8;
+
   const validate = (): string => {
     if (!current) return 'Enter your current password.';
-    if (next.length < MIN_LENGTH) return `Your new password must be at least ${MIN_LENGTH} characters.`;
+    // Same rules as registration and password reset (8–64 characters, upper
+    // and lower case letters and a number), plus 12+ for admins and managers.
+    const rule = registerSchema.shape.password.safeParse(next);
+    if (!rule.success) return rule.error.issues[0].message;
+    if (next.length < minLength) return `Admin and manager passwords must be at least ${STAFF_MIN_LENGTH} characters.`;
     if (next === current) return 'Choose a new password that is different from your current one.';
     if (next !== confirm) return 'The two new passwords do not match.';
     return '';
@@ -103,8 +113,8 @@ export default function AccountSecurityPage() {
         </div>
         <div>
           <label htmlFor="new-password" className="mb-1 block text-xs font-semibold text-neutral-800">New password</label>
-          <input id="new-password" data-testid="new-password" type={show ? 'text' : 'password'} autoComplete="new-password" minLength={MIN_LENGTH} maxLength={64} value={next} onChange={(e) => setNext(e.target.value)} aria-describedby="new-password-hint" className={field} />
-          <p id="new-password-hint" className="mt-1 text-[11px] text-neutral-500">At least {MIN_LENGTH} characters. A short phrase is easy to remember and hard to guess.</p>
+          <input id="new-password" data-testid="new-password" type={show ? 'text' : 'password'} autoComplete="new-password" minLength={minLength} maxLength={64} value={next} onChange={(e) => setNext(e.target.value)} aria-describedby="new-password-hint" className={field} />
+          <p id="new-password-hint" className="mt-1 text-[11px] text-neutral-500">At least {minLength} characters, with an uppercase letter, a lowercase letter and a number. A short phrase is easy to remember and hard to guess.</p>
         </div>
         <div>
           <label htmlFor="confirm-password" className="mb-1 block text-xs font-semibold text-neutral-800">Confirm new password</label>
