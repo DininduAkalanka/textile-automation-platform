@@ -1,8 +1,10 @@
 import { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/site-config';
 import { getResolvedApiUrl } from '@/lib/api-url';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nandanatextile.lk';
+  // The live www address (the bare domain redirects there).
+  const baseUrl = SITE_URL;
   // Shared rule (QA P1-10): only a production deployment reads the live API.
   const apiUrl = getResolvedApiUrl();
 

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
-import { SOCIAL_LINKS } from "@/lib/site-config";
+import { CONTACT_EMAIL, PHONE_MOBILE, SITE_URL, SOCIAL_LINKS } from "@/lib/site-config";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nandanatextile.lk";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -32,9 +32,9 @@ export const metadata: Metadata = {
     address: true,
     telephone: true,
   },
-  alternates: {
-    canonical: "/",
-  },
+  // No site-wide canonical here: Next.js merges metadata shallowly, so a
+  // canonical of "/" in this layout was inherited by EVERY page, telling Google
+  // each product page was a copy of the home page. Pages set their own.
   openGraph: {
     title: "Nandana Textile — Premium Textiles & Uniforms | Sri Lanka",
     description: "Sri Lanka's trusted textile and uniform specialist. Shop school uniforms, custom tailoring, and quality fabrics online with fast islandwide delivery.",
@@ -73,6 +73,14 @@ const jsonLd = {
       "image": `${siteUrl}/logo.png`,
       "description": "Sri Lanka's premier textile and uniform supplier specializing in custom tailoring, school uniforms, and quality fabrics.",
       "telephone": "+94332288445",
+      "email": CONTACT_EMAIL,
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": PHONE_MOBILE.tel,
+        "contactType": "customer service",
+        "areaServed": "LK",
+        "availableLanguage": ["English", "Sinhala", "Tamil"]
+      },
       "priceRange": "LKR 500 - 25000",
       "address": {
         "@type": "PostalAddress",
@@ -123,7 +131,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
         />
         <Providers>{children}</Providers>
       </body>

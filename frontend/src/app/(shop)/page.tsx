@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site-config';
 import {
   HeroSection,
   CategoryDiscovery,
@@ -14,6 +15,7 @@ import {
 } from '@/components/home';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/' },
   // absolute: the root layout's "%s | Nandana Textile" template would otherwise
   // print the brand twice in the browser tab and in search results.
   title: { absolute: 'Nandana Textile | Premium Fabrics, Apparel & Institutional Uniforms in Sri Lanka' },
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
     title: 'Nandana Textile | Premium Fabrics, Apparel & Institutional Uniforms',
     description:
       'Shop authentic fashion, luxury sarees, tailoring fabrics, and institutional uniforms with reliable island-wide delivery across all 25 districts.',
-    url: 'https://nandanatextile.lk',
+    url: SITE_URL,
     siteName: 'Nandana Textile',
     images: [
       {
@@ -47,52 +49,13 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Organization',
-      '@id': 'https://nandanatextile.lk/#organization',
-      name: 'Nandana Textile',
-      url: 'https://nandanatextile.lk',
-      description: 'Sri Lanka’s premier textile, apparel, and institutional uniform specialist since 2009.',
-      contactPoint: {
-        '@type': 'ContactPoint',
-        telephone: '+94-71-708-8445',
-        contactType: 'customer service',
-        areaServed: 'LK',
-        availableLanguage: ['English', 'Sinhala', 'Tamil'],
-      },
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'LK',
-      },
-    },
-    {
-      '@type': 'WebSite',
-      '@id': 'https://nandanatextile.lk/#website',
-      url: 'https://nandanatextile.lk',
-      name: 'Nandana Textile',
-      publisher: {
-        '@id': 'https://nandanatextile.lk/#organization',
-      },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: 'https://nandanatextile.lk/products?search={search_term_string}',
-        'query-input': 'required name=search_term_string',
-      },
-    },
-  ],
-};
+// Structured data (ClothingStore + WebSite) is rendered once, site-wide, in
+// app/layout.tsx. A second copy here reused the same @ids with a different
+// type, which gave search engines two conflicting descriptions of the shop.
 
 export default function HomePage() {
   return (
     <>
-      {/* Schema.org Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
 
       <div className="homepage-container" style={{ width: '100%', overflowX: 'hidden' }}>
         {/* 1. Hero Section: High-impact editorial commerce slider */}
