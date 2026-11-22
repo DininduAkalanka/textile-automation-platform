@@ -1,19 +1,34 @@
 name: Render Services Keep-Alive & Health Monitor
 
-# SRE Keep-Alive Strategy:
-# Render Free instances spin down after 15 minutes of inactivity (50s cold start).
-# Render provides 750 free instance hours per month across all free services.
-# Running 2 services 24/7 (1,488h) exhausts the 750h quota in ~15 days.
+# ─── Why this workflow is a BACKUP, not the primary keep-alive ─────────────────
 #
-# This workflow runs every 14 minutes between 03:00 UTC and 17:00 UTC
-# (8:30 AM to 10:30 PM Sri Lanka / IST - active e-commerce shopping hours):
-# 14 hours/day * 30 days = 420 hours per service.
-# Both services combined stay safely within the 750h free tier while
-# guaranteeing ZERO cold starts throughout daytime business hours!
+# Render Free web services spin down after 15 minutes without inbound traffic and
+# take up to about a minute to wake (https://render.com/docs/free).
+#
+# GitHub does not run `schedule` triggers on time. They can be delayed during
+# high load, and some are dropped. In this repository a cron asking for ~75 runs
+# a day was actually run about twice a day (Nov 2026 run history), which cannot
+# keep anything awake. The primary pinger is therefore an external scheduler
+# (cron-job.org — see docs/RUNBOOK.md, "Keeping the Render free services awake").
+# This workflow stays as a second pinger and as a loud health check: it now FAILS
+# (red) when it is not configured or a service does not answer, instead of
+# showing a green tick while doing nothing.
+#
+# ─── Free-hour budget ───────────────────────────────────────────────────────────
+# Render grants 750 free instance hours per WORKSPACE per month, shared by every
+# free service in it. When they run out, Render suspends ALL free services until
+# the next month. Two services kept awake 24/7 would need ~1,488 h, so the
+# window is limited to 03:00–13:59 UTC (08:30–19:30 Sri Lanka time):
+#   ~11.25 h/day (incl. the 15-min tail) × 2 services × 31 days ≈ 700 h  < 750 h.
+# Widen it only if the Render workspace has hours to spare.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   RENDER_BACKEND_URL  e.g. https://textile-automation-platform.onrender.com
+#   RENDER_AI_URL       e.g. https://textile-automation-platform-ai.onrender.com
 
 on:
   schedule:
-    - cron: '*/14 3-17 * * *'
+    - cron: '*/10 3-13 * * *'
   workflow_dispatch:
     inputs:
       custom_backend_url:
@@ -33,10 +48,10 @@ jobs:
   keepalive:
     name: Ping Services
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
 
     steps:
-      - name: Resolve Service URLs
+      - name: Resolve service URLs
         id: config
         env:
           INPUT_BACKEND_URL: ${{ inputs.custom_backend_url }}
@@ -46,86 +61,54 @@ jobs:
         run: |
           BACKEND_URL="${INPUT_BACKEND_URL:-$SECRET_BACKEND_URL}"
           AI_URL="${INPUT_AI_URL:-$SECRET_AI_URL}"
-
-          # Strip trailing slashes if present
           BACKEND_URL="${BACKEND_URL%/}"
           AI_URL="${AI_URL%/}"
+
+          # Missing configuration is a failure, not a notice. The old version
+          # skipped both pings on every run for a week and still showed green.
+          missing=0
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::error ::RENDER_BACKEND_URL secret is not set. Add it in Settings → Secrets and variables → Actions."
+            missing=1
+          fi
+          if [ -z "$AI_URL" ]; then
+            echo "::error ::RENDER_AI_URL secret is not set. Add it in Settings → Secrets and variables → Actions."
+            missing=1
+          fi
+          [ "$missing" = 0 ] || exit 1
 
           echo "backend_url=$BACKEND_URL" >> "$GITHUB_OUTPUT"
           echo "ai_url=$AI_URL" >> "$GITHUB_OUTPUT"
 
-      # ── 1. Backend API Keep-Alive ───────────────────────────────────────────
-      - name: Ping NestJS Backend API (:3001)
-        if: steps.config.outputs.backend_url != ''
+      - name: Ping backend and AI service
         env:
-          TARGET_BASE: ${{ steps.config.outputs.backend_url }}
+          BACKEND_HEALTH: ${{ steps.config.outputs.backend_url }}/api/v1/health
+          AI_HEALTH: ${{ steps.config.outputs.ai_url }}/health
         run: |
-          TARGET="${TARGET_BASE}/api/v1/health"
-          echo "Pinging Backend: $TARGET"
-          
-          # Max time 60s to accommodate potential cold start wakeup
-          RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" --max-time 60 "$TARGET" || echo -e "\n000\n0")
-          
-          BODY=$(echo "$RESPONSE" | head -n -2)
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n 2 | head -n 1)
-          LATENCY=$(echo "$RESPONSE" | tail -n 1)
-          
-          echo "Status: HTTP $HTTP_CODE | Latency: ${LATENCY}s"
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Backend API is active and healthy."
-          elif [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "000" ]; then
-            echo "⚠️ Backend warming up (code $HTTP_CODE). Retrying after 15s..."
-            sleep 15
-            RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$TARGET" || echo "000")
-            echo "Retry Status: HTTP $RETRY_CODE"
-            if [ "$RETRY_CODE" = "200" ]; then
-              echo "✅ Backend successfully woken up."
-            else
-              echo "::warning ::Backend returned HTTP $RETRY_CODE on retry."
-            fi
-          else
-            echo "::warning ::Backend returned unexpected HTTP $HTTP_CODE"
-          fi
+          # Polls one health URL until it returns HTTP 200, for up to ~2.5 min:
+          # a cold Render free instance takes up to about a minute to wake.
+          ping_until_healthy() {
+            name="$1"; url="$2"
+            body=$(mktemp)  # one file per call: the two pings run in parallel
+            for attempt in 1 2 3 4 5 6; do
+              # curl already prints 000 when it cannot connect; `|| true` only
+              # stops its non-zero exit from ending the loop.
+              code=$(curl -s -o "$body" -w '%{http_code}' --max-time 25 "$url") || true
+              echo "$name attempt $attempt: HTTP ${code:-000}"
+              if [ "$code" = "200" ]; then
+                echo "✅ $name healthy: $(head -c 300 "$body")"
+                return 0
+              fi
+              sleep 5
+            done
+            echo "::error ::$name did not return HTTP 200 ($url)"
+            return 1
+          }
 
-      - name: Backend Secret Notice
-        if: steps.config.outputs.backend_url == ''
-        run: |
-          echo "::notice ::RENDER_BACKEND_URL secret is not set yet. Add it in Repo Settings -> Secrets -> Actions to activate backend keep-alive."
-
-      # ── 2. AI Microservice Keep-Alive ───────────────────────────────────────
-      - name: Ping FastAPI AI Service (:8000)
-        if: steps.config.outputs.ai_url != ''
-        env:
-          TARGET_BASE: ${{ steps.config.outputs.ai_url }}
-        run: |
-          TARGET="${TARGET_BASE}/health"
-          echo "Pinging AI Service: $TARGET"
-          
-          RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" --max-time 60 "$TARGET" || echo -e "\n000\n0")
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n 2 | head -n 1)
-          LATENCY=$(echo "$RESPONSE" | tail -n 1)
-          
-          echo "Status: HTTP $HTTP_CODE | Latency: ${LATENCY}s"
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ FastAPI AI Microservice is active and healthy."
-          elif [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "000" ]; then
-            echo "⚠️ AI service warming up (code $HTTP_CODE). Retrying after 15s..."
-            sleep 15
-            RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$TARGET" || echo "000")
-            echo "Retry Status: HTTP $RETRY_CODE"
-            if [ "$RETRY_CODE" = "200" ]; then
-              echo "✅ AI service successfully woken up."
-            else
-              echo "::warning ::AI service returned HTTP $RETRY_CODE on retry."
-            fi
-          else
-            echo "::warning ::AI service returned unexpected HTTP $HTTP_CODE"
-          fi
-
-      - name: AI Service Secret Notice
-        if: steps.config.outputs.ai_url == ''
-        run: |
-          echo "::notice ::RENDER_AI_URL secret is not set yet. Add it in Repo Settings -> Secrets -> Actions to activate AI keep-alive."
+          # Ping both in parallel so a cold start on one does not delay the other.
+          ping_until_healthy "Backend" "$BACKEND_HEALTH" & b=$!
+          ping_until_healthy "AI service" "$AI_HEALTH" & a=$!
+          status=0
+          wait $b || status=1
+          wait $a || status=1
+          exit $status
