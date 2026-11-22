@@ -32,5 +32,16 @@ export function normalizeImageUrl(url?: string | null, fallback = '/images/prod1
   if (trimmed.startsWith('http://127.0.0.1:3001/uploads/')) {
     return trimmed.replace('http://127.0.0.1:3001', '');
   }
+  // Uploaded photos are stored on Cloudinary at their original size (up to
+  // 2 MB). Asking for f_auto,q_auto serves WebP/AVIF at an automatic quality —
+  // usually a fraction of the bytes, which matters for page speed (a search
+  // ranking factor). Display only: the stored URL is unchanged, and a URL that
+  // already carries a transformation is left alone.
+  if (CLOUDINARY_UPLOAD.test(trimmed)) {
+    return trimmed.replace(CLOUDINARY_UPLOAD, '$1f_auto,q_auto/');
+  }
   return trimmed;
 }
+
+/** "https://res.cloudinary.com/<cloud>/image/upload/" not already followed by a transformation. */
+const CLOUDINARY_UPLOAD = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(?![a-z]{1,3}_[^/]*\/)/;

@@ -11,6 +11,20 @@
 
 export const SITE_NAME = 'Nandana Textile';
 
+/**
+ * The shop's one public address, used for every canonical URL, the sitemap,
+ * robots.txt and structured data. www is the live host: the bare domain
+ * (nandanatextile.lk) redirects to it, so pointing search engines at the bare
+ * domain told them every page lives at an address that redirects away.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nandanatextile.lk').replace(/\/+$/, '');
+
+/** An absolute URL on the shop's public address. */
+export function absoluteUrl(path = '/'): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export const PHONE_MOBILE = {
   display: '071 708 8445',
   international: '+94 71 708 8445',
