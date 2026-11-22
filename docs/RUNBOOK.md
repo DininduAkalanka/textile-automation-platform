@@ -212,3 +212,33 @@ npm run reconcile
 # 2. If only cache drift exists, repair:
 npm run reconcile -- --repair
 ```
+
+---
+
+## 7. Keeping the Render free services awake
+
+Render Free web services spin down after **15 minutes without inbound traffic** and take up to about a minute to wake ([Render docs](https://render.com/docs/free)). While the AI service is waking, the AI Insights chat and the Analytics page show "not available". They recover on their own once it is awake, so a refresh a minute later works and a redeploy is not needed.
+
+### Why GitHub Actions alone is not enough
+GitHub runs `schedule` triggers late, and drops some under load. In November 2026 a cron asking for ~75 runs a day ran about **twice a day**, with 6–9 hour gaps. `.github/workflows/render-keepalive.yml` is kept only as a backup pinger and health alarm. It fails (red) if its secrets are missing or a service does not answer.
+
+### Primary pinger: cron-job.org (free)
+Create two cron jobs at [cron-job.org](https://cron-job.org):
+
+| Field | Backend job | AI job |
+| :--- | :--- | :--- |
+| URL | `https://<backend>.onrender.com/api/v1/health` | `https://<ai>.onrender.com/health` |
+| Schedule | Every 10 minutes | Every 10 minutes |
+| Hours | 09:00–19:59 | 09:00–19:59 |
+| Time zone | Asia/Colombo | Asia/Colombo |
+| Request timeout | 30 s | 30 s |
+
+### Free-hour budget (important)
+Render grants **750 free instance hours per workspace per month**, shared by all free services in it. If they run out, Render **suspends every free service until the next month**. Two services kept awake 24/7 need ~1,488 h, so keep-alive must be limited to a window:
+
+`awake hours/day × 2 services × 31 days ≤ 750` → at most **~11.5 h/day**, minus real visitor traffic outside the window.
+
+The 09:00–19:59 window above keeps each service awake ≈ 11.25 h/day (including the 15-minute tail): 11.25 × 2 × 31 ≈ **700 h**, leaving ~50 h for visitors outside the window. Any other free services in the same workspace share this pool, so check Render → Workspace → Billing after the first week.
+
+### Backup pinger: GitHub Actions
+Add the repository secrets `RENDER_BACKEND_URL` and `RENDER_AI_URL` (Settings → Secrets and variables → Actions), then run the workflow once by hand (Actions → Render Services Keep-Alive → Run workflow) and confirm that both pings show HTTP 200.
