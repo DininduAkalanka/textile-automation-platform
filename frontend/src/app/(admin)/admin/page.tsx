@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Paid orders"
-          value={totals?.totalOrders ?? '—'}
+          value={deltas?.paidOrders ?? '—'}
           icon={ShoppingCart}
           changePercent={deltas?.paidOrdersChangePercent}
           changeLabel="vs previous 30 days"

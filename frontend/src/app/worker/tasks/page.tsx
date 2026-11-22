@@ -106,7 +106,13 @@ export default function WorkerTasksPage() {
                 {STAGE_LABEL[task.stage]}
               </span>
               <p className="mt-1 text-[11px] text-neutral-400">
-                {task.status === 'IN_PROGRESS' ? 'in progress' : 'not started'}
+                {/* DONE used to fall through to "not started" right after the
+                    worker pressed Mark complete. */}
+                {task.status === 'IN_PROGRESS'
+                  ? 'in progress'
+                  : task.status === 'DONE'
+                    ? 'done — send to next stage'
+                    : 'not started'}
               </p>
             </div>
           </div>

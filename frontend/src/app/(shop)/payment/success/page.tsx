@@ -26,6 +26,8 @@ function PaymentSuccessContent() {
   const orderId = searchParams.get('orderId');
 
   const [state, setState] = useState<PollState>(orderId ? 'polling' : 'missing-order');
+  // The shopper-facing number (TXL-…), shown instead of the internal UUID.
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -40,6 +42,8 @@ function PaymentSuccessContent() {
       try {
         const payment = await api.getPayment(orderId);
         if (cancelledRef.current) return;
+        const number = (payment as { order?: { orderNumber?: string } }).order?.orderNumber;
+        if (number) setOrderNumber(number);
 
         if (payment.status === 'COMPLETED') {
           setState('completed');
@@ -115,7 +119,7 @@ function PaymentSuccessContent() {
               <div className="bg-[var(--clr-surface-2)] p-4 rounded-xl border border-[var(--clr-border)] mb-6 text-left space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-[var(--clr-text-3)] font-mono uppercase tracking-wider">Order Reference</span>
-                  <span className="font-mono font-bold text-[var(--clr-text)] truncate max-w-[200px]">{orderId}</span>
+                  <span className="font-mono font-bold text-[var(--clr-text)] truncate max-w-[200px]">{orderNumber ?? orderId}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs border-t border-[var(--clr-border-2)] pt-2">
                   <span className="text-[var(--clr-text-3)]">Estimated Delivery</span>

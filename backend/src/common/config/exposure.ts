@@ -56,18 +56,58 @@ export function publicUploadUrl(filename: string, req?: RequestLike): string {
 export const UPLOADED_FILENAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|jpeg|png|webp)$/;
 
+/** Cloudinary folder that holds the shop's uploads (see uploads/cloudinary.ts). */
+export const CLOUDINARY_UPLOAD_FOLDER = 'nandana-uploads';
+
 /**
- * The upload filename inside an image URL the shop issued, or null.
- * Accepts absolute (any origin) and root-relative forms; only the
- * /uploads/<uuid>.<ext> shape is recognised.
+ * An image URL the shop issued, as { filename, canonical url }, or null.
+ *
+ * Two shapes are recognised:
+ * - /uploads/<uuid>.<ext> on any origin (disk storage), canonicalised to this
+ *   API's own upload URL;
+ * - https://res.cloudinary.com/<our cloud>/image/upload/[v<n>/]nandana-uploads/<uuid>.<ext>,
+ *   only for the configured cloud and folder, so a review cannot point at an
+ *   image in someone else's account.
  */
-export function uploadedFilenameFrom(url: string): string | null {
-  let path: string;
+export function uploadedImageRef(
+  url: string,
+): { filename: string; url: string } | null {
+  let parsed: URL;
   try {
-    path = new URL(url, 'http://placeholder.invalid').pathname;
+    parsed = new URL(url, 'http://placeholder.invalid');
   } catch {
     return null;
   }
-  const match = /^\/uploads\/([^/]+)$/.exec(path);
-  return match && UPLOADED_FILENAME.test(match[1]) ? match[1] : null;
+  const local = /^\/uploads\/([^/]+)$/.exec(parsed.pathname);
+  if (local && UPLOADED_FILENAME.test(local[1])) {
+    return { filename: local[1], url: publicUploadUrl(local[1]) };
+  }
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  if (
+    cloud &&
+    parsed.protocol === 'https:' &&
+    parsed.hostname === 'res.cloudinary.com'
+  ) {
+    const m = /^\/([^/]+)\/image\/upload\/(?:v(\d+)\/)?([^/]+)\/([^/]+)$/.exec(
+      parsed.pathname,
+    );
+    if (
+      m &&
+      m[1] === cloud &&
+      m[3] === CLOUDINARY_UPLOAD_FOLDER &&
+      UPLOADED_FILENAME.test(m[4])
+    ) {
+      const version = m[2] ? `v${m[2]}/` : '';
+      return {
+        filename: m[4],
+        url: `https://res.cloudinary.com/${cloud}/image/upload/${version}${CLOUDINARY_UPLOAD_FOLDER}/${m[4]}`,
+      };
+    }
+  }
+  return null;
+}
+
+/** The upload filename inside an image URL the shop issued, or null. */
+export function uploadedFilenameFrom(url: string): string | null {
+  return uploadedImageRef(url)?.filename ?? null;
 }

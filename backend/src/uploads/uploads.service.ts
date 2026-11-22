@@ -4,15 +4,13 @@ import { join } from 'path';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { UploadPurpose } from '@prisma/client';
 
-import {
-  publicUploadUrl,
-  uploadedFilenameFrom,
-} from '../common/config/exposure';
+import { uploadedImageRef } from '../common/config/exposure';
 import {
   orphanUploadTtlHours,
   reviewUploadsPerDay,
 } from '../common/config/limits';
 import { PrismaService } from '../prisma/prisma.service';
+import { cloudinaryConfig, deleteFromCloudinary } from './cloudinary';
 
 export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 
@@ -78,20 +76,27 @@ export class UploadsService {
     const kept = new Set(alreadyOnReview);
     const result: string[] = [];
     const filenames: string[] = [];
+    // filename -> the URL to store (disk: this API's /uploads URL; Cloudinary:
+    // the https URL in the shop's own cloud and folder).
+    const canonical = new Map<string, string>();
 
     for (const url of urls) {
       if (kept.has(url)) {
         if (!result.includes(url)) result.push(url);
         continue;
       }
-      const name = uploadedFilenameFrom(url);
-      if (!name) {
+      const ref = uploadedImageRef(url);
+      const name = ref?.filename;
+      if (!ref || !name) {
         throw new BadRequestException({
           message: 'Review photos must be uploaded through the shop.',
           code: 'INVALID_REVIEW_IMAGE',
         });
       }
-      if (!filenames.includes(name)) filenames.push(name);
+      if (!filenames.includes(name)) {
+        filenames.push(name);
+        canonical.set(name, ref.url);
+      }
     }
 
     if (filenames.length > 0) {
@@ -113,7 +118,7 @@ export class UploadsService {
     }
 
     for (const name of filenames) {
-      const url = publicUploadUrl(name);
+      const url = canonical.get(name)!;
       if (!result.includes(url)) result.push(url);
     }
     return { urls: result, filenames };
@@ -155,7 +160,18 @@ export class UploadsService {
     `;
 
     let removed = 0;
+    const cloud = cloudinaryConfig();
     for (const orphan of orphans) {
+      if (cloud) {
+        try {
+          await deleteFromCloudinary(orphan.filename, cloud);
+        } catch (err) {
+          this.logger.warn(
+            `Could not delete orphan upload ${orphan.filename} from Cloudinary: ${(err as Error).message}`,
+          );
+          continue;
+        }
+      }
       try {
         await unlink(join(UPLOAD_DIR, orphan.filename));
       } catch (err) {

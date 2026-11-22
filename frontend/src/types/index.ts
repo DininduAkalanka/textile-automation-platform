@@ -291,6 +291,8 @@ export interface DashboardResponse {
   deltas: {
     previousRevenue: string;
     revenueChangePercent: number | null;
+    /** Orders with a completed payment in the current window. */
+    paidOrders?: number;
     previousPaidOrders: number;
     paidOrdersChangePercent: number | null;
   };

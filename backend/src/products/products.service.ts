@@ -8,6 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
+/**
+ * Fields a shopper must never receive. costPrice is what the shop pays its
+ * supplier: returning it from the public endpoints showed every product's margin
+ * to anyone who opened the browser's network tab. Admin endpoints still return it.
+ */
+const PUBLIC_PRODUCT_OMIT = { costPrice: true } as const;
+
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
@@ -284,6 +291,7 @@ export class ProductsService {
       this.prisma.product.findMany({
         where,
         include: { category: true },
+        omit: PUBLIC_PRODUCT_OMIT,
         orderBy,
         skip,
         take: limit,
@@ -390,6 +398,7 @@ export class ProductsService {
     let product = await this.prisma.product.findFirst({
       where: { slug, isActive: true },
       include: { category: true },
+      omit: PUBLIC_PRODUCT_OMIT,
     });
 
     if (!product) {
@@ -401,6 +410,7 @@ export class ProductsService {
         product = await this.prisma.product.findFirst({
           where: { id: slug, isActive: true },
           include: { category: true },
+          omit: PUBLIC_PRODUCT_OMIT,
         });
       }
     }
@@ -416,6 +426,7 @@ export class ProductsService {
     const product = await this.prisma.product.findFirst({
       where: { id, isActive: true },
       include: { category: true },
+      omit: PUBLIC_PRODUCT_OMIT,
     });
 
     if (!product) {
@@ -490,6 +501,7 @@ export class ProductsService {
       ? await this.prisma.product.findMany({
           where: { id: { in: rankedIds }, isActive: true },
           include: { category: true },
+          omit: PUBLIC_PRODUCT_OMIT,
         })
       : [];
     products.sort((a, b) => rankedIds.indexOf(a.id) - rankedIds.indexOf(b.id));
@@ -504,6 +516,7 @@ export class ProductsService {
           ...(product.categoryId ? { categoryId: product.categoryId } : {}),
         },
         include: { category: true },
+        omit: PUBLIC_PRODUCT_OMIT,
         orderBy: { createdAt: 'desc' },
         take: limit - products.length,
       });
@@ -545,6 +558,7 @@ export class ProductsService {
         ...(product.categoryId ? { categoryId: product.categoryId } : {}),
       },
       include: { category: true },
+      omit: PUBLIC_PRODUCT_OMIT,
       take: 60,
     });
 
@@ -572,6 +586,7 @@ export class ProductsService {
       const fillers = await this.prisma.product.findMany({
         where: { isActive: true, id: { notIn: excludeIds } },
         include: { category: true },
+        omit: PUBLIC_PRODUCT_OMIT,
         orderBy: { createdAt: 'desc' },
         take: limit - related.length,
       });

@@ -202,8 +202,8 @@ export class NotificationDispatchService {
         await this.smsService.send(
           order.user.phone,
           kind === 'failed'
-            ? `TextileShop: payment for order ${order.orderNumber} failed. Nothing was charged — please retry from My Orders.`
-            : `TextileShop: we couldn't verify payment for order ${order.orderNumber}. Please contact us or submit it again.`,
+            ? `Nandana Textile: payment for order ${order.orderNumber} failed. Nothing was charged — please retry from My Orders.`
+            : `Nandana Textile: we couldn't verify payment for order ${order.orderNumber}. Please contact us or submit it again.`,
         );
       }
     } catch (err) {
