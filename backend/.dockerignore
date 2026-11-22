@@ -1,3 +1,10 @@
 node_modules
 dist
+coverage
+# never bake secrets, local photos or database dumps into an image
 .env
+.env.*
+uploads/*
+!uploads/.gitkeep
+*.dump
+*.log

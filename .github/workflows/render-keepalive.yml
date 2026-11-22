@@ -40,6 +40,10 @@ on:
         required: false
         type: string
 
+# Least privilege: the job only sends HTTP requests.
+permissions:
+  contents: read
+
 concurrency:
   group: render-keepalive
   cancel-in-progress: true

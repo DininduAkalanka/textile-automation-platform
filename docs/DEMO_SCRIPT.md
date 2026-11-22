@@ -14,7 +14,7 @@
 | **2. Tailored Commerce & BR3** | 2:00 – 4:00 | Custom Measurements & Cart | Form validation, person profiles & measurement snapshot |
 | **3. Checkout & Payment Security** | 4:00 – 6:00 | Secure Payments & Webhooks | Server-to-server webhook verification, row locking |
 | **4. Operations & Factory Pipeline**| 6:00 – 8:00 | Admin & Factory Workflow | State machine stage progression, double-entry ledger |
-| **5. AI Business Intelligence** | 8:00 – 10:00| Analytics & Demand Forecast | Tool-calling BI agent, SARIMAX forecasting |
+| **5. AI Business Intelligence** | 8:00 – 10:00| Analytics & Demand Forecast | Tool-calling BI agent, Holt-Winters forecasting |
 
 ---
 
@@ -29,7 +29,7 @@
    - Type: `I need a durable fabric for school uniforms that stays cool.`
    - **Show Evaluators**: The AI responds with natural language advice **and interactive product cards**.
    - **Key Technical Highlight to Mention**:
-     > *"This is powered by Retrieval-Augmented Generation (RAG). The LLM is structurally prevented from hallucinating fake products because our backend validates returned IDs against PostgreSQL full-text search results and hydates real prices directly from the database."*
+     > *"This is powered by Retrieval-Augmented Generation (RAG). The LLM is structurally prevented from hallucinating fake products because our backend validates returned IDs against PostgreSQL full-text search results and hydrates real prices directly from the database."*
 
 ---
 
@@ -40,8 +40,8 @@
    - Show the specifications and stock indicator.
    - Click **Add to Cart**.
 2. **Open Shopping Cart (`/cart`)**:
-   - **Show Business Rule BR3 Enforcement**: The cart indicates *"Measurements needed before you can check out"*, and the checkout button is disabled.
-   - Click **Add Measurements**.
+   - **Show Business Rule BR3 Enforcement**: The cart shows *"Measurements needed for … before you can check out"*, and the checkout button is replaced by **Need Measurements**.
+   - Click **Add Custom Measurements (Required)**.
    - Fill in:
      - Person Name: `Dinindu`
      - Chest: `36 in`, Collar: `15 in`, Shirt Length: `28 in`
@@ -53,10 +53,10 @@
 ### Part 3: Checkout & Secure Webhook Processing (4:00 – 6:00)
 
 1. **Proceed to Checkout (`/checkout`)**:
-   - Select **Cash on Delivery (COD)** or **Card / Online Payment (PayHere)**.
+   - Select **Cash on Delivery** or **Card / Online Payment** (PayHere sandbox).
    - Submit the order.
 2. **Show Order Confirmation & Tracking Stepper (`/account/orders/:id`)**:
-   - Show the visual order progression stepper (`PENDING` → `CONFIRMED` → `IN_PRODUCTION` → `DELIVERED`).
+   - Show the visual order progression stepper (Order placed → Confirmed → In production → Quality check → Completed → Delivered).
 3. **Show PayHere Signature Security**:
    - Explain the zero-trust payment architecture:
      > *"In our architecture, the frontend is completely untrusted. The only event that confirms an online payment is a server-to-server signed webhook verified using MD5 cryptographic hashing."*
@@ -66,13 +66,14 @@
 ### Part 4: Admin Management & Production Pipeline (6:00 – 8:00)
 
 1. **Switch to Admin Dashboard (`http://localhost:3000/admin`)**:
-   - Log in as `admin@textileshop.com`.
-   - Show real-time KPI metrics (Net Revenue, Total Orders, Active Production Batches).
+   - Sign in with the local admin test account created by the seed script (`backend/prisma/seed.ts`; it exists only in a local database).
+   - Show the KPI cards (Revenue, Paid orders, Awaiting payment, Low stock), each compared with the previous 30 days.
 2. **Open Production Pipeline (`/admin/production`)**:
-   - Locate the order created in Part 2.
+   - Locate the order created in Part 2 and assign a worker to its task (a task cannot start without one).
    - Advance the production task through the factory floor state machine:
-     - `CUTTING` → `STITCHING` → `FINISHING` → `QUALITY_CHECK` → `READY_FOR_DISPATCH`
-   - **Highlight**: Every status change is protected by strict state-machine guard transitions.
+     - `CUTTING` → `STITCHING` → `FINISHING` → `QUALITY_CHECK` (**Start** → **Mark complete** → **Send to next stage**, then **Pass QC**)
+   - When the last task passes quality check, the order moves to `COMPLETED` by itself.
+   - **Highlight**: Every status change is protected by strict state-machine guard transitions; a failed QC needs a reason and sends the garment back to Finishing.
 3. **Open Real-Time Inventory Ledger (`/admin/inventory`)**:
    - Show the append-only stock movements table.
    - Demonstrate that every unit of stock traces directly to an order or admin purchase with zero drift.
@@ -100,5 +101,5 @@
 | :--- | :--- |
 | **Q: How do you prevent the AI from making up fake products or prices?** | *"We use a 'Hydrate-and-Validate' pattern. The LLM only receives candidate product IDs retrieved via PostgreSQL full-text search. Before returning the response, our service drops any unverified ID and reads the real price and stock directly from the database."* |
 | **Q: How do you prevent inventory overselling during sales spikes?** | *"We use PostgreSQL row-level locks (`SELECT ... FOR UPDATE`) inside atomic database transactions. Even with 100 concurrent requests, conflicting reservations are serialized and rejected once available stock reaches zero."* |
-| **Q: What is the single source of truth for stock?** | *"The `inventory_movements` append-only ledger. We have an automated reconciler (`npm run reconcile`) that verifies the ledger math against cache columns on every deployment."* |
+| **Q: What is the single source of truth for stock?** | *"The `inventory_movements` append-only ledger. We have an automated reconciler (`npm run reconcile`) that verifies the ledger math against the cached stock columns, and CI runs it on every change."* |
 | **Q: Is customer data secure from external LLM providers?** | *"Yes. The AI microservice connects using a dedicated read-only database user. No customer PII, phone numbers, or passwords are ever passed into LLM prompt contexts."* |

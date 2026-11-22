@@ -1,47 +1,111 @@
-# Dependencies
-node_modules/
+# ──────────────────────────────────────────────────────────────────────────────
+# Files that must never reach this public repository.
+# A pattern without a slash in the middle matches at any depth.
+# ──────────────────────────────────────────────────────────────────────────────
 
-# Python (the ai/ service)
+# ─── Secrets and credentials ──────────────────────────────────────────────────
+# Real configuration lives in the hosting dashboards (docs/RUNBOOK.md, section 2).
+# Only the commented templates (.env.example) are committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+.npmrc
+.pypirc
+.netrc
+
+# ─── Database dumps and backups: they contain customers' personal data ────────
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.sql.zip
+*.sqlite
+*.sqlite3
+pgdata/
+
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─── Build output and tool caches ─────────────────────────────────────────────
+dist/
+build/
+out/
+.next/
+.vercel/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+
+# ─── Python (ai/) ─────────────────────────────────────────────────────────────
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
 
-# Build output
-dist/
-build/
-.next/
-*.tsbuildinfo
-
-# Environment — secrets never enter history
-.env
-.env.*
-!.env.example
-
-# Logs
-*.log
-npm-debug.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Test artifacts & coverage
-cypress/screenshots/
-cypress/videos/
-frontend/cypress/screenshots/
-test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
+# ─── Tests and coverage ───────────────────────────────────────────────────────
 coverage/
 *.lcov
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
+**/playwright/.cache/
+**/cypress/screenshots/
+**/cypress/videos/
+**/cypress/downloads/
 
-# Temporary scratch files
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── AI coding-assistant instructions and settings (kept local) ───────────────
+.claude/
+.cursor/
+.codex/
+.aider*
+.cursorrules
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+
+# ─── Editors ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# ─── Operating systems and office temp files ──────────────────────────────────
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+~$*
+.~lock.*#
+
+# ─── Scratch space ────────────────────────────────────────────────────────────
 scratch/

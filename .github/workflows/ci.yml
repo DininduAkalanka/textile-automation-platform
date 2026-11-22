@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: the jobs only read the repository.
+permissions:
+  contents: read
+
 # Pull requests: one group per PR, and a new push to the PR cancels its
 # superseded run. Pushes to main: one group per commit, never cancelled, so every
 # commit on main ends with a real result.

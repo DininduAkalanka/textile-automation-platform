@@ -1,5 +1,7 @@
 # Nandana Textile — Load Testing Suite (k6)
 
+Part of the [Nandana Textile platform](../../README.md).
+
 This directory contains the performance and load testing scripts designed to audit and verify **NFR-001** (response time < 2000ms under 100 concurrent users) and payment webhook burst resilience.
 
 ---
