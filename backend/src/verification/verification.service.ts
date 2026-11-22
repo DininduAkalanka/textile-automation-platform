@@ -250,13 +250,13 @@ export class VerificationService {
     if (channel === VerificationChannel.EMAIL) {
       await this.emailService.send({
         to: destination,
-        subject: 'Your TextileShop verification code',
+        subject: 'Your Nandana Textile verification code',
         react: VerificationCodeEmail({ code }),
       });
     } else {
       await this.smsService.send(
         destination,
-        `Your TextileShop verification code is ${code}. It expires in 5 minutes.`,
+        `Your Nandana Textile verification code is ${code}. It expires in 5 minutes.`,
       );
     }
   }

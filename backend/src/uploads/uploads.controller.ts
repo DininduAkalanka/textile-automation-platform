@@ -17,7 +17,9 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   Post,
+  ServiceUnavailableException,
   Req,
   UploadedFile,
   UseGuards,
@@ -37,7 +39,14 @@ import {
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import {
+  cloudinaryConfig,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from './cloudinary';
 import { UPLOAD_DIR, UploadsService } from './uploads.service';
+
+const uploadLogger = new Logger('Uploads');
 
 /**
  * Image uploads for the admin catalogue and, separately, customer review
@@ -182,23 +191,52 @@ async function toUploadResponse(
     );
   }
 
+  // Durable storage: with Cloudinary configured the validated file goes there
+  // and the local copy is only a temporary file (the container disk is wiped on
+  // every Render deploy and wake-up). Without it, the disk is the storage.
+  const cloud = cloudinaryConfig();
+  let filename = file.filename;
+  // Absolute URL so it works in <img>, in captions, and for the Instagram Graph
+  // API, which only accepts a public URL. QA P2-15: the origin comes from
+  // configuration, never from the client's Host header.
+  let url = publicUploadUrl(file.filename, req);
+  if (cloud) {
+    try {
+      ({ url, filename } = await uploadToCloudinary(
+        file.path,
+        file.filename,
+        cloud,
+      ));
+    } catch (err) {
+      uploadLogger.error(
+        `Cloudinary upload failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+      throw new ServiceUnavailableException(
+        'Image storage is unavailable right now. Please try again in a minute.',
+      );
+    } finally {
+      removeQuietly(file.path);
+    }
+  }
+
   // QA P2-15: every upload is recorded with its uploader — the basis of the
   // quota, of the "your own photos only" check on reviews, and of the cleanup.
   try {
-    await uploads.record(file, req.user?.sub ?? null, purpose);
+    await uploads.record(
+      { filename, size: file.size },
+      req.user?.sub ?? null,
+      purpose,
+    );
   } catch (err) {
-    removeQuietly(file.path);
+    if (cloud) {
+      void deleteFromCloudinary(filename, cloud).catch(() => undefined);
+    } else {
+      removeQuietly(file.path);
+    }
     throw err;
   }
 
-  // Absolute URL so it works in <img>, in captions, and (later) for the
-  // Instagram Graph API, which will only accept a public URL. QA P2-15: the
-  // origin comes from configuration, never from the client's Host header.
-  return {
-    url: publicUploadUrl(file.filename, req),
-    filename: file.filename,
-    size: file.size,
-  };
+  return { url, filename, size: file.size };
 }
 
 @Controller('admin/uploads')

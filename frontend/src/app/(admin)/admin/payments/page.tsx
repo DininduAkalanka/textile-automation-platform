@@ -265,6 +265,9 @@ export default function AdminPaymentsPage() {
                         <ExternalLink size={12} />
                         View Installment Schedule
                       </Link>
+                    ) : p.order.status === 'CANCELLED' ? (
+                      // A cancelled order cannot be collected or paid; the API refuses it too.
+                      <span className="text-xs font-medium text-[#928E82]">Order cancelled</span>
                     ) : p.status === 'COMPLETED' ? (
                       <span className="text-xs font-medium text-emerald-700">
                         ✓ Payment Settled
@@ -410,6 +413,8 @@ export default function AdminPaymentsPage() {
                               Schedule
                               <ExternalLink size={11} />
                             </Link>
+                          ) : p.order.status === 'CANCELLED' ? (
+                            <span className="text-xs text-[#928E82]">Order cancelled</span>
                           ) : p.status === 'COMPLETED' ? (
                             <span className="text-xs text-[#928E82]">—</span>
                           ) : (

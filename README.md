@@ -232,7 +232,7 @@ npm run dev
 
 ## Demo Credentials & Role Access Matrix
 
-The database is pre-seeded with sample data and test accounts for every business role:
+A **local** database seeded with `npm run db:seed` contains sample data and these test accounts for every business role. Their passwords are public, so they are for local development only: the seed refuses to write them to a remote database, and the live shop must not have them (see `docs/RUNBOOK.md`, "Hand-over: admin account and demo accounts").
 
 | Role | Email Address | Password | Accessible Portals & Features |
 | :--- | :--- | :--- | :--- |

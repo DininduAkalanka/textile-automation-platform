@@ -36,9 +36,9 @@ export default function CartPage() {
           <ShoppingBag size={36} strokeWidth={1.5} />
         </div>
 
-        <h2 className="font-display text-2xl font-bold sm:text-3xl text-neutral-900 mb-2">
+        <h1 className="font-display text-2xl font-bold sm:text-3xl text-neutral-900 mb-2">
           Your Shopping Bag is Empty
-        </h2>
+        </h1>
 
         <p className="text-sm text-neutral-600 max-w-md mx-auto mb-8">
           Explore our curated fabrics, school uniforms, and custom tailored wear. Add items to your bag to enjoy seamless checkout.

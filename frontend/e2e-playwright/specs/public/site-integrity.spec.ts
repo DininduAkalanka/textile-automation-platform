@@ -110,7 +110,9 @@ test('no promotion, service or branch the shop cannot honour is advertised', asy
   const storeInfo = page.getByRole('button', { name: /view store information/i });
   if (await storeInfo.count()) {
     await storeInfo.click();
-    await expect(page.getByText('Our Showroom')).toBeVisible();
+    // exact: the page also says "Collect Your Order from Our Showroom", and a
+    // substring match hit both (strict-mode failure in every nightly run).
+    await expect(page.getByText('Our Showroom', { exact: true })).toBeVisible();
     await check('product page store popup');
   }
 

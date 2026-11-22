@@ -62,13 +62,13 @@ export class ContactVerificationService {
     if (channel === VerificationChannel.EMAIL) {
       await this.emailService.send({
         to: contact,
-        subject: 'Your TextileShop verification code',
+        subject: 'Your Nandana Textile verification code',
         react: VerificationCodeEmail({ code }),
       });
     } else {
       await this.smsService.send(
         contact,
-        `Your TextileShop verification code is ${code}. It expires in 5 minutes.`,
+        `Your Nandana Textile verification code is ${code}. It expires in 5 minutes.`,
       );
     }
     return { channel, expiresAt };

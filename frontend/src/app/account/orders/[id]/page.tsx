@@ -79,7 +79,13 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
   // enforces the same rule (orders.service.ts's cancel()) — this only decides
   // whether to SHOW the button; it is not the security boundary.
   const canCancel = order.status === 'PENDING';
-  const canRetryPayment = order.payment?.status === 'FAILED' && order.payment.method === 'PAYHERE';
+  // PayHere does not report a shopper who cancels or closes its page, so that
+  // order's payment stays PENDING. Without this the shopper had no way to pay
+  // again (the cart is emptied before the hand-off) — only to cancel.
+  const canRetryPayment =
+    order.payment?.method === 'PAYHERE' &&
+    (order.payment.status === 'FAILED' ||
+      (order.payment.status === 'PENDING' && order.status === 'PENDING'));
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>

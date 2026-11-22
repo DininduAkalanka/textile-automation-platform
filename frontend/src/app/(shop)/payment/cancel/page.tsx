@@ -27,16 +27,16 @@ function PaymentCancelContent() {
         </span>
         <h1 className="font-display text-2xl font-bold mb-2 text-neutral-900">Payment Was Cancelled</h1>
         <p className="text-sm text-[var(--clr-text-2)] mb-6 leading-relaxed">
-          You cancelled the transaction before it completed. Your card has not been charged, and your items are preserved. You can resume checkout whenever you&apos;re ready.
+          You cancelled the transaction before it completed, so your card has not been charged. Your order is saved as unpaid in My Orders: open it to pay now, or cancel it. Unpaid orders are released after 30 minutes.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           {orderId && (
             <Link href={`/account/orders/${orderId}`} className="btn btn-primary btn-lg flex-1" style={{ minHeight: '48px' }}>
-              Resume Order →
+              Pay for this order →
             </Link>
           )}
-          <Link href="/cart" className="btn btn-outline btn-lg flex-1" style={{ minHeight: '48px' }}>
-            Back to Cart
+          <Link href="/products" className="btn btn-outline btn-lg flex-1" style={{ minHeight: '48px' }}>
+            Continue Shopping
           </Link>
         </div>
       </div>

@@ -14,7 +14,9 @@ import {
 } from '@/components/home';
 
 export const metadata: Metadata = {
-  title: 'Nandana Textile | Premium Fabrics, Apparel & Institutional Uniforms in Sri Lanka',
+  // absolute: the root layout's "%s | Nandana Textile" template would otherwise
+  // print the brand twice in the browser tab and in search results.
+  title: { absolute: 'Nandana Textile | Premium Fabrics, Apparel & Institutional Uniforms in Sri Lanka' },
   description:
     'Sri Lanka’s premier textile destination since 2009. Shop authentic fashion, luxury sarees, custom tailoring fabrics, and institutional school & corporate uniforms with island-wide delivery.',
   keywords: [

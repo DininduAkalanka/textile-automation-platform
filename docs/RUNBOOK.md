@@ -145,7 +145,7 @@ Check these before every production deploy that includes the QA fixes:
 | 3 | `SWAGGER_ENABLED` is unset or `false` on the backend; `AI_DOCS_ENABLED` unset on the AI service | API docs are off in production by default; only turn them on deliberately. |
 | 4 | `ALLOW_DEV_OTP_BYPASS` is **not** set on the backend | Development-only; ignored when `NODE_ENV=production`, but keep it out of production config. |
 | 5 | `PUBLIC_API_URL` is the backend's public `https://` origin, or unset on Render | Uploaded-image links are built from it (Render's `RENDER_EXTERNAL_URL` is used when unset), never from the request. |
-| 6 | Image uploads are on persistent storage | Uploads are written to the container's `uploads/` folder. On Render's free tier that disk is wiped on every deploy/restart, so product and review photos disappear; attach a persistent disk or move uploads to object storage (e.g. Cloudinary). |
+| 6 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` are set on the backend | Product and review photos are then stored in Cloudinary. Without them they are written to the container disk, which Render's free tier wipes on every deploy, restart and wake-up, so the photos disappear (this happened to the live shop's uploaded photos before the fix). |
 | 7 | `EMAIL_FROM` uses a domain verified in Resend | OTP and password-reset emails are rejected otherwise. |
 
 ---
@@ -242,3 +242,26 @@ The 09:00–19:59 window above keeps each service awake ≈ 11.25 h/day (includi
 
 ### Backup pinger: GitHub Actions
 Add the repository secrets `RENDER_BACKEND_URL` and `RENDER_AI_URL` (Settings → Secrets and variables → Actions), then run the workflow once by hand (Actions → Render Services Keep-Alive → Run workflow) and confirm that both pings show HTTP 200.
+
+---
+
+## 8. Hand-over: admin account and demo accounts
+
+The demo accounts in the README (`admin@textileshop.com`, `customer@example.com`, `worker…@textileshop.com`) have passwords published in this repository. Before the shop is handed over, the live database must not contain them as working accounts.
+
+`backend/scripts/rotate-admin-account.ts` moves the admin account to the owner's email with a random temporary password, revokes all its saved sessions, and (with `--deactivate-demo`) deactivates the demo accounts. It also takes demo workers off the production board's worker list. Order history is kept and every change is written to the audit log.
+
+1. Put the live `DATABASE_URL` (Render → backend → Environment) in `backend/.env.production.local`. This file is git-ignored.
+2. Dry run, which changes nothing:
+   ```bash
+   cd backend
+   npx ts-node scripts/rotate-admin-account.ts --env-file .env.production.local      --to owner@example.com --deactivate-demo
+   ```
+3. Check the printed host and plan, then apply:
+   ```bash
+   CONFIRM_HOST=<the host it printed> npx ts-node scripts/rotate-admin-account.ts      --env-file .env.production.local --to owner@example.com --deactivate-demo --apply
+   ```
+4. Give the owner the temporary password it prints (shown once, stored nowhere). The owner signs in and sets their own password under **Change password**, or uses **Forgot password?** on the sign-in page.
+5. Delete `backend/.env.production.local`.
+
+"Forgot password?" emails only reach the owner if email sending is set up for real customers: `EMAIL_FROM` must use a domain verified in Resend. Resend's shared `onboarding@resend.dev` address only delivers to the email that owns the Resend account.

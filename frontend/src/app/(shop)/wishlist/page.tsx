@@ -236,14 +236,14 @@ export default function WishlistPage() {
 
   if (!mounted) {
     return (
-      <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2.5px solid var(--clr-border)', borderTopColor: 'var(--clr-brand)', animation: 'spin 0.8s linear infinite' }} />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main style={{ minHeight: '70vh', paddingTop: '2.5rem', paddingBottom: '4rem' }}>
+    <div style={{ minHeight: '70vh', paddingTop: '2.5rem', paddingBottom: '4rem' }}>
       <div className="container">
 
         {/* ── Page Header ─────────────────────────────────── */}
@@ -424,6 +424,6 @@ export default function WishlistPage() {
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

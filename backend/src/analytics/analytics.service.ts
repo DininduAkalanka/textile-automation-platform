@@ -84,6 +84,8 @@ export interface DashboardDeltas {
   /** Percent change, or null when the previous window had no revenue (division
    * by zero is not "infinite growth", it is "no basis for comparison"). */
   revenueChangePercent: number | null;
+  /** Orders with a completed payment inside the current window (the KPI card). */
+  paidOrders: number;
   previousPaidOrders: number;
   paidOrdersChangePercent: number | null;
 }
@@ -176,6 +178,7 @@ export class AnalyticsService {
         Number(current.revenue),
         Number(prior.revenue),
       ),
+      paidOrders: current.paidOrders,
       previousPaidOrders: prior.paidOrders,
       paidOrdersChangePercent: percentChange(
         current.paidOrders,
