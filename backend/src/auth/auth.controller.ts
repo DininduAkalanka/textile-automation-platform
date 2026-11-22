@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   UseGuards,
   Req,
@@ -12,6 +13,7 @@ import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-recovery.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PasswordRecoveryService } from './password-recovery.service';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -195,5 +197,16 @@ export class AuthController {
   @Get('profile')
   async getProfile(@Request() req: RequestWithUser) {
     return this.authService.getProfile(req.user.sub);
+  }
+
+  /** The signed-in person corrects their own name (never anyone else's). */
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  async updateProfile(
+    @Request() req: RequestWithUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(req.user.sub, dto);
   }
 }

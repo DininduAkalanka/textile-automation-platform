@@ -57,6 +57,8 @@ interface AuthState {
   logout: () => void;
   loadUser: () => Promise<void>;
   setAuth: (user: User, token: string) => void;
+  /** Merge a change to the signed-in user's details (e.g. a corrected name). */
+  updateUser: (changes: Partial<Pick<User, 'firstName' | 'lastName'>>) => void;
   clearSession: () => void;
 }
 
@@ -87,6 +89,17 @@ export const useAuthStore = create<AuthState>((set) => {
         window.localStorage.setItem('user', JSON.stringify(user));
       }
       set({ user, token, isAuthenticated: true, isLoading: false });
+    },
+
+    updateUser: (changes) => {
+      set((state) => {
+        if (!state.user) return {};
+        const user = { ...state.user, ...changes };
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('user', JSON.stringify(user));
+        }
+        return { user };
+      });
     },
 
     clearSession: () => {

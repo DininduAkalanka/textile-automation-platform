@@ -1,4 +1,4 @@
-import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, InstallmentPlanResponse, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment } from '@/types';
+import { ApiResponse, AuthResponse, ProductsResponse, Product, Order, Category, InstallmentSchedule, InstallmentPlanResponse, PayhereCheckoutResponse, CodPaymentResponse, AdminPaymentsResponse, DashboardResponse, Payment, User } from '@/types';
 import { getToken, setToken, clearToken } from '@/lib/token-store';
 import { getResolvedApiUrl } from '@/lib/api-url';
 
@@ -147,6 +147,14 @@ class ApiClient {
     return this.request<AuthResponse>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  /** The signed-in person corrects their own name. */
+  async updateProfile(firstName: string, lastName: string): Promise<User> {
+    return this.request<User>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ firstName, lastName }),
     });
   }
 

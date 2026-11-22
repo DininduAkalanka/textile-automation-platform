@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { registerSchema } from '@/lib/schemas';
 import { useAuthStore } from '@/store/useAuthStore';
+import { PASSWORD_SAFE_ATTRS } from '@/components/ui/password-reveal';
+import { ProfileNameForm } from '@/components/account/profile-name-form';
 
 /** Admins and managers can see every order and customer: longer passwords (the API enforces the same). */
 const STAFF_ROLES = new Set(['ADMIN', 'MANAGER']);
@@ -109,16 +111,16 @@ export default function AccountSecurityPage() {
       <form onSubmit={submit} noValidate className="space-y-4 rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
         <div>
           <label htmlFor="current-password" className="mb-1 block text-xs font-semibold text-neutral-800">Current password</label>
-          <input id="current-password" data-testid="current-password" type={show ? 'text' : 'password'} autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={field} />
+          <input id="current-password" data-testid="current-password" type={show ? 'text' : 'password'} {...PASSWORD_SAFE_ATTRS} autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={field} />
         </div>
         <div>
           <label htmlFor="new-password" className="mb-1 block text-xs font-semibold text-neutral-800">New password</label>
-          <input id="new-password" data-testid="new-password" type={show ? 'text' : 'password'} autoComplete="new-password" minLength={minLength} maxLength={64} value={next} onChange={(e) => setNext(e.target.value)} aria-describedby="new-password-hint" className={field} />
+          <input id="new-password" data-testid="new-password" type={show ? 'text' : 'password'} {...PASSWORD_SAFE_ATTRS} autoComplete="new-password" minLength={minLength} maxLength={64} value={next} onChange={(e) => setNext(e.target.value)} aria-describedby="new-password-hint" className={field} />
           <p id="new-password-hint" className="mt-1 text-[11px] text-neutral-500">At least {minLength} characters, with an uppercase letter, a lowercase letter and a number. A short phrase is easy to remember and hard to guess.</p>
         </div>
         <div>
           <label htmlFor="confirm-password" className="mb-1 block text-xs font-semibold text-neutral-800">Confirm new password</label>
-          <input id="confirm-password" data-testid="confirm-password" type={show ? 'text' : 'password'} autoComplete="new-password" maxLength={64} value={confirm} onChange={(e) => setConfirm(e.target.value)} className={field} />
+          <input id="confirm-password" data-testid="confirm-password" type={show ? 'text' : 'password'} {...PASSWORD_SAFE_ATTRS} autoComplete="new-password" maxLength={64} value={confirm} onChange={(e) => setConfirm(e.target.value)} className={field} />
         </div>
 
         <label className="flex items-center gap-2 text-xs text-neutral-700">
@@ -139,6 +141,8 @@ export default function AccountSecurityPage() {
           Forgot your current password? <Link href="/forgot-password" className="text-[#CC0000] underline underline-offset-2">Reset it instead</Link>
         </p>
       </form>
+
+      <ProfileNameForm />
     </div>
   );
 }
