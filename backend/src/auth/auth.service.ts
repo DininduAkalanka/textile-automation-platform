@@ -18,6 +18,19 @@ import { VerificationService } from '../verification/verification.service';
 import { loginLockMinutes, loginMaxFailures } from '../common/config/limits';
 
 const ACCESS_TTL = '15m';
+
+/** What /auth/me and a profile update return about the signed-in person. */
+const PROFILE_SELECT = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  phone: true,
+  role: true,
+  emailVerified: true,
+  phoneVerified: true,
+  createdAt: true,
+} as const;
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /** A guest used a contact that already has an account (QA P0-1). */
@@ -320,17 +333,7 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        emailVerified: true,
-        phoneVerified: true,
-        createdAt: true,
-      },
+      select: PROFILE_SELECT,
     });
 
     if (!user) {
@@ -338,6 +341,26 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * The signed-in person corrects their own name — it is what greets them,
+   * what their invoices and order emails carry, and the admin header. Before
+   * this, a name mistyped at registration or guest checkout could never be
+   * fixed. Only the name changes; the id comes from the verified token.
+   */
+  async updateProfile(
+    userId: string,
+    name: { firstName: string; lastName: string },
+  ) {
+    const updated = await this.prisma.user.updateMany({
+      where: { id: userId, isActive: true },
+      data: { firstName: name.firstName, lastName: name.lastName },
+    });
+    if (updated.count !== 1) {
+      throw new UnauthorizedException('User not found');
+    }
+    return this.getProfile(userId);
   }
 
   /**

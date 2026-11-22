@@ -11,6 +11,8 @@ import { ShieldCheck, Lock, Sparkles, CheckCircle2, AlertCircle, Ruler } from 'l
 import { MeasurementDialog } from '@/components/cart/measurement-dialog';
 import { isComplete, needsMeasurements, fieldsFor } from '@/lib/measurements';
 import { CartItem } from '@/types';
+import { registerSchema } from '@/lib/schemas';
+import { PASSWORD_SAFE_ATTRS, PasswordRevealButton, usePasswordReveal } from '@/components/ui/password-reveal';
 
 type PaymentMethod = 'payhere' | 'cod' | 'installment';
 
@@ -108,6 +110,7 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const installmentReveal = usePasswordReveal();
 
   // Inline OTP verification states (for COD / guest verification)
   const [otpModalOpen, setOtpModalOpen] = useState(false);
@@ -238,11 +241,16 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Same rule as registration (the API enforces it too).
-    if (method === 'installment' && !isAuthenticated && password.length < 8) {
-      setLoading(false);
-      setError('Create a password of at least 8 characters to manage your installment plan.');
-      return;
+    // Same rule as registration: 8+ characters with an uppercase letter, a
+    // lowercase letter and a number. It used to check the length only, so a
+    // guest could create a weaker password here than anywhere else.
+    if (method === 'installment' && !isAuthenticated) {
+      const rule = registerSchema.shape.password.safeParse(password);
+      if (!rule.success) {
+        setLoading(false);
+        setError(`Installment plan password: ${rule.error.issues[0].message}.`);
+        return;
+      }
     }
 
     try {
@@ -768,17 +776,28 @@ export default function CheckoutPage() {
               >
                 {method === 'installment' && !isAuthenticated && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed var(--clr-border)' }}>
-                    <label className="input-label">Create Password for Installment Schedule *</label>
-                    <input
-                      type="password"
-                      data-testid="checkout-installment-password-input"
-                      className="input"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter a password (min 8 characters)"
-                      minLength={8}
-                      required
-                    />
+                    <label className="input-label" htmlFor="checkout-installment-password">Create Password for Installment Schedule *</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="checkout-installment-password"
+                        type={installmentReveal.type}
+                        {...PASSWORD_SAFE_ATTRS}
+                        autoComplete="new-password"
+                        data-testid="checkout-installment-password-input"
+                        className="input"
+                        style={{ paddingRight: '2.75rem' }}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="8+ characters with A–Z, a–z and 0–9"
+                        minLength={8}
+                        required
+                      />
+                      <PasswordRevealButton
+                        shown={installmentReveal.shown}
+                        onToggle={installmentReveal.toggle}
+                        controls="checkout-installment-password"
+                      />
+                    </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--clr-text-3)', marginTop: '0.25rem', display: 'block' }}>
                       Required to access your account dashboard to view upcoming monthly payment schedules.
                     </span>
