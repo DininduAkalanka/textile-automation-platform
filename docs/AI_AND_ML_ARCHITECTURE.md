@@ -29,7 +29,7 @@ The AI system is built as an independent, asynchronous microservice communicatin
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer ["Client Presentation Layer (Next.js 15)"]
+    subgraph ClientLayer ["Client Presentation Layer (Next.js 16)"]
         StorefrontUI["Customer Storefront\n(Floating AI Assistant)"]
         AdminUI["Executive Dashboard\n(/admin/ai-insights)"]
     end
@@ -39,7 +39,7 @@ flowchart TB
         AIServiceGateway["AI Proxy Service & Circuit Breaker"]
     end
 
-    subgraph AIService ["AI & ML Microservice (FastAPI / Python 3.11)"]
+    subgraph AIService ["AI & ML Microservice (FastAPI / Python 3.12)"]
         InternalAuth["Shared Secret Guard\n(x-internal-key)"]
         
         subgraph SubCustomer ["Customer AI Pipeline"]
@@ -64,7 +64,7 @@ flowchart TB
 
     subgraph DataLayer ["Data & External Providers"]
         PostgresFacts[("PostgreSQL 16\n(ai_sales_facts, ai_inventory_facts)\n[Read-Only Pool]")]
-        LLMProvider["LLM API\n(Claude 3.5 Sonnet / GPT-4o / Groq)"]
+        LLMProvider["LLM API\n(Groq by default, configurable)"]
     end
 
     StorefrontUI -->|HTTP /api/v1/ai/chat/customer| GatewayLayer
@@ -93,15 +93,15 @@ flowchart TB
 
 | Layer | Technology | Version | Rationale & Architectural Purpose |
 | :--- | :--- | :--- | :--- |
-| **Runtime & Core** | Python | `3.11+` | High-performance asynchronous execution with typing guarantees. |
-| **Web Framework** | FastAPI | `0.115.6` | High-throughput asynchronous ASGI microservice with automatic OpenAPI documentation. |
-| **Server Engine** | Uvicorn (standard) | `0.34.0` | Production ASGI web server leveraging `uvloop` for event loop optimization. |
+| **Runtime & Core** | Python | `3.12` | High-performance asynchronous execution with typing guarantees. |
+| **Web Framework** | FastAPI / Starlette | `0.165.0 / 1.10.0` | High-throughput asynchronous ASGI microservice with automatic OpenAPI documentation. |
+| **Server Engine** | Uvicorn (standard) | `0.54.0` | Production ASGI web server leveraging `uvloop` for event loop optimization. |
 | **Data Validation** | Pydantic & Settings | `2.10.4` | Strict type safety, input sanitization, and environment schema validation. |
 | **Database Driver** | asyncpg | `0.30.0` | Ultra-fast native PostgreSQL binary protocol driver with asynchronous connection pooling. |
 | **Statistical ML** | statsmodels | `0.14.4` | Enterprise-grade classical time-series analysis (Holt-Winters, exponential smoothing). |
 | **Data Science** | pandas & numpy | `2.2.3 / 2.x` | Vectorized numerical manipulation and multi-dimensional time series processing. |
 | **HTTP Client** | httpx | `0.28.1` | Non-blocking async HTTP client for outbound LLM API requests with configurable timeouts. |
-| **Testing Suite** | pytest & pytest-asyncio | `8.3.4 / 0.25.0` | Automated unit and integration testing suite for end-to-end mathematical verification. |
+| **Testing Suite** | pytest & pytest-asyncio | `9.2.0 / 1.5.0` | Automated unit and integration testing suite for end-to-end mathematical verification. |
 
 ---
 
@@ -339,10 +339,10 @@ classDiagram
 ```
 
 * **Supported Providers**:
-  - `anthropic`: Anthropic Claude Messages API (Claude 3.5 Sonnet / Claude 3 Haiku).
-  - `openai`: OpenAI API (GPT-4o, GPT-4o-mini).
-  - `groq`: Ultra-low-latency Llama 3.3 70B inference.
-  - `openrouter` / `gemini`: Any OpenAI-compatible REST API.
+  - `groq` (default): Groq-hosted inference; the live service uses `openai/gpt-oss-120b`.
+  - `openai`: the OpenAI API, or any OpenAI-compatible API through `LLM_BASE_URL`.
+  - `anthropic`: the Anthropic Messages API.
+  - The model is chosen with `LLM_MODEL`, so changing it needs no code change.
 * **Resilient JSON Parser**: Extracts structured JSON from model responses even if the LLM wraps output in conversational prose or markdown code fences (` ```json `), preventing runtime crashes.
 * **Graceful Degradation**: If no API key is provided (`LLM_ENABLED=false`) or if the provider rate-limits, the assistant gracefully falls back to ranked product lists and deterministic charts without raising errors.
 

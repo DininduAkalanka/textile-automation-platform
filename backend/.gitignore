@@ -1,10 +1,15 @@
 # dependencies
 node_modules/
 
-# env files
+# env files: only the template is committed
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
+
+# database dumps and backups (customers' personal data)
+*.dump
+*.backup
+*.sql.gz
 
 # build
 dist/

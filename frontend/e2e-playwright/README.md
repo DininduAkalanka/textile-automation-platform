@@ -1,5 +1,7 @@
 # Playwright end-to-end tests
 
+Part of the [Nandana Textile platform](../../README.md); see also the [storefront README](../README.md).
+
 ## Run in one Docker container
 
 From the repository root, build the QA image. Installation requires access to the package and browser registries. The test run uses only loopback networking. PostgreSQL 16 on port 5433, Nest on port 3001, Next on port 3000 and the browser all run inside the container. The Dockerfile uses Linux x86-64 binaries. Each invocation creates a fresh seeded database in the container's writable layer.

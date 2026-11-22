@@ -1,496 +1,308 @@
-# Smart Textile Business Management & AI-Powered E-Commerce Platform
+# Nandana Textile — Commerce & Operations Platform
 
-**Nandana Textile** — An enterprise-grade, production-hardened business management and e-commerce platform engineered specifically for the Sri Lankan textile and garment manufacturing industry. The platform unifies a customer storefront, custom measurement tailoring capture, factory floor Kanban production pipeline, double-entry inventory ledger, multi-channel payment processing, and a dual-engine AI intelligence system (Retrieval-Augmented customer shopping assistant + executive business intelligence assistant).
-
----
+The online shop and back office of **Nandana Textile**, a textile, apparel and uniform retailer in Veyangoda, Sri Lanka. One platform runs the customer storefront, made-to-measure ordering, payments, the production floor, stock, and business reporting, with an AI shopping assistant for customers and an AI analyst for the owner.
 
 [![CI](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/ci.yml)
-[![Cypress E2E](https://img.shields.io/badge/Cypress%20E2E-35%2F35%20Passing%20(100%25)-brightgreen.svg)](docs/QA_FINAL_TEST_REPORT.md)
-[![Automated Tests](https://img.shields.io/badge/Automated%20Tests-413%20Passing%20(100%25)-success.svg)](docs/QA_FINAL_TEST_REPORT.md)
-[![k6 Load Tested](https://img.shields.io/badge/k6%20Load%20Tested-100%20VUs%20%7C%20p95%20302ms-blue.svg)](docs/QA_FINAL_TEST_REPORT.md)
-[![Security Audit](https://img.shields.io/badge/Security%20Audit-OWASP%20Top%2010%20Hardened-teal.svg)](docs/SECURITY_REVIEW.md)
-[![Docker Ready](https://img.shields.io/badge/Docker%20Compose-5%20Services%20Orchestrated-2496ED.svg)](docker-compose.yml)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg)](frontend)
-[![Next.js](https://img.shields.io/badge/Next.js-16%20(App%20Router)-black.svg)](frontend)
-[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E.svg)](backend)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688.svg)](ai)
+[![Playwright nightly](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/playwright-nightly.yml/badge.svg?branch=main)](https://github.com/DininduAkalanka/textile-automation-platform/actions/workflows/playwright-nightly.yml)
 
-> **Enterprise Production Platform** · High-performance, scalable textile business management and e-commerce infrastructure.  
-> Comprehensive Documentation: **[QA Final Audit Report (413 Tests)](docs/QA_FINAL_TEST_REPORT.md)** · **[System QA & SRE Audit Report (2026-11-14)](docs/PROJECT_AUDIT_2026-11-14.md)** · [Historical QA Report](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) · [Production Runbook](docs/RUNBOOK.md) · [Security Review](docs/SECURITY_REVIEW.md) · [System Demonstration Script](docs/DEMO_SCRIPT.md) · [Database Architecture (DBML)](docs/database.dbml).
+**Live site:** [www.nandanatextile.lk](https://www.nandanatextile.lk) · **Operations:** [Runbook](docs/RUNBOOK.md) · **Shop owners:** [Admin guide](docs/ADMIN_GUIDE.md) · **Launch:** [Go-live checklist](docs/GO_LIVE_CHECKLIST.md)
 
 ---
 
-## Table of Contents
+## Contents
 
-- [Core Business Capabilities](#core-business-capabilities)
-- [Dual-Engine AI Intelligence Layer](#dual-engine-ai-intelligence-layer)
-- [System Architecture](#system-architecture)
-- [Technology Stack](#technology-stack)
-- [Prerequisites](#prerequisites)
-- [Quick Start (Docker — Recommended)](#quick-start-docker--recommended)
-- [Local Development Without Docker](#local-development-without-docker)
-- [Demo Credentials & Role Access Matrix](#demo-credentials--role-access-matrix)
-- [Service URLs & Ports](#service-urls--ports)
-- [Payment Gateway Testing (PayHere Sandbox)](#payment-gateway-testing-payhere-sandbox)
-- [Quality Assurance & Verification (Cypress & k6)](#quality-assurance--verification-cypress--k6)
-- [Production Cloud Deployment & Topology](#production-cloud-deployment--topology)
-- [Comprehensive Documentation Index](#comprehensive-documentation-index)
-- [Repository Layout](#repository-layout)
-- [Contributing & Git Workflow](#contributing--git-workflow)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Repository structure](#repository-structure)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Core Business Capabilities
+## Features
 
-| Feature Domain | Production Capabilities | Business Value |
-| :--- | :--- | :--- |
-| **Curated Storefront & UX** | High-performance catalog, multi-criteria filtering, visual search, mega navigation menu, dynamic cart, and full responsive design across mobile, tablet, and desktop viewports. Header hero swapper engineered to Fashion Bug Sri Lanka standards ($1880 \times 720$ desktop full-bleed, $4:3$ mobile portrait prominence) with clean circular controls, uncluttered editorial presentation, and zero badge distractions. | Maximizes conversion, brand trust, and user engagement across devices. |
-| **Bespoke Measurement Capture (BR3)** | Tailoring measurement profile module capturing precise dimensions (neck, chest, waist, hips, inseam, sleeve, height) plus custom tailoring notes. Linked directly to custom order line items. | Eliminates sizing guesswork and manual order errors for school uniforms and custom garments. |
-| **Race-Safe Inventory Ledger** | Single-source-of-truth double-entry ledger with row-level locks (`SELECT FOR UPDATE`). Tracks all stock transitions: `INITIAL`, `RESERVE`, `RELEASE`, `SALE`, `PURCHASE`, `RETURN`, `ADJUSTMENT`, `PRODUCTION_USE`. | Prevents overselling during high-concurrency spikes; guarantees 100% financial and inventory consistency. |
-| **Manufacturing Kanban Pipeline** | Automated stage progression: `PENDING` -> `CUTTING` -> `SEWING` -> `FINISHING` -> `QUALITY_CONTROL` -> `DISPATCHED` -> `COMPLETED`. Live factory worker portal (`/worker/tasks`) for task claiming and stage completion. | Complete operational visibility from customer order placement to warehouse dispatch. |
-| **Zero Client-Trust Payments** | Multi-method support: **PayHere** (Visa/Mastercard/Amex with server-to-server signed MD5 webhooks), **Cash on Delivery (COD)** with phone risk validation, and **Bank Transfer / Slip Upload** with admin verification. | Eliminates payment fraud, tampering, and unpaid order dispatch. |
-| **Marketing Automation** | Automated social media post generator utilizing Meta Graph API (Facebook Pages & Instagram) with AI-crafted captions, price tags, and hashtags. Native WhatsApp direct chat support. | Reduces customer acquisition costs and automates promotional workflows. |
-| **Enterprise Security** | Dual-identifier auth (email or phone OTP), JWT access tokens + SHA-256 hashed refresh tokens, RBAC (`ADMIN`, `MANAGER`, `WORKER`, `CUSTOMER`), IDOR protection, and bcrypt password hashing (12 rounds). | Safeguards customer data, admin operations, and enterprise assets against OWASP Top 10 vulnerabilities. |
+### Storefront (customers)
+
+- **Catalogue** with categories, search, filters, size guide and per-size stock.
+- **Made-to-measure** ordering: customers enter measurements per item (fields depend on the garment type), which reach the tailor on the production board.
+- **Checkout** by PayHere card payment, cash on delivery, or 3 monthly instalments; guest checkout with email verification.
+- **Accounts** with email or phone verification codes, password reset by email link, show/hide password, editable name.
+- **Orders**: tracking timeline, PDF invoice, retry for an unpaid card payment, cancellation while pending.
+- **Reviews** with photos, ratings and "helpful" votes; **wishlist**; **WhatsApp** contact.
+- **AI shopping assistant** that suggests products from the live catalogue only (it cannot invent products or prices).
+
+### Back office (admin)
+
+- **Dashboard**: revenue, paid orders, payments awaiting, low stock, recent orders.
+- **Products and categories**, with photo uploads stored in Cloudinary; archive and restore.
+- **Inventory ledger**: every stock change is a recorded movement (reservation, release, sale, adjustment); reorder levels and low-stock alerts.
+- **Order processing**: confirm → fulfil → deliver → cash collected; admin cancellation releases stock.
+- **Payments and instalments**: record cash or bank payments, view schedules.
+- **Production board**: Cutting → Stitching → Finishing → Quality Check, with a separate **worker portal** where staff start, complete and pass work.
+- **Reviews moderation**, **CSV reports** (sales, inventory), **analytics** (demand forecast, trending, slow movers, reorder suggestions) and **AI business insights** answered only from the shop's own figures.
+- **Social sharing**: ready-made captions, WhatsApp share, and Facebook/Instagram posting when a Meta token is configured.
+
+### Platform
+
+- **Security**: short-lived access tokens with rotating refresh cookies and reuse detection, role-based access (admin, worker, customer), account lockout, rate limiting, strict CORS, security headers, signed payment verification.
+- **SEO**: per-page titles and canonical URLs, sitemap and robots.txt, Product, Breadcrumb and ClothingStore structured data.
+- **Notifications**: in-app notifications and transactional email (verification, receipts with invoice, order alerts); optional SMS.
 
 ---
 
-## Dual-Engine AI Intelligence Layer
+## Architecture
 
-The platform features an isolated, high-performance Python FastAPI microservice (`ai/`) interfacing with Groq LLMs (`openai/gpt-oss-120b` and `llama-3.3-70b-versatile`):
-
-```
-                       ┌──────────────────────────────────────────────┐
-                       │          Customer Storefront / Admin         │
-                       └──────────────────────┬───────────────────────┘
-                                              │
-                                              ▼
-                       ┌──────────────────────────────────────────────┐
-                       │           NestJS API Gateway (:3001)         │
-                       └──────────────────────┬───────────────────────┘
-                                              │ Internal Service Key
-                                              ▼
-                       ┌──────────────────────────────────────────────┐
-                       │           FastAPI AI Service (:8000)         │
-                       └──────────────┬────────────────┬──────────────┘
-                                      │                │
-            ┌─────────────────────────┴────┐      ┌────┴───────────────────────────┐
-            │ Customer Assistant (RAG)     │      │ Executive BI Assistant (Tools) │
-            │ • Natural language search    │      │ • Holt-Winters demand forecast │
-            │ • Fabric & styling advisor   │      │ • Inventory reorder analysis   │
-            │ • Direct clickable cards     │      │ • Revenue & margin insights    │
-            │ • Strict grounding filter    │      │ • Whitelisted SQL tools only   │
-            └──────────────┬───────────────┘      └────┬───────────────────────────┘
-                           │                           │
-                           └─────────────┬─────────────┘
-                                         │ SELECT ONLY (Zero PII access)
-                                         ▼
-                       ┌──────────────────────────────────────────────┐
-                       │  PostgreSQL 16 (textile_ai_readonly role)    │
-                       └──────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    U["Customers & staff<br/>(browser)"] --> W["Storefront & admin<br/>Next.js · Vercel"]
+    W -->|"REST /api/v1"| A["API<br/>NestJS · Render"]
+    A --> D[("PostgreSQL 16<br/>Neon")]
+    A -->|"internal key"| I["AI service<br/>FastAPI · Render"]
+    I -->|"read-only role"| D
+    I --> L["Groq LLM"]
+    A --> C["Cloudinary<br/>images"]
+    A --> E["Resend<br/>email"]
+    A <-->|"checkout / signed notify"| P["PayHere"]
+    A -.->|"optional"| S["Notify.lk / Text.lk<br/>SMS"]
+    A -.->|"optional"| M["Meta Graph API"]
 ```
 
-1. **Customer Shopping Assistant (RAG Retrieval)**:
-   - Understands customer fabric queries (e.g., *"What is the best breathable cotton for school uniforms in warm weather?"*).
-   - Performs semantic and full-text retrieval across active product catalogs.
-   - Renders interactive, clickable product cards directly inside the chat interface.
-   - Enforces strict anti-hallucination verification (`grounding.py`): ensures prices, SKUs, and stock quantities correspond strictly to the live database.
-2. **Executive Business Intelligence (BI) Assistant**:
-   - Whitelisted tool-calling execution for administrators and managers.
-   - Calculates inventory velocity, stockout risks, and revenue run-rates.
-   - Generates sales demand forecasts utilizing Holt-Winters exponential smoothing via `statsmodels`.
-3. **Architectural Isolation & Security**:
-   - Runs in a dedicated container to prevent compute-heavy LLM calls or model latency from blocking the main API event loop.
-   - Connects to PostgreSQL via a dedicated **read-only database role** (`textile_ai_readonly`): cannot mutate data, cannot view customer passwords, tokens, or PII.
+Design rules the code enforces:
+
+- **One writer.** Only the API changes data. The AI service connects with a read-only database role that can see the catalogue and PII-free sales views, nothing else.
+- **Payments are confirmed by the gateway, not the browser.** An order becomes paid only on PayHere's signed server-to-server notification, checked against the order total.
+- **Stock is a ledger.** Orders reserve stock inside a locked transaction; cancellations and expired unpaid orders release it, so concurrent buyers cannot oversell.
+- **The shop keeps working if the AI is down.** Customer chat falls back to a plain catalogue search; analytics show an "unavailable" state instead of an error.
 
 ---
 
-## System Architecture
+## Technology stack
 
+| Layer | Technology |
+| :--- | :--- |
+| Storefront and admin | Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, TanStack Query 5, Zustand 5 |
+| API | NestJS 11 on Node.js 20, Prisma 6, class-validator, Passport JWT, bcrypt, Helmet |
+| AI service | Python 3.12, FastAPI, asyncpg, Pydantic 2, statsmodels (Holt-Winters forecasting) |
+| Data | PostgreSQL 16 (full-text search, append-only stock ledger, read-only AI role) |
+| Integrations | PayHere, Cloudinary, Resend, Groq, Notify.lk / Text.lk (optional), Meta Graph API (optional) |
+| Testing | Jest, Supertest, Pytest, Cypress 15, Playwright, k6 |
+| Delivery | Docker / Docker Compose, GitHub Actions, Vercel, Render, Neon |
+
+---
+
+## Repository structure
+
+```text
+.
+├── backend/                  NestJS API — see backend/README.md
+│   ├── src/                  feature modules (auth, products, orders, payments, inventory,
+│   │                         production, reviews, uploads, analytics, ai, notifications, …)
+│   ├── prisma/               schema, migrations, local seed scripts
+│   ├── scripts/              operations scripts (stock reconciliation, admin hand-over, …)
+│   └── test/                 integration tests against a real PostgreSQL database
+├── frontend/                 Next.js storefront, admin and worker portal — see frontend/README.md
+│   ├── src/app/              routes: (shop), (auth), (admin), account, worker
+│   ├── cypress/              Cypress end-to-end suites
+│   └── e2e-playwright/       Playwright suites — see frontend/e2e-playwright/README.md
+├── ai/                       FastAPI AI service — see ai/README.md
+├── scripts/load/             k6 load tests — see scripts/load/README.md
+├── docs/                     runbook, guides, architecture and design documents
+├── .github/workflows/        CI, nightly browser tests, Render keep-alive
+└── docker-compose.yml        local stack: frontend, API, AI service, PostgreSQL, Redis
 ```
-                               ┌──────────────────────────────────────────┐
-                               │           Next.js 16 Storefront          │
-                               │        (Customer, Admin, Worker)         │
-                               └────────────────────┬─────────────────────┘
-                                                    │
-                                         HTTPS / REST API (:3001)
-                                                    │
-                                                    ▼
-                               ┌──────────────────────────────────────────┐
-                               │           NestJS 11 REST API             │
-                               │   Auth · Orders · Payments · Production  │
-                               └───────┬─────────────────┬────────┬───────┘
-                                       │                 │        │
-                   Internal HTTP (:8000)│    Prisma ORM   │        │
-                                       ▼                 ▼        ▼
-                      ┌──────────────────────┐  ┌──────────────┐ ┌──────────────┐
-                      │  FastAPI AI Service  │  │  PostgreSQL  │ │   Redis 7    │
-                      │  RAG & Forecasting   │  │  Database    │ │  Cache/Rate  │
-                      └──────────┬───────────┘  │   (:5433)    │ │   Limiting   │
-                                 │              └──────────────┘ └──────────────┘
-                                 │ Read-Only           ▲
-                                 └─────────────────────┘
-```
-
-### Architectural Principles:
-- **Single Database Writer**: The NestJS API is the sole mutating service in the entire topology.
-- **Transactional Ledger**: Stock movements utilize database transactions with row-level locks, guaranteeing zero race conditions during simultaneous customer purchases.
-- **Zero Client-Trust Checkout**: Payment state transitions occur exclusively through verified server-to-server webhooks signed with cryptographic hashes.
 
 ---
 
-## Technology Stack
+## Getting started
 
-| Layer | Technologies | Key Libraries & Frameworks |
-| :--- | :--- | :--- |
-| **Frontend** | TypeScript 5, React 19, Next.js 16 (App Router) | Tailwind CSS, Vanilla CSS Tokens, Zustand, TanStack Query, Recharts, Lucide Icons |
-| **Backend API** | TypeScript 5, Node.js 20+, NestJS 11 | Prisma ORM 6, class-validator, Passport.js (JWT), bcrypt (12 rounds), Resend Email |
-| **AI Microservice** | Python 3.12, FastAPI, Uvicorn | Groq API Client, statsmodels (Holt-Winters), asyncpg, Pydantic v2 |
-| **Database & Caching** | PostgreSQL 16 (Alpine), Redis 7 (Alpine) | Connection pooling, double-entry ledger, read-only AI role, Redis rate-limiting |
-| **Payment Gateway** | PayHere Payment Gateway, Stripe (Mock) | Server-to-server MD5 webhook verification, sandbox test suites |
-| **Testing & QA** | Cypress 15 (Headless E2E), Grafana k6, Jest | Electron headless test runner, concurrent load testing, service unit tests |
-| **DevOps & Containers**| Docker, Docker Compose, GitHub Actions CI | Multi-stage non-root Alpine images, automated migrations, health check probes |
+### Prerequisites
 
----
+- Docker Desktop (Compose v2) for the full stack
+- Node.js 20 and npm 10 for running the API or storefront on their own
+- Python 3.12 for running the AI service on its own (optional)
 
-## Prerequisites
-
-- **Docker Desktop** (version 24.0 or newer) — Recommended for single-command orchestration.
-- **Node.js 20+** and **npm 10+** (if developing locally without Docker).
-- **Python 3.11 or 3.12** (if developing the AI service locally without Docker).
-- **PostgreSQL 16** (if hosting a local database without Docker).
-- **Git**.
-
----
-
-## Quick Start (Docker — Recommended)
-
-Start the entire platform (PostgreSQL, Redis, NestJS Backend, FastAPI AI, and Next.js Frontend) in isolated containers with a single command:
+### Run the full stack with Docker
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/DininduAkalanka/textile-automation-platform.git
 cd textile-automation-platform
 
-# 2. Prepare environment configuration
-cp backend/.env.example backend/.env
-
-# 3. Build and launch all 5 microservices
+cp backend/.env.example backend/.env    # local defaults work as they are
 docker compose up -d --build
 ```
 
-The database migrations and initial seed catalogue will be applied automatically during boot.
+| Service | Address |
+| :--- | :--- |
+| Storefront, admin and worker portal | http://localhost:3000 |
+| API | http://localhost:3001/api/v1 (health: `/api/v1/health`) |
+| AI service | http://localhost:8000 (health: `/health`) |
+| PostgreSQL | `localhost:5433`, database `textile_db` |
 
-### Verify Running Containers:
-```bash
-docker compose ps
-```
-All 5 containers should report active and healthy:
-- `textile_frontend` (`http://localhost:3000`)
-- `textile_backend` (`http://localhost:3001/api/v1`)
-- `textile_ai` (`http://localhost:8000`)
-- `textile_postgresdocker` (`localhost:5433`)
-- `textile_redis` (`localhost:6379`)
+The API container applies database migrations when it starts. To load the **sample catalogue** into the local database (optional):
 
----
-
-## Local Development Without Docker
-
-To run services natively on the host system:
-
-### 1. PostgreSQL Database & Migrations
 ```bash
 cd backend
-npm install
-cp .env.example .env
-# Ensure PostgreSQL is running on port 5432 (or 5433) and update DATABASE_URL in .env
-npx prisma migrate deploy
+npm ci
+DATABASE_URL="postgresql://textile_admin:textile_secure_pass_2024@localhost:5433/textile_db?schema=public" \
+DIRECT_URL="postgresql://textile_admin:textile_secure_pass_2024@localhost:5433/textile_db?schema=public" \
 npm run db:seed
-npm run start:dev
 ```
 
-### 2. FastAPI AI Service
-```bash
-cd ai
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
+The seed also creates one test account per role (admin, customer, worker) for local use. Their default passwords are defined in `backend/prisma/seed.ts` and work **only against a local database**: the seed refuses to write to a remote database unless that host is named explicitly and real passwords are supplied.
 
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+### Run services individually
 
-### 3. Next.js Frontend
 ```bash
-cd frontend
-npm install
-npm run dev
+# API (needs PostgreSQL; set DATABASE_URL / DIRECT_URL in backend/.env)
+cd backend && npm ci && npx prisma migrate deploy && npm run start:dev
+
+# AI service
+cd ai && python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt && uvicorn app.main:app --port 8000 --reload
+
+# Storefront
+cd frontend && npm ci && npm run dev
 ```
 
 ---
 
-## Demo Credentials & Role Access Matrix
+## Configuration
 
-A **local** database seeded with `npm run db:seed` contains sample data and these test accounts for every business role. Their passwords are public, so they are for local development only: the seed refuses to write them to a remote database, and the live shop must not have them (see `docs/RUNBOOK.md`, "Hand-over: admin account and demo accounts").
+Each service reads its settings from environment variables. Copy the template next to the service and fill it in; never commit the real files.
 
-| Role | Email Address | Password | Accessible Portals & Features |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@textileshop.com` | `Admin@123456` | Full administrative access: Dashboard metrics, Inventory Ledger, Kanban Production, Orders, AI Insights, User Management. |
-| **Customer** | `customer@example.com` | `Customer@123456` | Customer Storefront: Catalog browsing, Bespoke Measurements profile, Cart, PayHere/COD Checkout, Order Tracking. |
-| **Worker (Cutting)** | `worker1@textileshop.com` | `Worker@123456` | Factory Worker Portal (`/worker/tasks`): Cutting stage claiming, progress logging, and stage completion. |
-| **Worker (Stitching)** | `worker2@textileshop.com` | `Worker@123456` | Factory Worker Portal (`/worker/tasks`): Sewing & Stitching stage claiming, progress logging, and stage completion. |
-
----
-
-## Service URLs & Ports
-
-| Service Component | URL / Port | Description |
+| Service | Template | Must be set in production |
 | :--- | :--- | :--- |
-| **Customer Storefront & Admin** | `http://localhost:3000` | Next.js 16 Web Application (Storefront, Admin, Worker Portal) |
-| **Backend REST API** | `http://localhost:3001/api/v1` | NestJS REST API root & health checks |
-| **Interactive Swagger API Docs** | `http://localhost:3001/api/v1/docs` | OpenAPI documentation with interactive sandbox |
-| **AI Microservice & Health** | `http://localhost:8000/health` | FastAPI RAG, BI tool execution, and forecasting engine |
-| **PostgreSQL Database** | `localhost:5433` (Docker mapped) | Primary relational database (`textile_db`) |
-| **Redis In-Memory Store** | `localhost:6379` | Cache layer, queue broker, and rate limiting |
+| API | [`backend/.env.example`](backend/.env.example) | `NODE_ENV`, database URLs, `JWT_SECRET`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `INTERNAL_API_KEY`, `AI_SERVICE_URL`, PayHere, Resend (`EMAIL_FROM` on a verified domain), Cloudinary |
+| AI service | [`ai/.env.example`](ai/.env.example) | `DATABASE_URL_READONLY` (rotated password), `INTERNAL_API_KEY`, `LLM_API_KEY` |
+| Storefront | [`frontend/.env.example`](frontend/.env.example) | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL` |
+
+The full production matrix, with what each value controls, is in the [Runbook, section 2](docs/RUNBOOK.md#2-configuration).
 
 ---
 
-## Payment Gateway Testing (PayHere Sandbox)
+## Testing
 
-The platform includes integration with Sri Lanka's **PayHere** payment gateway:
-
-1. Sign in as a customer (`customer@example.com` / `Customer@123456`).
-2. Add products to your cart and proceed to `/checkout`.
-3. Select **Card / PayHere Payment Gateway**.
-4. Use the PayHere Sandbox test credentials:
-   - **Test Visa Card**: `4916217501611292` (Expiry: Any future date, CVV: `123`, OTP: `123456`)
-   - **Test Mastercard**: `5307732125531191`
-5. Upon successful authorization, PayHere issues an asynchronous server-to-server webhook to `/api/v1/payments/payhere/notify`.
-6. The backend verifies the MD5 signature hash:
-   $$\text{Hash} = \text{MD5}(\text{MerchantID} + \text{OrderID} + \text{Amount} + \text{Currency} + \text{StatusCode} + \text{MD5}(\text{MerchantSecret}))$$
-7. When verified, stock reservations convert into confirmed sales in the inventory ledger and the order transitions to `CONFIRMED`.
-
----
-
-## Quality Assurance & Verification (Cypress, Jest, Pytest & k6)
-
-The platform implements an exhaustive testing pyramid verified through automated suites in CI and local Docker environments. Full audit evidence, logs, and metrics are documented in the **[QA Final Audit Report](docs/QA_FINAL_TEST_REPORT.md)** (with historical results in [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md)).
-
-### 1. Cypress Headless End-to-End Test Suite (35/35 Passed — 100%)
-
-Executes full browser automation across all 9 critical user journeys and admin workflows:
-
-```bash
-# Run headless (CI mode)
-cd frontend
-npm run test:e2e
-
-# Run interactive visual runner
-npm run test:e2e:open
-```
-
-| Test Specification | Covered Business Flows | Tests | Status |
-| :--- | :--- | :---: | :---: |
-| `admin-crud.cy.ts` | Category CRUD, Product lifecycle, Image uploads, Admin entity operations | 11 / 11 | **PASS (100%)** |
-| `admin-operations.cy.ts` | Executive Dashboard metrics, Orders management, Production Kanban, Inventory Ledger | 4 / 4 | **PASS (100%)** |
-| `ai.cy.ts` | Customer Shopping Assistant (RAG chat) & Admin Business Intelligence insights | 2 / 2 | **PASS (100%)** |
-| `catalog-and-media-lifecycle.cy.ts` | Dynamic navigation update, Image upload permissions, Mobile responsive viewport | 3 / 3 | **PASS (100%)** |
-| `customer-crud.cy.ts` | Catalog browsing, Order history, Cart modifications (+/-), Full checkout | 4 / 4 | **PASS (100%)** |
-| `customer-journey.cy.ts` | Customer registration, UI OTP verification, Bespoke garment tailoring, Order cancellation | 4 / 4 | **PASS (100%)** |
-| `payment-online.cy.ts` | PayHere card checkout simulation & idempotent server-to-server webhook verification | 1 / 1 | **PASS (100%)** |
-| `security.cy.ts` | Route guards, RBAC enforcement across 4 roles, and IDOR defense validation | 3 / 3 | **PASS (100%)** |
-| `worker-journey.cy.ts` | Worker task queue, Kanban pipeline advancement (Cutting->Sewing->Finishing->QC), Worker claim isolation | 3 / 3 | **PASS (100%)** |
-| **Total E2E Tests** | **Comprehensive Full-System Browser Automation** | **35 / 35** | **PASS (100%)** |
-
-### 2. Grafana k6 Load & Concurrency Stress Testing
-
-Audits non-functional requirement **NFR-001** (response times < 2000ms under load) and payment webhook burst resilience:
-
-```bash
-# Simulate 100 concurrent shopping customer sessions
-docker run --rm -i -v "${PWD}/scripts/load:/scripts" -e API_URL=http://host.docker.internal:3001/api/v1 grafana/k6 run --vus 100 --duration 1m /scripts/scenarios.js
-
-# Stress test 100 simultaneous signed payment webhook bursts
-docker run --rm -i -v "${PWD}/scripts/load:/scripts" -e API_URL=http://host.docker.internal:3001/api/v1 grafana/k6 run /scripts/webhook-spike.js
-```
-
-- **NFR-001 Benchmark (100 Concurrent Users)**: 4,479 requests, 5,902 checks, **0.00% error rate**, **p(95) = 302.33ms** (Target: < 2000ms — **6.6x faster than requirement**), **p(99) = 652.38ms**.
-- **Webhook Spike Throughput**: Sustained **293 requests/second** with **0.00% failure rate** and zero database locking deadlocks.
-
-### 3. Backend Unit, Integration & Concurrency Tests (Jest + PostgreSQL 16)
-
-```bash
-cd backend
-# Run 16 unit test suites (163 tests)
-npm test
-
-# Run 14 integration test suites with real PostgreSQL 16 (169 tests)
-npm run test:integration
-
-# Execute concurrency stock reservation race (10x repeated Promise.all transactions)
-npx jest --config ./test/jest-e2e.json test/stock-race.e2e-spec.ts --runInBand
-
-# Verify inventory ledger double-entry mathematical balance
-npm run reconcile
-```
-
-- **Unit Tests:** 16 suites, 163 tests passed.
-- **Integration Tests:** 14 suites, 169 tests passed against real PostgreSQL 16.
-- **AI Microservice Tests:** 3 Pytest suites, 46 tests passed (Holt-Winters forecasting, prompt injection defense, allowed-set grounding).
-- **Total Automated Functional Tests:** **413 / 413 Passing (100% Pass Rate)**.
-
----
-
-## Production Cloud Deployment & Topology
-
-```
-                       ┌─────────────────────────────────────────┐
-                       │            Vercel Edge CDN              │
-                       │         (Next.js 16 Storefront)         │
-                       └────────────────────┬────────────────────┘
-                                            │
-                                 HTTPS / REST API
-                                            │
-                                            ▼
-                       ┌─────────────────────────────────────────┐
-                       │          Railway / Render API           │
-                       │           (NestJS 11 Backend)           │
-                       └───────┬─────────────────────────┬───────┘
-                               │                         │
-                      Internal gRPC / HTTP        PostgreSQL TCP
-                               │                         │
-                               ▼                         ▼
- ┌───────────────────────────────────────┐   ┌───────────────────────────────────┐
- │          Railway / Render AI          │   │      Neon / Supabase Postgres     │
- │       (FastAPI / RAG / Forecast)      ├───┤  (Pooled DB + Read-Only AI Role)  │
- └───────────────────────────────────────┘   └───────────────────────────────────┘
-```
-
-Detailed deployment blueprints, secret rotation procedures, and rollback strategies are documented in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
-
-### Recommended Production Environment Configuration:
-
-#### Backend API (`Railway` / `Render`)
-```env
-NODE_ENV=production
-PORT=3001
-DATABASE_URL=postgresql://user:pass@ep-pooler.neon.tech/textile_db?sslmode=require
-DIRECT_URL=postgresql://user:pass@ep-direct.neon.tech/textile_db?sslmode=require
-FRONTEND_URL=https://nandanatextile.lk
-JWT_SECRET=your_32_byte_cryptographic_secret
-JWT_EXPIRATION=7d
-INTERNAL_API_KEY=your_shared_internal_service_key
-AI_SERVICE_URL=https://ai.nandanatextile.lk
-AI_TIMEOUT_MS=30000
-PAYHERE_MERCHANT_ID=your_live_merchant_id
-PAYHERE_MERCHANT_SECRET=your_live_merchant_secret
-PAYHERE_MODE=live
-PAYHERE_NOTIFY_URL=https://api.nandanatextile.lk/api/v1/payments/payhere/notify
-```
-
-#### AI Microservice (`Railway` / `Render`)
-```env
-PORT=8000
-DATABASE_URL_READONLY=postgresql://textile_ai_readonly:secure_pass@ep-direct.neon.tech/textile_db?sslmode=require
-LLM_PROVIDER=groq
-LLM_MODEL=openai/gpt-oss-120b
-LLM_API_KEY=gsk_your_groq_production_key
-INTERNAL_API_KEY=your_shared_internal_service_key
-```
-
-#### Storefront Web App (`Vercel`)
-```env
-NEXT_PUBLIC_API_URL=https://api.nandanatextile.lk/api/v1
-```
-
----
-
-## Comprehensive Documentation Index
-
-All architectural specifications, designs, and operational runbooks are maintained in the [`docs/`](docs/) directory:
-
-| Document | File Link | Summary & Contents |
+| Suite | Command | Needs |
 | :--- | :--- | :--- |
-| **00 — Project Vision** | [`docs/00_PROJECT_VISION.md.txt`](docs/00_PROJECT_VISION.md.txt) | Problem statement, Sri Lankan industry context, business drivers, target personas. |
-| **01 — Business Requirements** | [`docs/01_BUSINESS_REQUIREMENTS.md.txt`](docs/01_BUSINESS_REQUIREMENTS.md.txt) | Comprehensive BR1 to BR8 business requirements matrix and acceptance criteria. |
-| **02 — System Scope** | [`docs/02_SYSTEM_SCOPE.md.txt`](docs/02_SYSTEM_SCOPE.md.txt) | In-scope modules, out-of-scope boundaries, user roles, system boundaries. |
-| **03 — Software Requirements (SRS)** | [`docs/03_SOFTWARE_REQUIREMENTS_SPECIFICATION.md.txt`](docs/03_SOFTWARE_REQUIREMENTS_SPECIFICATION.md.txt) | Functional and non-functional requirements (NFRs), constraints, standards. |
-| **04 — System Architecture** | [`docs/04_SYSTEM_ARCHITECTURE.md.txt`](docs/04_SYSTEM_ARCHITECTURE.md.txt) | High-level modular monolithic to microservices architecture, data flow diagrams. |
-| **05 — Technology Stack** | [`docs/05_TECHNOLOGY_STACK.md.txt`](docs/05_TECHNOLOGY_STACK.md.txt) | Technology justification, trade-offs, language choices, runtime versions. |
-| **06 — Database Design** | [`docs/06_DATABASE_DESIGN.md.txt`](docs/06_DATABASE_DESIGN.md.txt) | Relational schema, normalization, indexes, movement ledger design. |
-| **07 — API Design & Contract** | [`docs/07_API_DESIGN.md.txt`](docs/07_API_DESIGN.md.txt) | RESTful API guidelines, status codes, response wrapping, error handling. |
-| **08 — AI Integration Design** | [`docs/08_AI_INTEGRATION_DESIGN.md.txt`](docs/08_AI_INTEGRATION_DESIGN.md.txt) | Dual RAG architecture, vector search, grounding filter, tool execution schema. |
-| **09 — Security Architecture** | [`docs/09_SECURITY_ARCHITECTURE.md.txt`](docs/09_SECURITY_ARCHITECTURE.md.txt) | Authentication, authorization, token rotation, OWASP Top 10 defense. |
-| **10 — UI/UX Design System** | [`docs/10_UI_UX_GUIDELINES.md.txt`](docs/10_UI_UX_GUIDELINES.md.txt) | Design tokens, color palette, typography hierarchy, responsive breakpoints. |
-| **11 — Payment Integration** | [`docs/11_PAYMENT_INTEGRATION.md.txt`](docs/11_PAYMENT_INTEGRATION.md.txt) | PayHere integration, MD5 webhook verification, COD and installment workflows. |
-| **12 — Deployment Architecture** | [`docs/12_DEPLOYMENT_ARCHITECTURE.md.txt`](docs/12_DEPLOYMENT_ARCHITECTURE.md.txt) | Containerization, cloud topology, edge delivery, environment staging. |
-| **13 — Testing Strategy** | [`docs/13_TESTING_STRATEGY.md.txt`](docs/13_TESTING_STRATEGY.md.txt) | Testing pyramid: unit, integration, E2E browser automation, k6 load testing. |
-| **Production Runbook** | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Operations manual, deployment checklists, backup/restore drills, incident recovery. |
-| **QA Final Test Report** | [`docs/QA_FINAL_TEST_REPORT.md`](docs/QA_FINAL_TEST_REPORT.md) | **Comprehensive Production QA Engineering Audit**: 413 automated tests (Cypress, Jest, Pytest), PostgreSQL concurrency race, webhook tamper security, AI grounding, and 100 VU k6 load testing. |
-| **System QA & SRE Audit** | [`docs/PROJECT_AUDIT_2026-11-14.md`](docs/PROJECT_AUDIT_2026-11-14.md) | Full architectural and reliability audit covering security vectors, inventory consistency, payments, and role-based test execution. |
-| **Historical QA Report** | [`docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md`](docs/QA_TEST_REPORT_E2E_AND_PERFORMANCE.md) | Previous test execution logs, timings, Cypress passes, k6 graphs. |
-| **Database Schema (DBML)** | [`docs/database.dbml`](docs/database.dbml) | DBML schema definition renderable visually at [dbdiagram.io](https://dbdiagram.io/d). |
-| **System Demonstration Script** | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Structured operational demonstration script for stakeholders and system evaluators. |
+| API unit tests | `cd backend && npm test` | — |
+| API integration tests | `cd backend && npm run test:integration` | PostgreSQL (seeded) |
+| Stock ledger check | `cd backend && npm run reconcile` | PostgreSQL |
+| AI service tests | `cd ai && pytest` | Python dependencies |
+| Storefront lint / types / build | `cd frontend && npm run lint && npx tsc --noEmit && npm run build` | — |
+| Cypress end-to-end | `cd frontend && npm run test:e2e` | running local stack |
+| Playwright end-to-end | `cd frontend && npm run test:pw` (smoke: `npm run test:pw:smoke`) | running local stack |
+| Load tests (k6) | see [`scripts/load/README.md`](scripts/load/README.md) | running local stack |
+
+**Continuous integration** ([`.github/workflows`](.github/workflows)):
+
+| Workflow | When | What |
+| :--- | :--- | :--- |
+| `ci.yml` | every pull request and push to `main` | API build, unit and integration tests, stock reconciliation; storefront build and type check; Cypress; Playwright smoke |
+| `playwright-nightly.yml` | nightly and on demand | full Playwright browser suite |
+| `render-keepalive.yml` | during shop hours | pings the API and AI service (backup to the external pinger) |
+
+The AI service tests are not part of CI yet; run them locally before changing `ai/`.
 
 ---
 
-## Repository Layout
+## Deployment
 
-```
-.
-├── backend/                       # NestJS 11 REST API Microservice
-│   ├── src/
-│   │   ├── auth/                  # JWT auth, dual-identifier OTP, guards, RBAC
-│   │   ├── orders/                # Checkout state machine, order life cycle
-│   │   ├── payments/              # PayHere gateway & signed webhook validation
-│   │   ├── inventory/             # Double-entry movement ledger & row-level locking
-│   │   ├── production/            # Manufacturing Kanban task management
-│   │   ├── analytics/             # Revenue reporting & BI export
-│   │   └── social/                # Meta Graph API (Facebook/IG) auto-posting
-│   ├── prisma/                    # Schema definition, migrations, and seed scripts
-│   └── test/                      # Unit & service integration test suites (Jest)
-├── frontend/                      # Next.js 16 Web Application (App Router)
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── (shop)/            # Customer Storefront (Hero swapper, Catalog, Cart)
-│   │   │   ├── (admin)/           # Admin Operations Dashboard & Analytics
-│   │   │   ├── (worker)/          # Factory Worker Task Portal
-│   │   │   └── (auth)/            # Login, Registration, OTP verification
-│   │   ├── components/            # Reusable UI components, modals, navigation
-│   │   └── lib/                   # API client, state stores (Zustand), utilities
-│   └── cypress/                   # Automated E2E test specifications & fixtures
-├── ai/                            # FastAPI AI & Machine Learning Microservice
-│   ├── app/
-│   │   ├── main.py                # FastAPI endpoints & CORS configuration
-│   │   ├── rag.py                 # Retrieval-grounded customer shopping assistant
-│   │   ├── bi.py                  # Executive tool execution & database analysis
-│   │   ├── forecast.py            # Holt-Winters exponential smoothing demand model
-│   │   └── grounding.py           # Anti-hallucination validation filter
-│   └── requirements.txt           # Python dependencies (statsmodels, asyncpg, etc.)
-├── scripts/
-│   └── load/                      # Grafana k6 load & concurrency test scripts
-├── docs/                          # Architecture specs (00–13), Runbook, QA reports
-├── docker-compose.yml             # 5-container orchestration configuration
-└── README.md                      # Primary project documentation
-```
+| Component | Host | Deploys |
+| :--- | :--- | :--- |
+| Storefront | Vercel | automatically on merge to `main` |
+| API | Render (Docker, `backend/Dockerfile`) | on merge to `main` (auto-deploy) or manually; runs `prisma migrate deploy` on start |
+| AI service | Render (Docker, `ai/Dockerfile`) | on merge to `main` (auto-deploy) or manually |
+| Database | Neon (PostgreSQL 16) | migrations applied by the API |
+
+Release flow: branch → pull request → all checks green → merge. Before a production release, work through the [pre-deploy checklist](docs/RUNBOOK.md#35-pre-deploy-checklist) and, for the first launch, the [go-live checklist](docs/GO_LIVE_CHECKLIST.md).
+
+On Render's free tier a service sleeps after 15 minutes without traffic, and all free services in a workspace share 750 instance hours a month. The [Runbook, section 7](docs/RUNBOOK.md#7-keeping-the-render-free-services-awake) explains the keep-alive set-up and the hour budget.
 
 ---
 
-## Contributing & Git Workflow
+## Security
 
-The `main` branch is protected and always deployable to staging and production. All updates follow conventional commits and branch pull requests:
+- Passwords hashed with bcrypt; admin passwords need at least 12 characters (8 for customers and workers); accounts lock for 15 minutes after 5 failed sign-ins.
+- 15-minute access tokens; refresh tokens are rotated, stored hashed and revoked on reuse, password change or deactivation.
+- Every API route requires authentication unless explicitly public; admin and worker routes are role-checked; customers can only read their own orders, invoices and payments.
+- PayHere notifications are verified by signature and amount; forged or replayed notifications cannot mark an order paid twice.
+- The AI service accepts calls only with the internal key and reads the database through a read-only role.
+- The storefront sends security headers (frame blocking, `nosniff`, referrer and permissions policies).
 
-```bash
-# Create a feature or fix branch
-git checkout -b feat/your-feature-name
+Details: [Security architecture](docs/09_SECURITY_ARCHITECTURE.md). To report a vulnerability, follow the [security policy](SECURITY.md); please do not open a public issue.
 
-# Stage and commit your changes
-git add .
-git commit -m "feat(storefront): description of changes"
+---
 
-# Push to your feature branch
-git push -u origin feat/your-feature-name
-```
+## Documentation
 
-*Continuous Integration (GitHub Actions) runs backend TypeScript builds, unit test suites, and Cypress headless end-to-end browser specifications automatically on every pull request.*
+### Guides
+
+| Document | For |
+| :--- | :--- |
+| [Admin guide](docs/ADMIN_GUIDE.md) | Shop owner and staff: running the shop day to day |
+| [Go-live checklist](docs/GO_LIVE_CHECKLIST.md) | Launching the shop for real customers |
+| [Runbook](docs/RUNBOOK.md) | Operations: hosting, configuration, releases, backups, secrets, incidents, keep-alive, staff accounts, go-live data reset |
+| [Demo script](docs/DEMO_SCRIPT.md) | Presenting the system |
+
+### Component READMEs
+
+| Document | Covers |
+| :--- | :--- |
+| [backend/README.md](backend/README.md) | API modules, scripts, database and tests |
+| [frontend/README.md](frontend/README.md) | Storefront, admin and worker portal; SEO; tests |
+| [ai/README.md](ai/README.md) | AI service endpoints, safety model and tests |
+| [frontend/e2e-playwright/README.md](frontend/e2e-playwright/README.md) | Running and writing Playwright tests |
+| [scripts/load/README.md](scripts/load/README.md) | k6 load and webhook-burst tests |
+
+### Architecture and design
+
+| Document | Covers |
+| :--- | :--- |
+| [00 — Project vision](docs/00_PROJECT_VISION.md) | Problem, goals, users |
+| [01 — Business requirements](docs/01_BUSINESS_REQUIREMENTS.md) | Business rules and acceptance criteria |
+| [02 — System scope](docs/02_SYSTEM_SCOPE.md) | In and out of scope, roles |
+| [03 — Software requirements](docs/03_SOFTWARE_REQUIREMENTS_SPECIFICATION.md) | Functional and non-functional requirements |
+| [04 — System architecture](docs/04_SYSTEM_ARCHITECTURE.md) | Components and data flow |
+| [05 — Technology stack](docs/05_TECHNOLOGY_STACK.md) | Technology choices and trade-offs |
+| [06 — Database design](docs/06_DATABASE_DESIGN.md) | Schema design and indexing |
+| [07 — API design](docs/07_API_DESIGN.md) | REST conventions and errors |
+| [08 — AI integration design](docs/08_AI_INTEGRATION_DESIGN.md) | Assistants, retrieval, grounding |
+| [09 — Security architecture](docs/09_SECURITY_ARCHITECTURE.md) | Authentication, authorisation, threats |
+| [10 — UI/UX guidelines](docs/10_UI_UX_GUIDELINES.md) | Design tokens and patterns |
+| [11 — Payment integration](docs/11_PAYMENT_INTEGRATION.md) | PayHere, cash on delivery, instalments |
+| [12 — Deployment architecture](docs/12_DEPLOYMENT_ARCHITECTURE.md) | Hosting and environments |
+| [13 — Testing strategy](docs/13_TESTING_STRATEGY.md) | Test pyramid and tooling |
+| [Database architecture](docs/DATABASE_ARCHITECTURE.md) | Schema dictionary, ledger, AI views, ERD |
+| [Database schema (DBML)](docs/database.dbml) | Renderable at [dbdiagram.io](https://dbdiagram.io/d) |
+| [AI and ML architecture](docs/AI_AND_ML_ARCHITECTURE.md) | Assistants, forecasting, evaluation |
+| [Coding standards](docs/CODING_STANDARDS.md) | Conventions for contributors |
+| [Frontend UX playbook](docs/FRONTEND_UX_PLAYBOOK.md) | UX engineering practices |
+
+### Security
+
+| Document | Covers |
+| :--- | :--- |
+| [Security policy](SECURITY.md) | How to report a vulnerability privately |
+
+---
+
+## Contributing
+
+1. Create a branch from `main` (`feat/…`, `fix/…`, `docs/…`).
+2. Use [Conventional Commits](https://www.conventionalcommits.org/) (`fix(orders): …`).
+3. Open a pull request; merge only when every check is green.
+4. Never commit secrets or real `.env` files. When code reads a new environment variable, add it to the matching `.env.example` and to the Runbook.
+5. Update the relevant README or document in the same pull request as the change.
+
+---
+
+## License
+
+Copyright © 2026 Nandana Textile. All rights reserved; see [LICENSE](LICENSE). The code is published for reference only: it may not be used, copied or distributed without written permission.

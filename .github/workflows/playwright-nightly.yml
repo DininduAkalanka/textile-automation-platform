@@ -66,7 +66,7 @@ jobs:
           PLAYWRIGHT_HTML_OPEN: never
           PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/junit.xml
         run: |
-          args=(--grep-invert @ai-live --fail-on-flaky-tests --reporter=github,html,junit)
+          args=(--grep-invert @ai-live --fail-on-flaky-tests '--reporter=github,html,junit')
           if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
             args+=(--project=chromium --grep '@smoke|@critical')
           elif [[ "$PW_FIREFOX" == 1 ]]; then
