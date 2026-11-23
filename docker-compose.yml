@@ -1,3 +1,8 @@
+# Local development stack only. Every port is bound to 127.0.0.1, so these
+# services and their well-known development passwords are reachable from this
+# computer only, never from the rest of the network. Production uses Neon,
+# Render and Vercel with their own secrets (docs/RUNBOOK.md).
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +13,7 @@ services:
       POSTGRES_PASSWORD: textile_secure_pass_2024
       POSTGRES_DB: textile_db
     ports:
-      - '5433:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +27,7 @@ services:
     container_name: textile_redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -39,7 +44,7 @@ services:
     container_name: textile_backend
     restart: unless-stopped
     ports:
-      - '3001:3001'
+      - '127.0.0.1:3001:3001'
     # Picks up PAYHERE_* (and anything else host-side dev already uses) from
     # the same file `npm run start:dev` reads, so sandbox credentials don't
     # need to be duplicated into a second .env. Keys also set below in
@@ -88,7 +93,7 @@ services:
     container_name: textile_ai
     restart: unless-stopped
     ports:
-      - '8000:8000'
+      - '127.0.0.1:8000:8000'
     env_file:
       - backend/.env
     environment:
@@ -112,7 +117,7 @@ services:
     container_name: textile_frontend
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
       - INTERNAL_BACKEND_URL=http://backend:3001
