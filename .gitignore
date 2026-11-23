@@ -107,5 +107,15 @@ $RECYCLE.BIN/
 ~$*
 .~lock.*#
 
+# ─── Large media and archives: host videos outside Git ───────────────────────
+*.mp4
+*.mov
+*.webm
+*.avi
+*.mkv
+*.zip
+*.7z
+*.rar
+
 # ─── Scratch space ────────────────────────────────────────────────────────────
 scratch/
